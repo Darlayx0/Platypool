@@ -10,40 +10,19 @@
   </script>
   <title>Platypus: Clay Wings - Retro Arcade Shmup</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23e53935%22/><text y=%2260%22 font-size=%2245%22 text-anchor=%22middle%22 x=%2250%22 fill=%22white%22 font-family=%22sans-serif%22 font-weight=%22bold%22>P</text></svg>">
-  <script type="module" crossorigin src="./assets/index-Cl8rpc_u.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Cr93v-XU.css">
+  <script type="module" crossorigin src="./assets/index-jYknC7Mz.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-TPAi0NVM.css">
 </head>
 <body>
   <div id="game-wrapper">
     <canvas id="game-canvas" width="1280" height="720"></canvas>
 
-    <!-- Top in-game quick control buttons -->
-    <div id="hud-topbar">
-      <div class="hud-group">
-        <button id="btn-sound" class="hud-icon-btn" title="Toggle Suara (SFX)">
-          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        </button>
-        <button id="btn-music" class="hud-icon-btn" title="Toggle Musik">
-          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-        </button>
-      </div>
-      <div class="hud-group">
-        <button id="btn-control-mode" class="hud-icon-btn" title="Ganti Mode Kontrol (Mouse / Keyboard)">
-          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 1.07V9h7c0-4.08-3.05-7.44-7-7.93zM4 15c0 4.42 3.58 8 8 8s8-3.58 8-8v-4H4v4zm7-13.93C7.05 1.56 4 4.92 4 9h7V1.07z"/></svg>
-        </button>
-        <button id="btn-autofire" class="hud-icon-btn" title="Toggle Auto-Fire">
-          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
-        </button>
-        <button id="btn-pause" class="hud-icon-btn" title="Jeda (Pause)">
-          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
-      </div>
-    </div>
+    <!-- Dynamic In-Game Micro-Interaction Toast Notification (Auto-Fire, Controls) -->
+    <div id="hud-toast" class="hud-toast"></div>
 
-    <!-- Start / Main Menu Modal -->
-    <!-- Start / Main Menu Modal -->
+    <!-- Start / Main Menu Modal (Clean, Minimal, To The Point) -->
     <div id="modal-start" class="modal-screen active">
-      <div class="clay-card main-menu-card">
+      <div class="clay-card main-menu-card minimal-main-menu">
         <!-- Floating Clay Header Badge -->
         <div class="menu-pill-badge">
           <span>ARCADE SHOOT 'EM UP • EDISI MASTER</span>
@@ -52,156 +31,11 @@
         <h1 class="game-title">PLATYPUS</h1>
         <p class="game-subtitle">CLAY WINGS • RETRO CLAYMATION SHOOTER</p>
 
-        <!-- Segmented Tab Navigation -->
-        <div class="clay-tab-bar">
-          <button type="button" class="clay-tab-btn active" data-tab="tab-control">
-            <span class="tab-icon">🎮</span> KONTROL & PANDUAN
-          </button>
-          <button type="button" class="clay-tab-btn" data-tab="tab-weapons">
-            <span class="tab-icon">⚡</span> ARSENAL SENJATA (15S)
-          </button>
-          <button type="button" class="clay-tab-btn" data-tab="tab-worlds">
-            <span class="tab-icon">🏆</span> 4 DUNIA & BOSS
-          </button>
-        </div>
-
-        <!-- Tab 1: Kontrol & Mekanik -->
-        <div id="tab-control" class="tab-pane active">
-          <div class="control-grid">
-            <div class="instruction-item">
-              <span class="instruction-badge">KONTROL</span>
-              <div class="instruction-text">
-                <strong>Gerakan Fleksibel:</strong>
-                <p>Gunakan <code>Mouse</code> (mengikuti kursor) atau <code>W, A, S, D</code> / <code>Tombol Panah</code>.</p>
-              </div>
-            </div>
-            <div class="instruction-item">
-              <span class="instruction-badge">TEMBAK</span>
-              <div class="instruction-text">
-                <strong>Tembakan Utama:</strong>
-                <p>Tahan <code>Klik Kiri</code> atau <code>Spasi</code>. Tersedia tombol <strong>Auto-Fire (⚡)</strong> di atas.</p>
-              </div>
-            </div>
-            <div class="instruction-item">
-              <span class="instruction-badge">SENJATA</span>
-              <div class="instruction-text">
-                <strong>Drop Senjata 10–40 Detik:</strong>
-                <p>Kapsul senjata spesial muncul berkala setiap <strong>10–40 detik</strong> di kondisi apapun (termasuk saat melawan Boss!).</p>
-              </div>
-            </div>
-            <div class="instruction-item">
-              <span class="instruction-badge">NYAWA</span>
-              <div class="instruction-text">
-                <strong>Regulasi Ketahanan:</strong>
-                <p>Nyawa ekstra hanya diperoleh setiap kelipatan <strong>250.000 skor</strong> & mengalahkan Boss Kolosal!</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="weapon-preview-row-quick">
-            <span class="preview-label">5 ARSENAL SPESIAL (15S):</span>
-            <div class="weapon-chips-wrap">
-              <span class="weapon-chip chip-red" data-target-weapon="SPREAD" title="Spread Shot">SPREAD</span>
-              <span class="weapon-chip chip-blue" data-target-weapon="LASER" title="Sonic Laser">LASER</span>
-              <span class="weapon-chip chip-green" data-target-weapon="HOMING" title="Homing Missiles">HOMING</span>
-              <span class="weapon-chip chip-yellow" data-target-weapon="FLAK" title="Clay Flak Bomb">FLAK</span>
-              <span class="weapon-chip chip-purple" data-target-weapon="PLASMA" title="Plasma Arc (Listrik)">PLASMA</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 2: Arsenal Senjata (15 Detik) -->
-        <div id="tab-weapons" class="tab-pane">
-          <div class="weapon-notice-banner">
-            <span>⏱️ Seluruh 5 tipe senjata spesial memiliki durasi aktif <strong>15 detik</strong> sebelum kembali ke Pea-Shooter!</span>
-          </div>
-          <div class="arsenal-grid">
-            <div class="weapon-card card-spread" data-weapon="SPREAD">
-              <div class="weapon-card-header">
-                <span class="weapon-chip chip-red">SPR</span>
-                <span class="weapon-card-name">SPREAD SHOT</span>
-              </div>
-              <p class="weapon-card-desc">Tembakan 3 arah menyebar, sangat efektif memusnahkan kawanan musuh yang padat.</p>
-              <span class="weapon-stat">Durasi: 15s • Area Luas</span>
-            </div>
-
-            <div class="weapon-card card-laser" data-weapon="LASER">
-              <div class="weapon-card-header">
-                <span class="weapon-chip chip-blue">LSR</span>
-                <span class="weapon-card-name">SONIC LASER</span>
-              </div>
-              <p class="weapon-card-desc">Berkas sinar laser kontinu berkecepatan tinggi yang menembus armor musuh berderet.</p>
-              <span class="weapon-stat">Durasi: 15s • Menembus Target</span>
-            </div>
-
-            <div class="weapon-card card-homing" data-weapon="HOMING">
-              <div class="weapon-card-header">
-                <span class="weapon-chip chip-green">HOM</span>
-                <span class="weapon-card-name">HOMING MISSILES</span>
-              </div>
-              <p class="weapon-card-desc">Rudal pintar pencari panas yang secara otomatis memburu dan menghantam target terdekat.</p>
-              <span class="weapon-stat">Durasi: 15s • Pelacak Otomatis</span>
-            </div>
-
-            <div class="weapon-card card-flak" data-weapon="FLAK">
-              <div class="weapon-card-header">
-                <span class="weapon-chip chip-yellow">FLK</span>
-                <span class="weapon-card-name">CLAY FLAK BOMB</span>
-              </div>
-              <p class="weapon-card-desc">Bom fragmentasi tanah liat dengan ledakan area radial yang meluluhlantakkan formasi.</p>
-              <span class="weapon-stat">Durasi: 15s • Ledakan Radius</span>
-            </div>
-
-            <div class="weapon-card card-plasma" data-weapon="PLASMA">
-              <div class="weapon-card-header">
-                <span class="weapon-chip chip-purple">PLS</span>
-                <span class="weapon-card-name">PLASMA ARC</span>
-              </div>
-              <p class="weapon-card-desc">Arc energi plasma petir ungu yang melompat antar musuh dengan efek kejut mematikan.</p>
-              <span class="weapon-stat">Durasi: 15s • Sambaran Listrik</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 3: Ekspedisi 4 Dunia & Boss -->
-        <div id="tab-worlds" class="tab-pane">
-          <div class="worlds-timeline">
-            <div class="world-item">
-              <span class="world-badge badge-valley">WORLD 1</span>
-              <div class="world-info">
-                <strong>Lembah Tanah Liat (Stage 1–5)</strong>
-                <p>Boss Stage 5: <em>The Iron Clay Dreadnought</em></p>
-              </div>
-            </div>
-            <div class="world-item">
-              <span class="world-badge badge-canyon">WORLD 2</span>
-              <div class="world-info">
-                <strong>Ngarai Senja Sandstone (Stage 6–10)</strong>
-                <p>Boss Stage 10: <em>The Clay Goliath Zeppelin</em></p>
-              </div>
-            </div>
-            <div class="world-item">
-              <span class="world-badge badge-cyber">WORLD 3</span>
-              <div class="world-info">
-                <strong>Malam Siber Sintesis (Stage 11–15)</strong>
-                <p>Boss Stage 15: <em>The Ultimate Clay Leviathan</em></p>
-              </div>
-            </div>
-            <div class="world-item">
-              <span class="world-badge badge-cosmic">WORLD 4</span>
-              <div class="world-info">
-                <strong>Singularitas Kosmis (Stage 16–20)</strong>
-                <p>Boss Stage 20: <em>The Omega Clay Colossus</em></p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Difficulty Selection Section -->
         <div class="difficulty-section">
           <div class="difficulty-header">
-            <span class="difficulty-title-icon">⚙️</span>
-            <span class="difficulty-title-text">TINGKAT KESULITAN (DIFFICULTY)</span>
+            <span class="difficulty-title-icon">⚡</span>
+            <span class="difficulty-title-text">TINGKAT KESULITAN</span>
           </div>
           <div class="difficulty-options">
             <button type="button" class="difficulty-btn diff-easy" data-difficulty="EASY">
@@ -221,32 +55,393 @@
             </button>
           </div>
           <div id="difficulty-description-banner" class="difficulty-desc-box">
-            <span class="desc-highlight">Klasik Arcade:</span> Max 10 Nyawa • Durasi Senjata 15s • Senjata Hancur Saat Mati • +1 Nyawa tiap 250k Skor & Boss
+            <span class="desc-highlight">Klasik Arcade:</span> Max 10 Nyawa • Durasi Senjata 15s • +1 Nyawa tiap 250k Skor & Boss
           </div>
         </div>
 
-        <!-- Launch CTA -->
+        <!-- Launch CTA Button -->
         <div class="menu-action-area">
           <button id="btn-play-game" class="clay-btn primary-launch">
+            <span class="btn-icon">🚀</span>
             <span>MULAI PERTEMPURAN (20 STAGE)</span>
           </button>
-          <p class="keyboard-tip">
-            💡 Tekan <kbd>SPASI</kbd> atau <kbd>ENTER</kbd> untuk mulai bermain
-          </p>
+        </div>
+
+        <!-- Sleek Secondary Navigation Buttons -->
+        <div class="menu-nav-actions">
+          <button type="button" id="btn-open-settings" class="clay-nav-btn" title="Pengaturan Audio & Kontrol">
+            <span class="nav-btn-icon">⚙️</span>
+            <span class="nav-btn-text">PENGATURAN</span>
+          </button>
+          <button type="button" id="btn-open-guide" class="clay-nav-btn" title="Panduan Kontrol & Arsenal Senjata">
+            <span class="nav-btn-icon">📖</span>
+            <span class="nav-btn-text">PANDUAN & INFO</span>
+          </button>
+          <button type="button" id="btn-open-cheat" class="clay-nav-btn subtle-cheat" title="Konfigurasi Curang">
+            <span class="nav-btn-icon">🛠️</span>
+            <span class="nav-btn-text">CURANG</span>
+            <span id="cheat-pill-indicator" class="cheat-pill-status off">OFF</span>
+          </button>
+        </div>
+
+        <p class="keyboard-tip">
+          💡 Tekan <kbd>ENTER</kbd> untuk mulai • <kbd>ESC</kbd> untuk jeda • <kbd>M</kbd> / <kbd>Klik Kanan</kbd> toggle auto-fire
+        </p>
+      </div>
+    </div>
+
+    <!-- Settings Modal (Modal Pengaturan) -->
+    <div id="modal-settings" class="modal-screen">
+      <div class="clay-card settings-modal-card">
+        <div class="menu-pill-badge">
+          <span>⚙️ PREFERENSI & KONTROL</span>
+        </div>
+
+        <h2 class="game-title modal-title">PENGATURAN</h2>
+        <p class="game-subtitle">Sesuaikan audio, volume, dan kendali permainan</p>
+
+        <div class="settings-content-scroll">
+          <!-- Section 1: Audio Settings -->
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span>🎵 TATA SUARA & SOUNDTRACK</span>
+            </div>
+
+            <!-- Sound Effects (SFX) Setting -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon">🔊</span>
+                  <div>
+                    <strong class="settings-name">Efek Suara (SFX)</strong>
+                    <span class="settings-subdesc">Suara letupan peluru, ledakan tanah liat, dan dampak benturan</span>
+                  </div>
+                </div>
+                <label class="clay-toggle-switch" title="Toggle Efek Suara">
+                  <input type="checkbox" id="setting-sfx-toggle" checked />
+                  <span class="clay-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="settings-slider-row" id="wrap-sfx-slider">
+                <span class="settings-slider-label">Volume:</span>
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-sfx-vol-dec" title="Kurangi Volume SFX">−</button>
+                  <input type="range" id="setting-sfx-volume" min="0" max="100" value="85" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-sfx-vol-inc" title="Tambah Volume SFX">+</button>
+                </div>
+                <span id="setting-sfx-vol-badge" class="settings-val-badge">85%</span>
+              </div>
+            </div>
+
+            <!-- Soundtrack (Music) Setting -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon">🎼</span>
+                  <div>
+                    <strong class="settings-name">Soundtrack & BGM</strong>
+                    <span class="settings-subdesc">Musik dinamis retro 4 dunia pertempuran dan tema boss</span>
+                  </div>
+                </div>
+                <label class="clay-toggle-switch" title="Toggle Soundtrack">
+                  <input type="checkbox" id="setting-music-toggle" checked />
+                  <span class="clay-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="settings-slider-row" id="wrap-music-slider">
+                <span class="settings-slider-label">Volume:</span>
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-music-vol-dec" title="Kurangi Volume BGM">−</button>
+                  <input type="range" id="setting-music-volume" min="0" max="100" value="50" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-music-vol-inc" title="Tambah Volume BGM">+</button>
+                </div>
+                <span id="setting-music-vol-badge" class="settings-val-badge">50%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Mode Kontrol & Auto Fire -->
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span>🎮 KENDALI & AUTO-FIRE</span>
+            </div>
+
+            <div class="settings-card-item">
+              <div class="settings-field-label">
+                <strong class="settings-name">Mode Kemudi Pesawat:</strong>
+              </div>
+              <div class="mode-segmented-bar">
+                <button type="button" id="btn-mode-mouse" class="mode-seg-btn active">
+                  <span class="seg-icon">🖱️</span>
+                  <span class="seg-title">MODE MOUSE</span>
+                </button>
+                <button type="button" id="btn-mode-keyboard" class="mode-seg-btn">
+                  <span class="seg-icon">⌨️</span>
+                  <span class="seg-title">KEYBOARD (WASD)</span>
+                </button>
+              </div>
+              <div id="control-mode-desc" class="control-mode-desc">
+                Pesawat mengikuti kursor mouse di dalam arena dengan respon instan dan akurat.
+              </div>
+            </div>
+
+            <!-- Auto-Fire Default Setting -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon">⚡</span>
+                  <div>
+                    <strong class="settings-name">Auto-Fire Otomatis</strong>
+                    <span class="settings-subdesc">Menembak otomatis tanpa perlu menahan tombol (Bisa di-toggle via <kbd>M</kbd> atau <kbd>Klik Kanan</kbd>)</span>
+                  </div>
+                </div>
+                <label class="clay-toggle-switch" title="Toggle Auto-Fire">
+                  <input type="checkbox" id="setting-autofire-toggle" />
+                  <span class="clay-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Keyboard Shortcuts Quick Reference -->
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span>⌨️ DAFTAR PINTASAN TOMBOL KEYBOARD</span>
+            </div>
+            <div class="shortcuts-grid">
+              <div class="shortcut-pill">
+                <kbd>ESC</kbd>
+                <span>Jeda Game (In-Game) / Menu Utama (saat Pause)</span>
+              </div>
+              <div class="shortcut-pill">
+                <kbd>M</kbd> / <kbd>Klik Kanan</kbd>
+                <span>Toggle Auto-Fire (Otomatis Menembak)</span>
+              </div>
+              <div class="shortcut-pill">
+                <kbd>Klik Kiri</kbd> / <kbd>Spasi</kbd>
+                <span>Tembakan Utama Meriam</span>
+              </div>
+              <div class="shortcut-pill">
+                <kbd>WASD</kbd> / <kbd>Panah</kbd>
+                <span>Kemudi Pesawat (Mode Keyboard)</span>
+              </div>
+              <div class="shortcut-pill">
+                <kbd>R</kbd>
+                <span>Ulangi Permainan (Restart)</span>
+              </div>
+              <div class="shortcut-pill">
+                <kbd>ENTER</kbd>
+                <span>Mulai Permainan / Lanjutkan Jeda</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="settings-footer-actions">
+          <button type="button" id="btn-settings-reset" class="clay-btn secondary">
+            <span>🔄 RESET DEFAULT</span>
+          </button>
+          <button type="button" id="btn-settings-close" class="clay-btn green">
+            <span>✅ SIMPAN & TUTUP (ESC)</span>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Pause Modal -->
-    <div id="modal-pause" class="modal-screen">
-      <div class="clay-card">
-        <div id="pause-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
-        <h2 class="game-title" style="font-size: 2.8rem;">GAME DIJEDA</h2>
-        <p class="game-subtitle">Tarik napas sejenak, pilot tanah liat!</p>
-        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
-          <button id="btn-resume" class="clay-btn green">LANJUT (ESC)</button>
-          <button id="btn-restart-pause" class="clay-btn secondary">ULANGI</button>
+    <!-- Guide Modal (Modal Panduan & Informasi) -->
+    <div id="modal-guide" class="modal-screen">
+      <div class="clay-card guide-modal-card">
+        <div class="menu-pill-badge">
+          <span>📖 ENSIKLOPEDIA & PANDUAN</span>
         </div>
+
+        <h2 class="game-title modal-title">PANDUAN & INFORMASI</h2>
+        <p class="game-subtitle">Mekanik permainan, 5 tipe senjata spesial, dan 4 dunia pertempuran</p>
+
+        <!-- Segmented Tab Navigation -->
+        <div class="clay-tab-bar">
+          <button type="button" class="clay-tab-btn active" data-tab="tab-control">
+            <span class="tab-icon">🎮</span> KONTROL & PANDUAN
+          </button>
+          <button type="button" class="clay-tab-btn" data-tab="tab-weapons">
+            <span class="tab-icon">⚡</span> ARSENAL SENJATA (15S)
+          </button>
+          <button type="button" class="clay-tab-btn" data-tab="tab-worlds">
+            <span class="tab-icon">🏆</span> 4 DUNIA & BOSS
+          </button>
+        </div>
+
+        <div class="guide-tab-content-wrap">
+          <!-- Tab 1: Kontrol & Mekanik -->
+          <div id="tab-control" class="tab-pane active">
+            <div class="control-grid">
+              <div class="instruction-item">
+                <span class="instruction-badge">KONTROL</span>
+                <div class="instruction-text">
+                  <strong>Gerakan Fleksibel:</strong>
+                  <p>Gunakan <code>Mouse</code> (mengikuti kursor) atau <code>W, A, S, D</code> / <code>Tombol Panah</code>.</p>
+                </div>
+              </div>
+              <div class="instruction-item">
+                <span class="instruction-badge">TEMBAK</span>
+                <div class="instruction-text">
+                  <strong>Tembakan Utama:</strong>
+                  <p>Tahan <code>Klik Kiri</code> atau <code>Spasi</code>. Toggle Auto-Fire dengan <code>M</code> atau <code>Klik Kanan</code>.</p>
+                </div>
+              </div>
+              <div class="instruction-item">
+                <span class="instruction-badge">SENJATA</span>
+                <div class="instruction-text">
+                  <strong>Drop Senjata 10–40 Detik:</strong>
+                  <p>Kapsul senjata spesial muncul berkala setiap <strong>10–40 detik</strong> di kondisi apapun (termasuk saat melawan Boss!).</p>
+                </div>
+              </div>
+              <div class="instruction-item">
+                <span class="instruction-badge">NYAWA</span>
+                <div class="instruction-text">
+                  <strong>Regulasi Ketahanan:</strong>
+                  <p>Nyawa ekstra diperoleh setiap kelipatan <strong>250.000 skor</strong> & menumbangkan Boss Kolosal!</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="weapon-preview-row-quick">
+              <span class="preview-label">5 ARSENAL SPESIAL (15S):</span>
+              <div class="weapon-chips-wrap">
+                <span class="weapon-chip chip-red" data-target-weapon="SPREAD" title="Spread Shot">SPREAD</span>
+                <span class="weapon-chip chip-blue" data-target-weapon="LASER" title="Sonic Laser">LASER</span>
+                <span class="weapon-chip chip-green" data-target-weapon="HOMING" title="Homing Missiles">HOMING</span>
+                <span class="weapon-chip chip-yellow" data-target-weapon="FLAK" title="Clay Flak Bomb">FLAK</span>
+                <span class="weapon-chip chip-purple" data-target-weapon="PLASMA" title="Plasma Arc (Listrik)">PLASMA</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Arsenal Senjata (15 Detik) -->
+          <div id="tab-weapons" class="tab-pane">
+            <div class="weapon-notice-banner">
+              <span id="weapon-notice-text">⏱️ Seluruh 5 tipe senjata spesial memiliki durasi aktif <strong>15 detik</strong> sebelum kembali ke Pea-Shooter!</span>
+            </div>
+            <div class="arsenal-grid">
+              <div class="weapon-card card-spread" data-weapon="SPREAD">
+                <div class="weapon-card-header">
+                  <span class="weapon-chip chip-red">SPR</span>
+                  <span class="weapon-card-name">SPREAD SHOT</span>
+                </div>
+                <p class="weapon-card-desc">Tembakan 3 arah menyebar, sangat efektif memusnahkan kawanan musuh yang padat.</p>
+                <span class="weapon-stat">Durasi: 15s • Area Luas</span>
+              </div>
+
+              <div class="weapon-card card-laser" data-weapon="LASER">
+                <div class="weapon-card-header">
+                  <span class="weapon-chip chip-blue">LSR</span>
+                  <span class="weapon-card-name">SONIC LASER</span>
+                </div>
+                <p class="weapon-card-desc">Berkas sinar laser kontinu berkecepatan tinggi yang menembus armor musuh berderet.</p>
+                <span class="weapon-stat">Durasi: 15s • Menembus Target</span>
+              </div>
+
+              <div class="weapon-card card-homing" data-weapon="HOMING">
+                <div class="weapon-card-header">
+                  <span class="weapon-chip chip-green">HOM</span>
+                  <span class="weapon-card-name">HOMING MISSILES</span>
+                </div>
+                <p class="weapon-card-desc">Rudal pintar pencari panas yang secara otomatis memburu dan menghantam target terdekat.</p>
+                <span class="weapon-stat">Durasi: 15s • Pelacak Otomatis</span>
+              </div>
+
+              <div class="weapon-card card-flak" data-weapon="FLAK">
+                <div class="weapon-card-header">
+                  <span class="weapon-chip chip-yellow">FLK</span>
+                  <span class="weapon-card-name">CLAY FLAK BOMB</span>
+                </div>
+                <p class="weapon-card-desc">Bom fragmentasi tanah liat dengan ledakan area radial yang meluluhlantakkan formasi.</p>
+                <span class="weapon-stat">Durasi: 15s • Ledakan Radius</span>
+              </div>
+
+              <div class="weapon-card card-plasma" data-weapon="PLASMA">
+                <div class="weapon-card-header">
+                  <span class="weapon-chip chip-purple">PLS</span>
+                  <span class="weapon-card-name">PLASMA ARC</span>
+                </div>
+                <p class="weapon-card-desc">Arc energi plasma petir ungu yang melompat antar musuh dengan efek kejut mematikan.</p>
+                <span class="weapon-stat">Durasi: 15s • Sambaran Listrik</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Ekspedisi 4 Dunia & Boss -->
+          <div id="tab-worlds" class="tab-pane">
+            <div class="worlds-timeline">
+              <div class="world-item">
+                <span class="world-badge badge-valley">WORLD 1</span>
+                <div class="world-info">
+                  <strong>Lembah Tanah Liat (Stage 1–5)</strong>
+                  <p>Boss Stage 5: <em>The Iron Clay Dreadnought</em></p>
+                </div>
+              </div>
+              <div class="world-item">
+                <span class="world-badge badge-canyon">WORLD 2</span>
+                <div class="world-info">
+                  <strong>Ngarai Senja Sandstone (Stage 6–10)</strong>
+                  <p>Boss Stage 10: <em>The Clay Goliath Zeppelin</em></p>
+                </div>
+              </div>
+              <div class="world-item">
+                <span class="world-badge badge-cyber">WORLD 3</span>
+                <div class="world-info">
+                  <strong>Malam Siber Sintesis (Stage 11–15)</strong>
+                  <p>Boss Stage 15: <em>The Ultimate Clay Leviathan</em></p>
+                </div>
+              </div>
+              <div class="world-item">
+                <span class="world-badge badge-cosmic">WORLD 4</span>
+                <div class="world-info">
+                  <strong>Singularitas Kosmis (Stage 16–20)</strong>
+                  <p>Boss Stage 20: <em>The Omega Clay Colossus</em></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide Footer -->
+        <div class="guide-footer-actions">
+          <button type="button" id="btn-guide-close" class="clay-btn green">
+            <span>✅ MENGERTI & TUTUP (ESC)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Modal (Claymorphism Polished) -->
+    <div id="modal-pause" class="modal-screen">
+      <div class="clay-card pause-modal-card">
+        <div id="pause-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
+        <h2 class="game-title pause-title">GAME DIJEDA</h2>
+        <p class="game-subtitle">Tarik napas sejenak, pilot tanah liat!</p>
+        <div class="pause-actions-grid">
+          <button id="btn-resume" class="clay-btn green">
+            <span class="btn-icon">▶️</span>
+            <span>LANJUT (ENTER)</span>
+          </button>
+          <button id="btn-settings-pause" class="clay-btn tertiary">
+            <span class="btn-icon">⚙️</span>
+            <span>PENGATURAN</span>
+          </button>
+          <button id="btn-restart-pause" class="clay-btn secondary">
+            <span class="btn-icon">🔄</span>
+            <span>ULANGI (R)</span>
+          </button>
+          <button id="btn-menu-pause" class="clay-btn red">
+            <span class="btn-icon">🏠</span>
+            <span>MENU UTAMA (ESC)</span>
+          </button>
+        </div>
+        <p class="keyboard-tip" style="margin-top: 16px;">
+          💡 Tekan <kbd>ESC</kbd> untuk kembali ke Menu Utama • <kbd>ENTER</kbd> untuk melanjutkan
+        </p>
       </div>
     </div>
 
@@ -258,10 +453,16 @@
         <p id="gameover-stats" style="font-size: 1.2rem; margin: 15px 0; color: #4e342e; font-weight: 700;">
           Skor: 0 | Stage: 1 / 20
         </p>
-        <p id="gameover-highscore" style="font-size: 1rem; color: #795548; margin-bottom: 25px;">
+        <p id="gameover-highscore" style="font-size: 1rem; color: #795548; margin-bottom: 20px;">
           Skor Tertinggi: 0
         </p>
-        <button id="btn-retry" class="clay-btn">COBA LAGI</button>
+        <p id="gameover-cheat-notice" class="cheat-unrecorded-notice" style="display: none;">
+          ⚠️ Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+          <button id="btn-retry" class="clay-btn">COBA LAGI (R)</button>
+          <button id="btn-menu-gameover" class="clay-btn secondary">🏠 MENU UTAMA</button>
+        </div>
       </div>
     </div>
 
@@ -274,7 +475,142 @@
         <p id="victory-stats" style="font-size: 1.3rem; margin: 15px 0; color: #4e342e; font-weight: 700;">
           Skor Akhir: 0 | 20 / 20 STAGE COMPLETED!
         </p>
-        <button id="btn-play-again" class="clay-btn green">MAIN LAGI</button>
+        <p id="victory-cheat-notice" class="cheat-unrecorded-notice" style="display: none;">
+          ⚠️ Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+          <button id="btn-play-again" class="clay-btn green">MAIN LAGI</button>
+          <button id="btn-menu-victory" class="clay-btn secondary">🏠 MENU UTAMA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Konfigurasi Curang (Cheat Config Modal) -->
+    <div id="modal-cheat" class="modal-screen">
+      <div class="clay-card cheat-modal-card">
+        <!-- Floating Pill Header -->
+        <div class="cheat-badge-pill">
+          <span>🛠️ FITUR KHUSUS • KENDALI BEBAS</span>
+        </div>
+
+        <h2 class="cheat-modal-title">KONFIGURASI CURANG</h2>
+        <p class="cheat-modal-subtitle">Eksplorasi dan kustomisasi parameter permainan sesuka Anda</p>
+
+        <!-- Unrecorded High Score Warning Notice -->
+        <div class="cheat-warning-card">
+          <span class="cheat-warning-icon">⚠️</span>
+          <div class="cheat-warning-body">
+            <strong>PROTEKSI REKOR TERTINGGI:</strong>
+            <p>Skor dari sesi dengan mode curang aktif <strong>tidak akan dicatat dalam high rekor</strong>.</p>
+          </div>
+        </div>
+
+        <!-- Master Switch: Aktifkan Mode Curang -->
+        <div class="cheat-master-row">
+          <div class="cheat-master-labels">
+            <span class="cheat-master-title">STATUS FITUR CURANG</span>
+            <span id="cheat-master-status-desc" class="cheat-master-desc">Mode curang saat ini: <strong>NON-AKTIF</strong></span>
+          </div>
+          <label class="clay-toggle-switch" title="Toggle Mode Curang">
+            <input type="checkbox" id="cheat-master-toggle" />
+            <span class="clay-toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Cheat Settings Controls Panel -->
+        <div id="cheat-controls-panel" class="cheat-controls-panel">
+          <!-- 1. Awal Stage (1 - 20) -->
+          <div class="cheat-control-group">
+            <div class="cheat-group-header">
+              <div class="cheat-group-label">
+                <span class="group-icon">🚀</span>
+                <span class="group-title">AWAL STAGE (STAGE 1 – 20)</span>
+              </div>
+              <span id="cheat-stage-val-badge" class="cheat-val-badge">STAGE 1</span>
+            </div>
+            <div id="cheat-stage-desc" class="cheat-detail-info">
+              Lembah Tanah Liat (Misi 1: Sapu Penyelidik Musuh)
+            </div>
+            <div class="clay-stepper-wrap">
+              <button type="button" class="clay-step-btn" id="btn-stage-dec" title="Kurangi Stage">−</button>
+              <input type="range" id="cheat-stage-slider" min="1" max="20" value="1" class="clay-slider" />
+              <button type="button" class="clay-step-btn" id="btn-stage-inc" title="Tambah Stage">+</button>
+            </div>
+            <!-- Quick Preset Chips for Worlds & Bosses -->
+            <div class="cheat-quick-pills">
+              <button type="button" class="quick-chip" data-set-stage="1">W1: Stg 1</button>
+              <button type="button" class="quick-chip" data-set-stage="5">Boss 1 (Stg 5)</button>
+              <button type="button" class="quick-chip" data-set-stage="6">W2: Stg 6</button>
+              <button type="button" class="quick-chip" data-set-stage="10">Boss 2 (Stg 10)</button>
+              <button type="button" class="quick-chip" data-set-stage="11">W3: Stg 11</button>
+              <button type="button" class="quick-chip" data-set-stage="15">Boss 3 (Stg 15)</button>
+              <button type="button" class="quick-chip" data-set-stage="16">W4: Stg 16</button>
+              <button type="button" class="quick-chip" data-set-stage="20">Final (Stg 20)</button>
+            </div>
+          </div>
+
+          <!-- 2. Jumlah Nyawa Awal (1 - 20 / Tak Terbatas) -->
+          <div class="cheat-control-group">
+            <div class="cheat-group-header">
+              <div class="cheat-group-label">
+                <span class="group-icon">❤️</span>
+                <span class="group-title">JUMLAH NYAWA AWAL (MAX 20 / TAK TERBATAS)</span>
+              </div>
+              <span id="cheat-lives-val-badge" class="cheat-val-badge">10 NYAWA</span>
+            </div>
+            <div class="clay-stepper-wrap" id="wrap-lives-slider">
+              <button type="button" class="clay-step-btn" id="btn-lives-dec" title="Kurangi Nyawa">−</button>
+              <input type="range" id="cheat-lives-slider" min="1" max="20" value="10" class="clay-slider" />
+              <button type="button" class="clay-step-btn" id="btn-lives-inc" title="Tambah Nyawa">+</button>
+            </div>
+            <div class="cheat-toggle-option-row">
+              <button type="button" id="btn-toggle-infinite-lives" class="clay-opt-toggle">
+                <span class="opt-icon">♾️</span>
+                <span class="opt-text">Nyawa Tak Terbatas (Infinite)</span>
+              </button>
+              <span class="cheat-priority-tag">⭐ Diprioritaskan di atas Difficulty</span>
+            </div>
+          </div>
+
+          <!-- 3. Durasi Senjata (Max 60 Detik / Tak Terbatas) -->
+          <div class="cheat-control-group">
+            <div class="cheat-group-header">
+              <div class="cheat-group-label">
+                <span class="group-icon">⚡</span>
+                <span class="group-title">DURASI SENJATA (MAX 60 DETIK / TAK TERBATAS)</span>
+              </div>
+              <span id="cheat-weapon-val-badge" class="cheat-val-badge">15 DETIK</span>
+            </div>
+            <div class="clay-stepper-wrap" id="wrap-weapon-slider">
+              <button type="button" class="clay-step-btn" id="btn-weapon-dec" title="Kurangi Durasi">−</button>
+              <input type="range" id="cheat-weapon-slider" min="5" max="60" step="5" value="15" class="clay-slider" />
+              <button type="button" class="clay-step-btn" id="btn-weapon-inc" title="Tambah Durasi">+</button>
+            </div>
+            <div class="cheat-toggle-option-row">
+              <button type="button" id="btn-toggle-infinite-weapon" class="clay-opt-toggle">
+                <span class="opt-icon">♾️</span>
+                <span class="opt-text">Durasi Senjata Tak Terbatas (Infinite)</span>
+              </button>
+              <span class="cheat-priority-tag">⭐ Diprioritaskan di atas Difficulty</span>
+            </div>
+          </div>
+
+          <!-- Priority Notice -->
+          <div class="cheat-priority-info-box">
+            <span class="priority-badge">🎯 ATURAN PRIORITAS KELAYAKAN</span>
+            <p>Pilihan pada konfigurasi curang akan <strong>selalu diprioritaskan dibanding difficulty</strong>. Misalnya jika Anda memilih difficulty <em>Hard</em> tetapi mengatur <em>Nyawa Tak Terbatas</em>, Anda akan tetap memiliki nyawa tak terbatas di permainan!</p>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="cheat-footer-actions">
+          <button type="button" id="btn-cheat-reset" class="clay-btn secondary">
+            <span>🔄 RESET DEFAULT</span>
+          </button>
+          <button type="button" id="btn-cheat-save" class="clay-btn green">
+            <span>✅ SIMPAN & TUTUP</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
