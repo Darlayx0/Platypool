@@ -10,7 +10,7 @@ export class Player {
     this.reset();
   }
 
-  reset(difficultyConfig = null) {
+  reset(difficultyConfig = null, cheatOverrides = null) {
     if (difficultyConfig) {
       this.difficultyConfig = difficultyConfig;
     }
@@ -21,24 +21,51 @@ export class Player {
       keepWeaponOnDeath: false
     };
 
+    const cheats = cheatOverrides !== null ? cheatOverrides : (this.cheatOverrides || {});
+    this.cheatOverrides = cheats;
+
     this.x = 160;
     this.y = this.canvasHeight / 2;
     this.radius = 22;
     this.speed = 460;
     this.tilt = 0;
-    this.maxLives = diff.maxLives !== undefined ? diff.maxLives : 10;
-    this.lives = Math.min(3, this.maxLives);
+
+    // Handle Infinite Lives vs Custom Starting Lives vs Difficulty Default
+    if (cheats.infiniteLives) {
+      this.infiniteLives = true;
+      this.lives = Infinity;
+      this.maxLives = Infinity;
+    } else if (cheats.startingLives !== undefined && cheats.startingLives !== null) {
+      this.infiniteLives = false;
+      this.maxLives = Math.max(20, cheats.startingLives);
+      this.lives = cheats.startingLives;
+    } else {
+      this.infiniteLives = false;
+      this.maxLives = diff.maxLives !== undefined ? diff.maxLives : 10;
+      this.lives = Math.min(3, this.maxLives);
+    }
+
     this.score = 0;
     this.scoreIntervalForLife = diff.scoreIntervalForLife || 250000;
     this.nextLifeScore = this.scoreIntervalForLife;
     this.combo = 1;
     this.comboTimer = 0;
 
-    // Weapon state
+    // Weapon state (Infinite duration vs custom duration vs difficulty default)
     this.activeWeapon = 'NORMAL';
     this.weaponTimeLeft = 0;
-    this.maxWeaponTime = diff.weaponDuration || 15;
-    this.keepWeaponOnDeath = Boolean(diff.keepWeaponOnDeath);
+    if (cheats.infiniteWeaponDuration) {
+      this.infiniteWeapon = true;
+      this.maxWeaponTime = Infinity;
+    } else if (cheats.weaponDuration !== undefined && cheats.weaponDuration !== null) {
+      this.infiniteWeapon = false;
+      this.maxWeaponTime = cheats.weaponDuration;
+    } else {
+      this.infiniteWeapon = false;
+      this.maxWeaponTime = diff.weaponDuration || 15;
+    }
+
+    this.keepWeaponOnDeath = Boolean(diff.keepWeaponOnDeath) || Boolean(this.infiniteWeapon);
     this.shootTimer = 0;
 
     // Invulnerability
@@ -50,8 +77,8 @@ export class Player {
   respawn() {
     this.x = 160;
     this.y = this.canvasHeight / 2;
-    // When keepWeaponOnDeath is enabled (Easy mode), active weapon & time are retained
-    if (!this.keepWeaponOnDeath) {
+    // When keepWeaponOnDeath is enabled (Easy mode) or infinite weapon active, active weapon is retained
+    if (!this.keepWeaponOnDeath && !this.infiniteWeapon) {
       this.activeWeapon = 'NORMAL';
       this.weaponTimeLeft = 0;
     }
@@ -60,7 +87,7 @@ export class Player {
 
   setWeapon(type) {
     this.activeWeapon = type;
-    this.weaponTimeLeft = this.maxWeaponTime;
+    this.weaponTimeLeft = this.infiniteWeapon ? Infinity : this.maxWeaponTime;
   }
 
   update(dt, input, particles) {
@@ -68,10 +95,14 @@ export class Player {
 
     // Weapon duration countdown
     if (this.activeWeapon !== 'NORMAL') {
-      this.weaponTimeLeft -= dt;
-      if (this.weaponTimeLeft <= 0) {
-        this.activeWeapon = 'NORMAL';
-        this.weaponTimeLeft = 0;
+      if (!this.infiniteWeapon) {
+        this.weaponTimeLeft -= dt;
+        if (this.weaponTimeLeft <= 0) {
+          this.activeWeapon = 'NORMAL';
+          this.weaponTimeLeft = 0;
+        }
+      } else {
+        this.weaponTimeLeft = Infinity;
       }
     }
 
@@ -275,11 +306,11 @@ export class Player {
     this.combo = Math.min(8, this.combo + 0.1);
     this.comboTimer = 2.5; // refresh combo window
 
-    // Extra life every 250,000 score
+    // Extra life every scoreIntervalForLife
     let livesAwarded = 0;
     while (this.score >= this.nextLifeScore) {
       this.nextLifeScore += this.scoreIntervalForLife;
-      if (this.lives < this.maxLives) {
+      if (!this.infiniteLives && this.lives < this.maxLives) {
         this.lives++;
         livesAwarded++;
       }
@@ -289,6 +320,10 @@ export class Player {
 
   hit() {
     if (this.invulnerableTimer > 0) return false;
+    if (this.infiniteLives) {
+      this.invulnerableTimer = 2.5;
+      return true;
+    }
     this.lives--;
     return true;
   }

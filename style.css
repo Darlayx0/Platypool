@@ -150,6 +150,16 @@ body {
   text-shadow: 2px 2px 0 #1b5e20;
 }
 
+.clay-btn.tertiary {
+  background: linear-gradient(180deg, #8d6e63, #4e342e);
+  box-shadow: 
+    inset 0 4px 6px var(--clay-highlight),
+    inset 0 -5px 6px rgba(0, 0, 0, 0.4),
+    0 8px 15px rgba(0, 0, 0, 0.4),
+    0 4px 0 #271612;
+  text-shadow: 2px 2px 0 #271612;
+}
+
 /* Modal Screens with Glass-Clay Backdrop */
 .modal-screen {
   position: absolute;
@@ -773,66 +783,454 @@ body {
   box-shadow: 0 2px 0 #271612;
 }
 
-/* In-game HUD controls topbar */
-#hud-topbar {
+/* =======================================================
+   DYNAMIC HUD TOAST MICRO-INTERACTIONS (Auto-Fire / Hints)
+   ======================================================= */
+.hud-toast {
   position: absolute;
-  top: 12px;
-  left: 16px;
-  right: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.hud-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  pointer-events: auto;
-}
-
-.hud-icon-btn {
-  background: rgba(46, 32, 28, 0.88);
-  color: #ffecb3;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, #3e2723, #271612);
   border: 2px solid #8d6e63;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  color: #fff;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 1rem;
+  letter-spacing: 0.8px;
+  padding: 8px 24px;
+  border-radius: 20px;
+  box-shadow: 
+    0 10px 24px rgba(0, 0, 0, 0.55),
+    inset 0 2px 4px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-shadow: 1px 1px 0 #000;
+  animation: toastDropIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.hud-toast.active-green {
+  background: linear-gradient(145deg, #2e7d32, #1b5e20);
+  border-color: #66bb6a;
+  color: #e8f5e9;
+  text-shadow: 1px 1px 0 #0f3d13;
+}
+
+.hud-toast.active-amber {
+  background: linear-gradient(145deg, #f57c00, #bf360c);
+  border-color: #ffb74d;
+  color: #fff8e1;
+  text-shadow: 1px 1px 0 #6d1b00;
+}
+
+@keyframes toastDropIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, 4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* =======================================================
+   MINIMAL, TO-THE-POINT MAIN MENU (CLAYMORPHISM POLISHED)
+   ======================================================= */
+.minimal-main-menu {
+  max-width: 580px;
+  padding: 32px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu-action-area {
+  margin-top: 10px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.menu-nav-actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-  transition: transform 0.12s, background 0.2s, border-color 0.2s;
-  padding: 0;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
-.hud-svg {
+.clay-nav-btn {
+  background: linear-gradient(145deg, #f0e4d0, #d7c2a2);
+  border: 2px solid #8d6e63;
+  border-radius: 18px;
+  padding: 10px 18px;
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #4e342e;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.2),
+    inset 0 2px 3px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.14s ease, filter 0.14s ease;
+  outline: none;
+}
+
+.clay-nav-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  filter: brightness(1.08);
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.26),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.22);
+}
+
+.clay-nav-btn:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 
+    0 2px 5px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.clay-nav-btn.subtle-cheat {
+  background: rgba(62, 39, 35, 0.14);
+  border-color: rgba(141, 110, 99, 0.45);
+  color: #6d4c41;
+}
+
+.clay-nav-btn.subtle-cheat:hover {
+  background: rgba(62, 39, 35, 0.24);
+  color: #3e2723;
+}
+
+.nav-btn-icon {
+  font-size: 1.05rem;
+}
+
+.nav-btn-text {
+  font-family: 'Luckiest Guy', cursive;
+  letter-spacing: 0.5px;
+  font-size: 0.95rem;
+}
+
+/* =======================================================
+   SETTINGS MODAL (CLAYMORPHISM AUDIO & CONTROLS SUITE)
+   ======================================================= */
+.settings-modal-card {
+  max-width: 620px;
+  max-height: 90vh;
+  padding: 24px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.settings-content-scroll {
+  width: 100%;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 6px 0 14px 0;
+}
+
+.settings-content-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.settings-content-scroll::-webkit-scrollbar-thumb {
+  background: #a1887f;
+  border-radius: 4px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.settings-section-title {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.95rem;
+  letter-spacing: 0.8px;
+  color: #6d4c41;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+.settings-card-item {
+  background: rgba(255, 255, 255, 0.55);
+  border: 2px solid #bcaaa4;
+  border-radius: 18px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.65),
+    0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.settings-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.settings-name {
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #3e2723;
   display: block;
-  width: 20px;
-  height: 20px;
+}
+
+.settings-subdesc {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #6d4c41;
+  line-height: 1.25;
+  display: block;
+  margin-top: 2px;
+}
+
+.settings-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(141, 110, 99, 0.35);
+  transition: opacity 0.2s ease;
+}
+
+.settings-slider-row.disabled {
+  opacity: 0.45;
   pointer-events: none;
 }
 
-.hud-icon-btn:hover {
-  transform: scale(1.1);
-  background: #4e342e;
-  border-color: #bcaaa4;
+.settings-slider-label {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.82rem;
+  color: #5d4037;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
-.hud-icon-btn:active {
-  transform: scale(0.95);
+.settings-val-badge {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.9rem;
+  color: #fff;
+  background: linear-gradient(180deg, #ff7043, #d84315);
+  padding: 3px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+  min-width: 48px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Mode Segmented Bar */
+.mode-segmented-bar {
+  display: flex;
+  gap: 8px;
+  background: rgba(62, 39, 35, 0.12);
+  padding: 4px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(141, 110, 99, 0.35);
+  width: 100%;
+}
+
+.mode-seg-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.86rem;
+  letter-spacing: 0.5px;
+  color: #6d4c41;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.16s ease;
+  outline: none;
+}
+
+.mode-seg-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  color: #3e2723;
+}
+
+.mode-seg-btn.active {
+  background: linear-gradient(180deg, #ffa726, #e65100);
+  color: #ffffff;
+  box-shadow: 
+    0 4px 8px rgba(230, 81, 0, 0.35),
+    inset 0 2px 3px rgba(255, 255, 255, 0.5);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.control-mode-desc {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #5d4037;
+  padding: 4px 2px 2px 2px;
+  line-height: 1.35;
+}
+
+/* Keyboard Shortcuts Reference Grid */
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.shortcut-pill {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1.5px solid #bcaaa4;
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4e342e;
+}
+
+.shortcut-pill kbd {
+  background: #3e2723;
+  color: #ffecb3;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.74rem;
+  box-shadow: 0 2px 0 #1b120c;
+  flex-shrink: 0;
+}
+
+.settings-footer-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+/* =======================================================
+   GUIDE MODAL (PANDUAN & ENSIKLOPEDIA)
+   ======================================================= */
+.guide-modal-card {
+  max-width: 660px;
+  max-height: 90vh;
+  padding: 24px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.guide-tab-content-wrap {
+  width: 100%;
+  max-height: 56vh;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 14px;
+}
+
+.guide-tab-content-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+.guide-tab-content-wrap::-webkit-scrollbar-thumb {
+  background: #a1887f;
+  border-radius: 4px;
+}
+
+.guide-footer-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* =======================================================
+   PAUSE MODAL (POLISHED CLAY ACTIONS)
+   ======================================================= */
+.pause-modal-card {
+  max-width: 520px;
+  padding: 28px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pause-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.clay-btn.red {
+  background: linear-gradient(180deg, #ef5350, #c62828);
+  box-shadow: 
+    inset 0 4px 6px var(--clay-highlight),
+    inset 0 -5px 6px rgba(0, 0, 0, 0.4),
+    0 8px 15px rgba(0, 0, 0, 0.4),
+    0 4px 0 #8e0000;
+  text-shadow: 2px 2px 0 #8e0000;
+}
+
+.clay-btn.red:hover {
+  filter: brightness(1.12);
 }
 
 /* Responsive Scaling */
 @media (max-width: 640px) {
   .game-title {
-    font-size: 2.6rem;
+    font-size: 2.3rem;
   }
   .clay-card {
     padding: 18px 16px;
+    width: 96%;
   }
   .control-grid {
     grid-template-columns: 1fr;
@@ -844,5 +1242,555 @@ body {
   .clay-btn.primary-launch {
     font-size: 1.1rem;
     padding: 10px 24px;
+    width: 100%;
   }
+  .pause-actions-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+  .mode-segmented-bar {
+    flex-direction: column;
+  }
+  .menu-nav-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .clay-nav-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .settings-modal-card,
+  .guide-modal-card {
+    padding: 16px 14px;
+  }
+}
+
+/* Subtle Non-Dominant Cheat Trigger Button in Main Menu */
+.menu-subtle-footer {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.clay-subtle-cheat-btn {
+  background: rgba(62, 39, 35, 0.16);
+  border: 1.5px solid rgba(141, 110, 99, 0.45);
+  border-radius: 18px;
+  padding: 5px 14px;
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6d4c41;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5), 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.clay-subtle-cheat-btn:hover {
+  background: rgba(62, 39, 35, 0.28);
+  border-color: #8d6e63;
+  color: #3e2723;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.6), 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+.clay-subtle-cheat-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.cheat-trigger-icon {
+  font-size: 0.95rem;
+}
+
+.cheat-pill-status {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+
+.cheat-pill-status.off {
+  background: rgba(141, 110, 99, 0.25);
+  color: #8d6e63;
+}
+
+.cheat-pill-status.active {
+  background: linear-gradient(180deg, #ff7043, #d84315);
+  color: #ffffff;
+  box-shadow: 0 1px 5px rgba(216, 67, 21, 0.45);
+}
+
+/* Cheat Unrecorded High Score Notice on Game Over / Victory */
+.cheat-unrecorded-notice {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #d84315;
+  background: rgba(255, 171, 0, 0.18);
+  border: 1.5px dashed #f57c00;
+  border-radius: 12px;
+  padding: 6px 14px;
+  margin-bottom: 16px;
+  display: inline-block;
+  animation: pulseNotice 2.5s infinite ease-in-out;
+}
+
+@keyframes pulseNotice {
+  0%, 100% { opacity: 0.92; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.01); }
+}
+
+/* Dedicated Cheat Configuration Modal Card */
+.cheat-modal-card {
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 22px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cheat-modal-card::-webkit-scrollbar {
+  width: 6px;
+}
+.cheat-modal-card::-webkit-scrollbar-thumb {
+  background: #a1887f;
+  border-radius: 3px;
+}
+
+.cheat-badge-pill {
+  background: #4e342e;
+  color: #ffe082;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 3px 14px;
+  border-radius: 16px;
+  margin-bottom: 6px;
+  border: 1px solid #8d6e63;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cheat-modal-title {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 2.2rem;
+  color: #d84315;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #bf360c, -1px -1px 0 #fff, 0 3px 10px rgba(0, 0, 0, 0.3);
+  margin-bottom: 2px;
+}
+
+.cheat-modal-subtitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5d4037;
+  margin-bottom: 14px;
+}
+
+/* Warning Card for High Score Protection */
+.cheat-warning-card {
+  background: rgba(255, 235, 59, 0.22);
+  border: 2px dashed #f57c00;
+  border-radius: 14px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  margin-bottom: 14px;
+  width: 100%;
+}
+
+.cheat-warning-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.cheat-warning-body strong {
+  font-size: 0.8rem;
+  color: #bf360c;
+  display: block;
+  letter-spacing: 0.3px;
+}
+
+.cheat-warning-body p {
+  font-size: 0.76rem;
+  color: #4e342e;
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+/* Master Switch Row */
+.cheat-master-row {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.65);
+  border: 2.5px solid #8d6e63;
+  border-radius: 18px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.65), 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cheat-master-labels {
+  text-align: left;
+}
+
+.cheat-master-title {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 1rem;
+  color: #3e2723;
+  letter-spacing: 0.5px;
+  display: block;
+}
+
+.cheat-master-desc {
+  font-size: 0.78rem;
+  color: #5d4037;
+}
+
+.cheat-master-desc strong {
+  color: #d84315;
+}
+
+/* Tactile 3D Clay Toggle Switch */
+.clay-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 58px;
+  height: 32px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.clay-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.clay-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #a1887f;
+  border: 2px solid #5d4037;
+  border-radius: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.clay-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background: linear-gradient(180deg, #f5f5f5, #e0e0e0);
+  border-radius: 50%;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.8);
+}
+
+.clay-toggle-switch input:checked + .clay-toggle-slider {
+  background: linear-gradient(180deg, #66bb6a, #2e7d32);
+  border-color: #1b5e20;
+}
+
+.clay-toggle-switch input:checked + .clay-toggle-slider:before {
+  transform: translateX(26px);
+  background: linear-gradient(180deg, #ffffff, #f1f8e9);
+}
+
+/* Cheat Controls Panel */
+.cheat-controls-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.cheat-controls-panel.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
+/* Option Groups */
+.cheat-control-group {
+  background: rgba(255, 255, 255, 0.52);
+  border: 2px solid #bcaaa4;
+  border-radius: 16px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6);
+}
+
+.cheat-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cheat-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-icon {
+  font-size: 1rem;
+}
+
+.group-title {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.88rem;
+  color: #3e2723;
+  letter-spacing: 0.5px;
+}
+
+.cheat-val-badge {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.88rem;
+  color: #fff;
+  background: linear-gradient(180deg, #ff7043, #d84315);
+  padding: 2px 10px;
+  border-radius: 12px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+  letter-spacing: 0.5px;
+}
+
+.cheat-detail-info {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #5d4037;
+  padding-left: 2px;
+}
+
+/* Stepper Wrap & Clay Controls */
+.clay-stepper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.clay-step-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(180deg, #ff8a65, #d84315);
+  color: #fff;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.6), 0 3px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease, filter 0.15s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.clay-step-btn:hover {
+  transform: translateY(-1px) scale(1.08);
+  filter: brightness(1.12);
+}
+
+.clay-step-btn:active {
+  transform: translateY(2px) scale(0.94);
+}
+
+.clay-step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Custom Clay Range Slider */
+.clay-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  background: rgba(62, 39, 35, 0.35);
+  border-radius: 5px;
+  outline: none;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.clay-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffa726, #e65100);
+  border: 2px solid #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.8);
+  transition: transform 0.12s ease;
+}
+
+.clay-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.clay-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffa726, #e65100);
+  border: 2px solid #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.8);
+}
+
+.clay-slider:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Quick Preset Chips */
+.cheat-quick-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.quick-chip {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid #bcaaa4;
+  border-radius: 10px;
+  padding: 3px 8px;
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4e342e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.quick-chip:hover {
+  background: #d84315;
+  color: #fff;
+  border-color: #bf360c;
+  transform: translateY(-1px);
+}
+
+.quick-chip:active {
+  transform: translateY(1px);
+}
+
+/* Infinite Toggle Buttons */
+.cheat-toggle-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.clay-opt-toggle {
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid #8d6e63;
+  border-radius: 14px;
+  padding: 5px 12px;
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4e342e;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  outline: none;
+}
+
+.clay-opt-toggle:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.clay-opt-toggle:active {
+  transform: translateY(1px);
+}
+
+.clay-opt-toggle.active {
+  background: linear-gradient(180deg, #66bb6a, #2e7d32);
+  border-color: #1b5e20;
+  color: #ffffff;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 3px 8px rgba(46, 125, 50, 0.4);
+}
+
+.cheat-priority-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #bf360c;
+}
+
+/* Priority Info Box */
+.cheat-priority-info-box {
+  background: rgba(62, 39, 35, 0.12);
+  border: 1.5px solid rgba(141, 110, 99, 0.45);
+  border-radius: 14px;
+  padding: 8px 12px;
+  text-align: left;
+  margin-top: 4px;
+}
+
+.priority-badge {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.78rem;
+  color: #d84315;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.cheat-priority-info-box p {
+  font-size: 0.74rem;
+  color: #4e342e;
+  line-height: 1.35;
+}
+
+.cheat-priority-info-box strong {
+  color: #bf360c;
+}
+
+/* Footer Actions */
+.cheat-footer-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 14px;
+  width: 100%;
 }

@@ -19,6 +19,11 @@ export class HUD {
     this.bossDisplayHp = 1.0;
     this.bossHudAlpha = 0;
     this.hudTick = 0;
+    this.isCheatActive = false;
+  }
+
+  setCheatActive(active) {
+    this.isCheatActive = Boolean(active);
   }
 
   setDifficulty(diffId, config) {
@@ -49,7 +54,7 @@ export class HUD {
   update(dt, player, boss) {
     this.hudTick += dt;
 
-    if (player && player.score > this.highScore) {
+    if (player && player.score > this.highScore && !this.isCheatActive) {
       this.highScore = Math.floor(player.score);
       try {
         const key = this.difficulty ? `platypus_highscore_${this.difficulty}` : 'platypus_highscore';
@@ -128,7 +133,8 @@ export class HUD {
     // High Score
     ctx.font = '700 13px Fredoka, sans-serif';
     ctx.fillStyle = '#ffecb3';
-    ctx.fillText(`TERTINGGI: ${this.highScore.toLocaleString()}`, sx + 14, sy + 52);
+    const hsText = this.isCheatActive ? `TERTINGGI: ${this.highScore.toLocaleString()} (NON-AKTIF)` : `TERTINGGI: ${this.highScore.toLocaleString()}`;
+    ctx.fillText(hsText, sx + 14, sy + 52);
 
     // Difficulty Pill Badge below score panel
     const diffLabel = (this.difficultyConfig && this.difficultyConfig.name) || this.difficulty || 'NORMAL';
@@ -140,6 +146,14 @@ export class HUD {
     ctx.textBaseline = 'middle';
     ctx.shadowBlur = 3;
     ctx.fillText(`MODE: ${diffLabel}`, sx + 52, sy + 77);
+
+    // Cheat Mode Active Pill
+    if (this.isCheatActive) {
+      ClayRenderer.drawClayCapsule(ctx, sx + 148, sy + 76, 88, 20, '#d84315', '#bf360c');
+      ctx.font = 'bold 10px Luckiest Guy, cursive';
+      ctx.fillStyle = '#ffe082';
+      ctx.fillText('⚡ CURANG', sx + 148, sy + 77);
+    }
 
     // Dynamic Multiplier / Combo Badge
     if (player.combo > 1) {
@@ -160,8 +174,9 @@ export class HUD {
   }
 
   drawLivesPanel(ctx, player) {
-    const lives = Math.max(0, player.lives);
-    const maxLives = player.maxLives || 10;
+    const isInfinite = Boolean(player.infiniteLives);
+    const lives = isInfinite ? '∞' : Math.max(0, player.lives);
+    const maxLives = isInfinite ? '∞' : (player.maxLives || 10);
 
     ctx.save();
 
@@ -180,18 +195,34 @@ export class HUD {
     ctx.shadowBlur = 4;
     ctx.fillText(`LIVES: ${lives} / ${maxLives}`, badgeX + 22, badgeY + 1);
 
-    // 2. Ships Tray with Adaptive Spacing & Scale (supporting up to 15 lives smoothly)
+    // 2. Ships Tray with Adaptive Spacing & Scale (supporting up to 20 lives smoothly or infinite)
     const startX = 26;
     const startY = 688;
-    const scale = lives > 11 ? 0.50 : (lives > 8 ? 0.60 : (lives > 5 ? 0.72 : 0.82));
-    const spacing = lives > 11 ? 21 : (lives > 8 ? 25 : (lives > 5 ? 29 : 35));
+    if (isInfinite) {
+      for (let i = 0; i < 5; i++) {
+        ctx.save();
+        ctx.translate(startX + i * 30, startY);
+        ctx.scale(0.72, 0.72);
+        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, 0, 'NORMAL');
+        ctx.restore();
+      }
+      ctx.font = 'bold 24px Fredoka, sans-serif';
+      ctx.fillStyle = '#ffd54f';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('♾️', startX + 5 * 30 + 4, startY);
+    } else {
+      const shipCount = Math.min(20, Math.max(0, player.lives));
+      const scale = shipCount > 15 ? 0.44 : (shipCount > 11 ? 0.50 : (shipCount > 8 ? 0.60 : (shipCount > 5 ? 0.72 : 0.82)));
+      const spacing = shipCount > 15 ? 18 : (shipCount > 11 ? 21 : (shipCount > 8 ? 25 : (shipCount > 5 ? 29 : 35)));
 
-    for (let i = 0; i < lives; i++) {
-      ctx.save();
-      ctx.translate(startX + i * spacing, startY);
-      ctx.scale(scale, scale);
-      ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, 0, 'NORMAL');
-      ctx.restore();
+      for (let i = 0; i < shipCount; i++) {
+        ctx.save();
+        ctx.translate(startX + i * spacing, startY);
+        ctx.scale(scale, scale);
+        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, 0, 'NORMAL');
+        ctx.restore();
+      }
     }
 
     ctx.restore();
@@ -214,7 +245,7 @@ export class HUD {
 
     const cur = weapons[player.activeWeapon] || weapons.NORMAL;
     const isSpecial = player.activeWeapon !== 'NORMAL';
-    const isExpiring = isSpecial && player.weaponTimeLeft <= 4.0;
+    const isExpiring = isSpecial && !player.infiniteWeapon && player.weaponTimeLeft <= 4.0;
 
     ctx.save();
 
@@ -268,10 +299,15 @@ export class HUD {
       ctx.font = '700 12px Fredoka, sans-serif';
       ctx.fillStyle = isExpiring ? '#ff5252' : '#ffffff';
       ctx.textAlign = 'right';
-      ctx.fillText(`⏱️ ${timeLeft.toFixed(1)}s / 15.0s`, cx + cardW / 2 - 20, cy - 6);
+      if (player.infiniteWeapon) {
+        ctx.fillText('⏱️ ∞ (TAK TERBATAS)', cx + cardW / 2 - 20, cy - 6);
+      } else {
+        const totalDur = (player.maxWeaponTime || 15.0).toFixed(0);
+        ctx.fillText(`⏱️ ${timeLeft.toFixed(1)}s / ${totalDur}s`, cx + cardW / 2 - 20, cy - 6);
+      }
 
       // Dual-Layer Progress Gauge
-      const ratio = Math.max(0, Math.min(1, player.weaponTimeLeft / player.maxWeaponTime));
+      const ratio = player.infiniteWeapon ? 1.0 : Math.max(0, Math.min(1, player.weaponTimeLeft / player.maxWeaponTime));
       const barX = badgeX + 22;
       const barY = cy + 4;
       const barW = cardW - 84;

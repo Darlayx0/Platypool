@@ -6,6 +6,8 @@ export class SoundController {
     this.ctx = null;
     this.sfxEnabled = true;
     this.musicEnabled = true;
+    this.sfxVolume = 0.85;
+    this.musicVolume = 0.50;
     this.isMuted = false;
 
     // Audio Routing Nodes
@@ -63,12 +65,12 @@ export class SoundController {
 
       // 4. SFX Bus
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(this.sfxEnabled ? this.sfxVolume : 0, this.ctx.currentTime);
       this.sfxGain.connect(this.warmthFilter);
 
       // 5. Music Bus
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.setValueAtTime(0.38, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this.musicEnabled ? (this.musicVolume * 0.45) : 0, this.ctx.currentTime);
       this.musicGain.connect(this.warmthFilter);
 
       // 6. Stereo Spatial Delay / Reverb Line (Adds lush acoustic depth to synth plucks & leads)
@@ -137,18 +139,36 @@ export class SoundController {
     }
   }
 
-  toggleSFX() {
-    this.sfxEnabled = !this.sfxEnabled;
+  setSFXVolume(volume) {
+    this.sfxVolume = Math.max(0, Math.min(1, Number(volume) || 0));
     if (this.sfxGain && this.ctx) {
-      this.sfxGain.gain.setValueAtTime(this.sfxEnabled ? 0.85 : 0, this.ctx.currentTime);
+      const target = this.sfxEnabled ? this.sfxVolume : 0;
+      this.sfxGain.gain.setValueAtTime(target, this.ctx.currentTime);
+    }
+  }
+
+  setMusicVolume(volume) {
+    this.musicVolume = Math.max(0, Math.min(1, Number(volume) || 0));
+    if (this.musicGain && this.ctx) {
+      const target = this.musicEnabled ? (this.musicVolume * 0.45) : 0;
+      this.musicGain.gain.setValueAtTime(target, this.ctx.currentTime);
+    }
+  }
+
+  setSFXEnabled(enabled) {
+    this.sfxEnabled = Boolean(enabled);
+    if (this.sfxGain && this.ctx) {
+      const target = this.sfxEnabled ? this.sfxVolume : 0;
+      this.sfxGain.gain.setValueAtTime(target, this.ctx.currentTime);
     }
     return this.sfxEnabled;
   }
 
-  toggleMusic() {
-    this.musicEnabled = !this.musicEnabled;
+  setMusicEnabled(enabled) {
+    this.musicEnabled = Boolean(enabled);
     if (this.musicGain && this.ctx) {
-      this.musicGain.gain.setValueAtTime(this.musicEnabled ? 0.38 : 0, this.ctx.currentTime);
+      const target = this.musicEnabled ? (this.musicVolume * 0.45) : 0;
+      this.musicGain.gain.setValueAtTime(target, this.ctx.currentTime);
     }
     if (this.musicEnabled) {
       this.startMusic();
@@ -156,6 +176,14 @@ export class SoundController {
       this.stopMusic();
     }
     return this.musicEnabled;
+  }
+
+  toggleSFX() {
+    return this.setSFXEnabled(!this.sfxEnabled);
+  }
+
+  toggleMusic() {
+    return this.setMusicEnabled(!this.musicEnabled);
   }
 
   // --- SOUND EFFECTS (SFX) WITH PROFESSIONAL SMOOTH TIMBRE ---

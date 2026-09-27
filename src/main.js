@@ -16,31 +16,93 @@ function initGameApp() {
   const modalPause = document.getElementById('modal-pause');
   const modalGameOver = document.getElementById('modal-gameover');
   const modalVictory = document.getElementById('modal-victory');
+  const modalCheat = document.getElementById('modal-cheat');
+  const modalSettings = document.getElementById('modal-settings');
+  const modalGuide = document.getElementById('modal-guide');
 
-  // DOM Buttons
+  // DOM Buttons - Navigation & Actions
   const btnPlayGame = document.getElementById('btn-play-game');
   const btnResume = document.getElementById('btn-resume');
   const btnRestartPause = document.getElementById('btn-restart-pause');
+  const btnMenuPause = document.getElementById('btn-menu-pause');
   const btnRetry = document.getElementById('btn-retry');
+  const btnMenuGameOver = document.getElementById('btn-menu-gameover');
   const btnPlayAgain = document.getElementById('btn-play-again');
+  const btnMenuVictory = document.getElementById('btn-menu-victory');
 
-  // HUD Quick Action Buttons
-  const btnSound = document.getElementById('btn-sound');
-  const btnMusic = document.getElementById('btn-music');
-  const btnControlMode = document.getElementById('btn-control-mode');
-  const btnAutoFire = document.getElementById('btn-autofire');
-  const btnPause = document.getElementById('btn-pause');
-  const btnFullscreen = document.getElementById('btn-fullscreen');
+  // Navigation & Modal triggers
+  const btnOpenSettings = document.getElementById('btn-open-settings');
+  const btnSettingsPause = document.getElementById('btn-settings-pause');
+  const btnSettingsClose = document.getElementById('btn-settings-close');
+  const btnSettingsReset = document.getElementById('btn-settings-reset');
+  const btnOpenGuide = document.getElementById('btn-open-guide');
+  const btnGuideClose = document.getElementById('btn-guide-close');
 
-  // Stats displays
+  // Settings DOM controls
+  const settingSfxToggle = document.getElementById('setting-sfx-toggle');
+  const settingSfxVolume = document.getElementById('setting-sfx-volume');
+  const settingSfxVolBadge = document.getElementById('setting-sfx-vol-badge');
+  const btnSfxVolDec = document.getElementById('btn-sfx-vol-dec');
+  const btnSfxVolInc = document.getElementById('btn-sfx-vol-inc');
+  const wrapSfxSlider = document.getElementById('wrap-sfx-slider');
+
+  const settingMusicToggle = document.getElementById('setting-music-toggle');
+  const settingMusicVolume = document.getElementById('setting-music-volume');
+  const settingMusicVolBadge = document.getElementById('setting-music-vol-badge');
+  const btnMusicVolDec = document.getElementById('btn-music-vol-dec');
+  const btnMusicVolInc = document.getElementById('btn-music-vol-inc');
+  const wrapMusicSlider = document.getElementById('wrap-music-slider');
+
+  const btnModeMouse = document.getElementById('btn-mode-mouse');
+  const btnModeKeyboard = document.getElementById('btn-mode-keyboard');
+  const controlModeDesc = document.getElementById('control-mode-desc');
+  const settingAutofireToggle = document.getElementById('setting-autofire-toggle');
+
+  // In-Game Floating Toast Notification
+  const hudToast = document.getElementById('hud-toast');
+
+  // Cheat DOM Controls
+  const btnOpenCheat = document.getElementById('btn-open-cheat');
+  const cheatPillIndicator = document.getElementById('cheat-pill-indicator');
+  const cheatMasterToggle = document.getElementById('cheat-master-toggle');
+  const cheatMasterStatusDesc = document.getElementById('cheat-master-status-desc');
+  const cheatControlsPanel = document.getElementById('cheat-controls-panel');
+  const cheatStageSlider = document.getElementById('cheat-stage-slider');
+  const cheatStageValBadge = document.getElementById('cheat-stage-val-badge');
+  const cheatStageDesc = document.getElementById('cheat-stage-desc');
+  const btnStageDec = document.getElementById('btn-stage-dec');
+  const btnStageInc = document.getElementById('btn-stage-inc');
+  const quickStageChips = document.querySelectorAll('.quick-chip[data-set-stage]');
+
+  const cheatLivesSlider = document.getElementById('cheat-lives-slider');
+  const cheatLivesValBadge = document.getElementById('cheat-lives-val-badge');
+  const btnLivesDec = document.getElementById('btn-lives-dec');
+  const btnLivesInc = document.getElementById('btn-lives-inc');
+  const btnToggleInfiniteLives = document.getElementById('btn-toggle-infinite-lives');
+
+  const cheatWeaponSlider = document.getElementById('cheat-weapon-slider');
+  const cheatWeaponValBadge = document.getElementById('cheat-weapon-val-badge');
+  const btnWeaponDec = document.getElementById('btn-weapon-dec');
+  const btnWeaponInc = document.getElementById('btn-weapon-inc');
+  const btnToggleInfiniteWeapon = document.getElementById('btn-toggle-infinite-weapon');
+
+  const btnCheatReset = document.getElementById('btn-cheat-reset');
+  const btnCheatSave = document.getElementById('btn-cheat-save');
+
+  // Stats & notices displays
   const textGameOverStats = document.getElementById('gameover-stats');
   const textGameOverHighscore = document.getElementById('gameover-highscore');
+  const gameoverCheatNotice = document.getElementById('gameover-cheat-notice');
   const textVictoryStats = document.getElementById('victory-stats');
+  const victoryCheatNotice = document.getElementById('victory-cheat-notice');
 
-  // Helper to show/hide modals cleanly
+  // Modal navigation manager with history
+  const allModals = [modalStart, modalPause, modalGameOver, modalVictory, modalCheat, modalSettings, modalGuide];
+  let previousModalBeforeSettings = modalStart;
+
   function showModal(modal) {
-    [modalStart, modalPause, modalGameOver, modalVictory].forEach(m => {
-      if (m !== modal) {
+    allModals.forEach(m => {
+      if (m && m !== modal) {
         m.classList.remove('active');
         m.style.display = 'none';
       }
@@ -52,10 +114,29 @@ function initGameApp() {
   }
 
   function hideAllModals() {
-    [modalStart, modalPause, modalGameOver, modalVictory].forEach(m => {
-      m.classList.remove('active');
-      m.style.display = 'none';
+    allModals.forEach(m => {
+      if (m) {
+        m.classList.remove('active');
+        m.style.display = 'none';
+      }
     });
+  }
+
+  // Micro-interaction toast popup for in-game shortcuts
+  let toastTimer = null;
+  function showToast(text, styleClass = '', duration = 1600) {
+    if (!hudToast) return;
+    hudToast.innerText = text;
+    hudToast.className = `hud-toast ${styleClass}`;
+    hudToast.style.display = 'flex';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      hudToast.style.opacity = '0';
+      setTimeout(() => {
+        hudToast.style.display = 'none';
+        hudToast.style.opacity = '1';
+      }, 300);
+    }, duration);
   }
 
   // Setup Game with UI callbacks
@@ -74,7 +155,7 @@ function initGameApp() {
         hideAllModals();
       }
     },
-    onGameOver: (score, stage, totalStages, wave, highscore, diffConfig) => {
+    onGameOver: (score, stage, totalStages, wave, highscore, diffConfig, isCheat) => {
       const diffName = (diffConfig && diffConfig.name) || game.difficulty || 'NORMAL';
       if (textGameOverStats) textGameOverStats.innerText = `Mode: ${diffName} | Skor: ${score.toLocaleString()} | Stage: ${stage} / ${totalStages} (Gelombang ${wave})`;
       if (textGameOverHighscore) textGameOverHighscore.innerText = `Skor Tertinggi (${diffName}): ${highscore.toLocaleString()}`;
@@ -83,15 +164,21 @@ function initGameApp() {
         badge.innerText = `MODE: ${diffName}`;
         badge.className = `modal-diff-badge diff-badge-${diffName.toLowerCase()}`;
       }
+      if (gameoverCheatNotice) {
+        gameoverCheatNotice.style.display = isCheat ? 'inline-block' : 'none';
+      }
       showModal(modalGameOver);
     },
-    onVictory: (score, totalStages, diffConfig) => {
+    onVictory: (score, totalStages, diffConfig, isCheat) => {
       const diffName = (diffConfig && diffConfig.name) || game.difficulty || 'NORMAL';
       if (textVictoryStats) textVictoryStats.innerText = `Mode: ${diffName} | Skor Akhir: ${score.toLocaleString()} | SELURUH ${totalStages} STAGE SELESAI!`;
       const badge = document.getElementById('victory-difficulty-badge');
       if (badge) {
         badge.innerText = `MODE: ${diffName}`;
         badge.className = `modal-diff-badge diff-badge-${diffName.toLowerCase()}`;
+      }
+      if (victoryCheatNotice) {
+        victoryCheatNotice.style.display = isCheat ? 'inline-block' : 'none';
       }
       showModal(modalVictory);
     }
@@ -139,8 +226,180 @@ function initGameApp() {
     ensureFullscreen();
   });
 
+  // Navigation: Return to Main Menu
+  const returnToMainMenu = () => {
+    if (game.sound && game.sound.initialized) {
+      game.sound.playUiClick();
+    }
+    game.goToMainMenu();
+    showModal(modalStart);
+  };
+
+  // ==========================================
+  // SETTINGS & AUDIO CONTROLS MANAGER
+  // ==========================================
+  const SETTINGS_STORAGE = {
+    SFX_ENABLED: 'platypus_setting_sfx_enabled',
+    SFX_VOLUME: 'platypus_setting_sfx_volume',
+    MUSIC_ENABLED: 'platypus_setting_music_enabled',
+    MUSIC_VOLUME: 'platypus_setting_music_volume',
+    CONTROL_MODE: 'platypus_setting_control_mode',
+    AUTOFIRE: 'platypus_setting_autofire'
+  };
+
+  const settingsState = {
+    sfxEnabled: localStorage.getItem(SETTINGS_STORAGE.SFX_ENABLED) !== 'false',
+    sfxVolume: localStorage.getItem(SETTINGS_STORAGE.SFX_VOLUME) !== null 
+      ? parseInt(localStorage.getItem(SETTINGS_STORAGE.SFX_VOLUME), 10) 
+      : 85,
+    musicEnabled: localStorage.getItem(SETTINGS_STORAGE.MUSIC_ENABLED) !== 'false',
+    musicVolume: localStorage.getItem(SETTINGS_STORAGE.MUSIC_VOLUME) !== null 
+      ? parseInt(localStorage.getItem(SETTINGS_STORAGE.MUSIC_VOLUME), 10) 
+      : 50,
+    controlMode: localStorage.getItem(SETTINGS_STORAGE.CONTROL_MODE) || 'MOUSE',
+    autoFire: localStorage.getItem(SETTINGS_STORAGE.AUTOFIRE) === 'true'
+  };
+
+  const applySettingsToEngine = (notify = false) => {
+    game.sound.setSFXEnabled(settingsState.sfxEnabled);
+    game.sound.setSFXVolume(settingsState.sfxVolume / 100);
+    game.sound.setMusicEnabled(settingsState.musicEnabled);
+    game.sound.setMusicVolume(settingsState.musicVolume / 100);
+    input.setControlMode(settingsState.controlMode);
+    input.setAutoFire(settingsState.autoFire, notify);
+  };
+
+  const saveSettings = () => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE.SFX_ENABLED, settingsState.sfxEnabled);
+      localStorage.setItem(SETTINGS_STORAGE.SFX_VOLUME, settingsState.sfxVolume);
+      localStorage.setItem(SETTINGS_STORAGE.MUSIC_ENABLED, settingsState.musicEnabled);
+      localStorage.setItem(SETTINGS_STORAGE.MUSIC_VOLUME, settingsState.musicVolume);
+      localStorage.setItem(SETTINGS_STORAGE.CONTROL_MODE, settingsState.controlMode);
+      localStorage.setItem(SETTINGS_STORAGE.AUTOFIRE, settingsState.autoFire);
+    } catch (e) {
+      console.warn('LocalStorage error saving settings:', e);
+    }
+  };
+
+  const syncSettingsUI = () => {
+    if (settingSfxToggle) settingSfxToggle.checked = settingsState.sfxEnabled;
+    if (wrapSfxSlider) {
+      if (settingsState.sfxEnabled) wrapSfxSlider.classList.remove('disabled');
+      else wrapSfxSlider.classList.add('disabled');
+    }
+    if (settingSfxVolume) settingSfxVolume.value = settingsState.sfxVolume;
+    if (settingSfxVolBadge) settingSfxVolBadge.innerText = `${settingsState.sfxVolume}%`;
+
+    if (settingMusicToggle) settingMusicToggle.checked = settingsState.musicEnabled;
+    if (wrapMusicSlider) {
+      if (settingsState.musicEnabled) wrapMusicSlider.classList.remove('disabled');
+      else wrapMusicSlider.classList.add('disabled');
+    }
+    if (settingMusicVolume) settingMusicVolume.value = settingsState.musicVolume;
+    if (settingMusicVolBadge) settingMusicVolBadge.innerText = `${settingsState.musicVolume}%`;
+
+    if (btnModeMouse && btnModeKeyboard) {
+      if (settingsState.controlMode === 'MOUSE') {
+        btnModeMouse.classList.add('active');
+        btnModeKeyboard.classList.remove('active');
+        if (controlModeDesc) controlModeDesc.innerText = 'Pesawat bermanuver mulus mengikuti pergerakan kursor mouse di arena permainan secara presisi.';
+      } else {
+        btnModeKeyboard.classList.add('active');
+        btnModeMouse.classList.remove('active');
+        if (controlModeDesc) controlModeDesc.innerText = 'Gunakan tombol W, A, S, D atau Tombol Panah pada keyboard untuk mengemudikan pesawat.';
+      }
+    }
+
+    if (settingAutofireToggle) settingAutofireToggle.checked = settingsState.autoFire;
+  };
+
+  const openSettingsModal = (sourceModal = modalStart) => {
+    previousModalBeforeSettings = sourceModal;
+    game.sound.init();
+    game.sound.playUiClick();
+    syncSettingsUI();
+    showModal(modalSettings);
+  };
+
+  const closeSettingsModal = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    showModal(previousModalBeforeSettings || modalStart);
+  };
+
+  const openGuideModal = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    showModal(modalGuide);
+  };
+
+  const closeGuideModal = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    showModal(modalStart);
+  };
+
+  const resetSettingsDefaults = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    settingsState.sfxEnabled = true;
+    settingsState.sfxVolume = 85;
+    settingsState.musicEnabled = true;
+    settingsState.musicVolume = 50;
+    settingsState.controlMode = 'MOUSE';
+    settingsState.autoFire = false;
+    applySettingsToEngine();
+    saveSettings();
+    syncSettingsUI();
+  };
+
+  // Connect Input AutoFire toggle to Toast notification and Sound
+  input.onAutoFireChanged = (isAuto) => {
+    settingsState.autoFire = isAuto;
+    saveSettings();
+    if (game.sound && game.sound.initialized) {
+      game.sound.playUiClick();
+    }
+    if (settingAutofireToggle) {
+      settingAutofireToggle.checked = isAuto;
+    }
+    showToast(isAuto ? '⚡ AUTO-FIRE: AKTIF' : '⚡ AUTO-FIRE: NON-AKTIF', isAuto ? 'active-green' : 'active-amber');
+  };
+
+  // Initialize settings in engine and UI
+  applySettingsToEngine();
+  syncSettingsUI();
+
   // Keyboard navigation for all screens/modals
   window.addEventListener('keydown', (e) => {
+    // If Settings Modal is active
+    if (modalSettings && (modalSettings.classList.contains('active') || modalSettings.style.display === 'flex')) {
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        closeSettingsModal();
+      }
+      return;
+    }
+
+    // If Guide Modal is active
+    if (modalGuide && (modalGuide.classList.contains('active') || modalGuide.style.display === 'flex')) {
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        closeGuideModal();
+      }
+      return;
+    }
+
+    // If Cheat Modal is active
+    if (modalCheat && (modalCheat.classList.contains('active') || modalCheat.style.display === 'flex')) {
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        saveAndCloseCheat();
+      }
+      return;
+    }
+
     // If Start Screen is active
     if (modalStart && (modalStart.classList.contains('active') || modalStart.style.display === 'flex')) {
       if (e.code === 'Enter' || e.code === 'Space') {
@@ -150,9 +409,12 @@ function initGameApp() {
       return;
     }
 
-    // If Pause Screen is active
+    // If Pause Screen is active: ESC returns to Main Menu, Enter/Space/P resumes, R restarts
     if (modalPause && (modalPause.classList.contains('active') || modalPause.style.display === 'flex')) {
-      if (e.code === 'Escape' || e.code === 'KeyP' || e.code === 'Enter') {
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        returnToMainMenu();
+      } else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyP') {
         e.preventDefault();
         game.togglePause();
       } else if (e.code === 'KeyR') {
@@ -169,6 +431,9 @@ function initGameApp() {
         e.preventDefault();
         hideAllModals();
         game.restart();
+      } else if (e.code === 'Escape' || e.code === 'KeyM') {
+        e.preventDefault();
+        returnToMainMenu();
       }
       return;
     }
@@ -179,6 +444,9 @@ function initGameApp() {
         e.preventDefault();
         hideAllModals();
         game.restart();
+      } else if (e.code === 'Escape' || e.code === 'KeyM') {
+        e.preventDefault();
+        returnToMainMenu();
       }
       return;
     }
@@ -191,6 +459,12 @@ function initGameApp() {
     });
   }
 
+  if (btnSettingsPause) {
+    btnSettingsPause.addEventListener('click', () => {
+      openSettingsModal(modalPause);
+    });
+  }
+
   if (btnRestartPause) {
     btnRestartPause.addEventListener('click', () => {
       ensureFullscreen();
@@ -199,7 +473,32 @@ function initGameApp() {
     });
   }
 
-  // Game Over Retry
+  if (btnMenuPause) {
+    btnMenuPause.addEventListener('click', () => {
+      returnToMainMenu();
+    });
+  }
+
+  // Navigation Buttons in Main Menu & Modals
+  if (btnOpenSettings) {
+    btnOpenSettings.addEventListener('click', () => {
+      openSettingsModal(modalStart);
+    });
+  }
+  if (btnSettingsClose) {
+    btnSettingsClose.addEventListener('click', closeSettingsModal);
+  }
+  if (btnSettingsReset) {
+    btnSettingsReset.addEventListener('click', resetSettingsDefaults);
+  }
+  if (btnOpenGuide) {
+    btnOpenGuide.addEventListener('click', openGuideModal);
+  }
+  if (btnGuideClose) {
+    btnGuideClose.addEventListener('click', closeGuideModal);
+  }
+
+  // Game Over Buttons
   if (btnRetry) {
     btnRetry.addEventListener('click', () => {
       ensureFullscreen();
@@ -208,7 +507,13 @@ function initGameApp() {
     });
   }
 
-  // Victory Play Again
+  if (btnMenuGameOver) {
+    btnMenuGameOver.addEventListener('click', () => {
+      returnToMainMenu();
+    });
+  }
+
+  // Victory Buttons
   if (btnPlayAgain) {
     btnPlayAgain.addEventListener('click', () => {
       ensureFullscreen();
@@ -217,64 +522,379 @@ function initGameApp() {
     });
   }
 
-  // Sound & Music Toggles
-  if (btnSound) {
-    btnSound.addEventListener('click', () => {
-      const sfxOn = game.sound.toggleSFX();
-      btnSound.innerHTML = sfxOn ? ICONS.SOUND_ON : ICONS.SOUND_OFF;
-      btnSound.title = sfxOn ? 'Suara (SFX) Aktif' : 'Suara (SFX) Mati';
+  if (btnMenuVictory) {
+    btnMenuVictory.addEventListener('click', () => {
+      returnToMainMenu();
     });
   }
 
-  if (btnMusic) {
-    btnMusic.addEventListener('click', () => {
-      const musicOn = game.sound.toggleMusic();
-      btnMusic.innerHTML = musicOn ? ICONS.MUSIC_ON : ICONS.MUSIC_OFF;
-      btnMusic.title = musicOn ? 'Musik Aktif' : 'Musik Mati';
-    });
-  }
+  // ==========================================
+  // CHEAT MODE CONTROLLER & MICRO-INTERACTIONS
+  // ==========================================
+  const STAGE_DESCRIPTIONS = {
+    1: 'Lembah Tanah Liat (Misi 1: Sapu Penyelidik Musuh)',
+    2: 'Serangan Kumbang (Waspada Penukik Cepat Beracun)',
+    3: 'Armada Meriam Biru (Kapal Tempur Gunship)',
+    4: 'Konvoi Balon Udara (Balon Tempur Zeppelin)',
+    5: 'BENTENG DREADNOUGHT (BOSS DUNIA 1 - IRON DREADNOUGHT)',
+    6: 'Ngarai Tanah Senja (Tawon Stinger Berkecepatan Tinggi)',
+    7: 'Lorong Penembak Jitu (Sniper Laser Merah Jarak Jauh)',
+    8: 'Hujan Bom Tanah Liat (Pelempap Bom Beruntun)',
+    9: 'Badai Cakram Berputar (Cakram Gergaji Spinner Memantul)',
+    10: 'GOLIATH PENGUASA LANGIT (BOSS DUNIA 2 - GOLIATH ZEPPELIN)',
+    11: 'Benteng Malam Cyber (Perisai Energi Shield Cruiser)',
+    12: 'Medan Ranjau Terapung (Drone Penebar Ranjau Meledak)',
+    13: 'Skuadron Elit Emas (Pilot Ace Akrobatik Loop Udara)',
+    14: 'Serangan Total: Gauntlet (Maraton 7 Gelombang Musuh)',
+    15: 'TITAN LEVIATHAN (BOSS DUNIA 3 - ULTIMATE CLAY LEVIATHAN)',
+    16: 'Gerbang Ruang Kosmis (Memasuki Angkasa Hamburan Kosmos)',
+    17: 'Benteng Siber Berlapis Baja (Formasi Pengawal Perisai Ganda)',
+    18: 'Skuadron Badai Bintang (Pilot Ace Elit Pengepung)',
+    19: 'Barikade Terakhir Singularitas (Gauntlet Kosmis 5 Gelombang)',
+    20: 'KOLOSUS CLAY OMEGA (FINAL CLIMAX BOSS - OMEGA CLAY COLOSSUS)'
+  };
 
-  // Control Mode Toggle (Mouse vs Keyboard)
-  if (btnControlMode) {
-    btnControlMode.addEventListener('click', () => {
-      const mode = input.toggleControlMode();
-      btnControlMode.innerHTML = mode === 'MOUSE' ? ICONS.MOUSE : ICONS.KEYBOARD;
-      btnControlMode.title = `Mode Kontrol: ${mode === 'MOUSE' ? 'Mouse' : 'Keyboard (WASD)'}`;
-    });
-  }
+  let workingCheat = Object.assign({}, game.cheatConfig);
 
-  // Auto-Fire Toggle
-  if (btnAutoFire) {
-    btnAutoFire.addEventListener('click', () => {
-      const auto = input.toggleAutoFire();
-      btnAutoFire.style.background = auto ? '#f57c00' : 'rgba(46, 32, 28, 0.88)';
-      btnAutoFire.style.borderColor = auto ? '#ffb74d' : '#8d6e63';
-      btnAutoFire.title = auto ? 'Auto-Fire Aktif' : 'Auto-Fire Mati';
-    });
-  }
+  const updateCheatIndicator = () => {
+    if (cheatPillIndicator) {
+      const active = game.isCheatActive();
+      cheatPillIndicator.className = `cheat-pill-status ${active ? 'active' : 'off'}`;
+      cheatPillIndicator.innerText = active ? 'AKTIF' : 'OFF';
+    }
+  };
 
-  // Top Bar Pause Button
-  if (btnPause) {
-    btnPause.addEventListener('click', () => {
-      game.togglePause();
-    });
-  }
-
-  // Fullscreen Toggle
-  if (btnFullscreen) {
-    btnFullscreen.addEventListener('click', () => {
-      const wrapper = document.getElementById('game-wrapper');
-      if (!document.fullscreenElement) {
-        wrapper.requestFullscreen().catch(err => console.log(err));
-        btnFullscreen.innerHTML = ICONS.FULLSCREEN_EXIT;
+  const syncCheatModalUI = () => {
+    if (cheatMasterToggle) cheatMasterToggle.checked = Boolean(workingCheat.enabled);
+    if (cheatMasterStatusDesc) {
+      cheatMasterStatusDesc.innerHTML = workingCheat.enabled 
+        ? 'Mode curang saat ini: <strong style="color:#2e7d32;">AKTIF</strong>' 
+        : 'Mode curang saat ini: <strong>NON-AKTIF</strong>';
+    }
+    if (cheatControlsPanel) {
+      if (workingCheat.enabled) {
+        cheatControlsPanel.classList.remove('disabled');
       } else {
-        document.exitFullscreen().catch(err => console.log(err));
-        btnFullscreen.innerHTML = ICONS.FULLSCREEN_ENTER;
+        cheatControlsPanel.classList.add('disabled');
+      }
+    }
+
+    // Stage
+    const stage = Math.max(1, Math.min(20, workingCheat.startStage || 1));
+    if (cheatStageSlider) cheatStageSlider.value = stage;
+    if (cheatStageValBadge) cheatStageValBadge.innerText = `STAGE ${stage}`;
+    if (cheatStageDesc) cheatStageDesc.innerText = STAGE_DESCRIPTIONS[stage] || `Stage ${stage}`;
+
+    // Lives
+    if (workingCheat.infiniteLives) {
+      if (cheatLivesValBadge) cheatLivesValBadge.innerText = '∞ TAK TERBATAS';
+      if (btnToggleInfiniteLives) btnToggleInfiniteLives.classList.add('active');
+      if (cheatLivesSlider) cheatLivesSlider.disabled = true;
+      if (btnLivesDec) btnLivesDec.disabled = true;
+      if (btnLivesInc) btnLivesInc.disabled = true;
+    } else {
+      const lives = Math.max(1, Math.min(20, workingCheat.startingLives || 10));
+      if (cheatLivesValBadge) cheatLivesValBadge.innerText = `${lives} NYAWA`;
+      if (cheatLivesSlider) {
+        cheatLivesSlider.value = lives;
+        cheatLivesSlider.disabled = false;
+      }
+      if (btnToggleInfiniteLives) btnToggleInfiniteLives.classList.remove('active');
+      if (btnLivesDec) btnLivesDec.disabled = false;
+      if (btnLivesInc) btnLivesInc.disabled = false;
+    }
+
+    // Weapon duration
+    if (workingCheat.infiniteWeaponDuration) {
+      if (cheatWeaponValBadge) cheatWeaponValBadge.innerText = '∞ TAK TERBATAS';
+      if (btnToggleInfiniteWeapon) btnToggleInfiniteWeapon.classList.add('active');
+      if (cheatWeaponSlider) cheatWeaponSlider.disabled = true;
+      if (btnWeaponDec) btnWeaponDec.disabled = true;
+      if (btnWeaponInc) btnWeaponInc.disabled = true;
+    } else {
+      const duration = Math.max(5, Math.min(60, workingCheat.weaponDuration || 15));
+      if (cheatWeaponValBadge) cheatWeaponValBadge.innerText = `${duration} DETIK`;
+      if (cheatWeaponSlider) {
+        cheatWeaponSlider.value = duration;
+        cheatWeaponSlider.disabled = false;
+      }
+      if (btnToggleInfiniteWeapon) btnToggleInfiniteWeapon.classList.remove('active');
+      if (btnWeaponDec) btnWeaponDec.disabled = false;
+      if (btnWeaponInc) btnWeaponInc.disabled = false;
+    }
+  };
+
+  const openCheatModal = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    workingCheat = Object.assign({}, game.cheatConfig);
+    syncCheatModalUI();
+    showModal(modalCheat);
+  };
+
+  const saveAndCloseCheat = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    game.setCheatConfig(workingCheat);
+    updateCheatIndicator();
+    showModal(modalStart);
+  };
+
+  const resetCheatDefaults = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    workingCheat = {
+      enabled: false,
+      startStage: 1,
+      infiniteLives: false,
+      startingLives: 10,
+      infiniteWeaponDuration: false,
+      weaponDuration: 15
+    };
+    syncCheatModalUI();
+  };
+
+  // Cheat event listeners
+  if (btnOpenCheat) btnOpenCheat.addEventListener('click', openCheatModal);
+  if (btnCheatSave) btnCheatSave.addEventListener('click', saveAndCloseCheat);
+  if (btnCheatReset) btnCheatReset.addEventListener('click', resetCheatDefaults);
+
+  if (cheatMasterToggle) {
+    cheatMasterToggle.addEventListener('change', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.enabled = cheatMasterToggle.checked;
+      syncCheatModalUI();
+    });
+  }
+
+  // Stage interactions
+  if (cheatStageSlider) {
+    cheatStageSlider.addEventListener('input', () => {
+      workingCheat.startStage = parseInt(cheatStageSlider.value, 10);
+      syncCheatModalUI();
+    });
+  }
+  if (btnStageDec) {
+    btnStageDec.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.startStage = Math.max(1, (workingCheat.startStage || 1) - 1);
+      syncCheatModalUI();
+    });
+  }
+  if (btnStageInc) {
+    btnStageInc.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.startStage = Math.min(20, (workingCheat.startStage || 1) + 1);
+      syncCheatModalUI();
+    });
+  }
+  quickStageChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const stg = parseInt(chip.getAttribute('data-set-stage'), 10);
+      if (stg) {
+        game.sound.init();
+        game.sound.playUiClick();
+        workingCheat.startStage = stg;
+        syncCheatModalUI();
       }
     });
+  });
+
+  // Lives interactions
+  if (cheatLivesSlider) {
+    cheatLivesSlider.addEventListener('input', () => {
+      workingCheat.infiniteLives = false;
+      workingCheat.startingLives = parseInt(cheatLivesSlider.value, 10);
+      syncCheatModalUI();
+    });
+  }
+  if (btnLivesDec) {
+    btnLivesDec.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.infiniteLives = false;
+      workingCheat.startingLives = Math.max(1, (workingCheat.startingLives || 10) - 1);
+      syncCheatModalUI();
+    });
+  }
+  if (btnLivesInc) {
+    btnLivesInc.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.infiniteLives = false;
+      workingCheat.startingLives = Math.min(20, (workingCheat.startingLives || 10) + 1);
+      syncCheatModalUI();
+    });
+  }
+  if (btnToggleInfiniteLives) {
+    btnToggleInfiniteLives.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.infiniteLives = !workingCheat.infiniteLives;
+      syncCheatModalUI();
+    });
   }
 
-  // Main Menu Tab Navigation & Audio Micro-Interactions
+  // Weapon interactions
+  if (cheatWeaponSlider) {
+    cheatWeaponSlider.addEventListener('input', () => {
+      workingCheat.infiniteWeaponDuration = false;
+      workingCheat.weaponDuration = parseInt(cheatWeaponSlider.value, 10);
+      syncCheatModalUI();
+    });
+  }
+  if (btnWeaponDec) {
+    btnWeaponDec.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.infiniteWeaponDuration = false;
+      workingCheat.weaponDuration = Math.max(5, (workingCheat.weaponDuration || 15) - 5);
+      syncCheatModalUI();
+    });
+  }
+  if (btnWeaponInc) {
+    btnWeaponInc.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.infiniteWeaponDuration = false;
+      workingCheat.weaponDuration = Math.min(60, (workingCheat.weaponDuration || 15) + 5);
+      syncCheatModalUI();
+    });
+  }
+  if (btnToggleInfiniteWeapon) {
+    btnToggleInfiniteWeapon.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      workingCheat.infiniteWeaponDuration = !workingCheat.infiniteWeaponDuration;
+      syncCheatModalUI();
+    });
+  }
+
+  // Initial sync of the main menu subtle cheat badge
+  updateCheatIndicator();
+
+  // ==========================================
+  // SETTINGS MODAL INTERACTIVE CONTROLS
+  // ==========================================
+  // 1. SFX Toggle
+  if (settingSfxToggle) {
+    settingSfxToggle.addEventListener('change', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.sfxEnabled = settingSfxToggle.checked;
+      game.sound.setSFXEnabled(settingsState.sfxEnabled);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+
+  // SFX Volume Slider & Stepper Buttons
+  if (settingSfxVolume) {
+    settingSfxVolume.addEventListener('input', () => {
+      settingsState.sfxVolume = parseInt(settingSfxVolume.value, 10);
+      game.sound.setSFXVolume(settingsState.sfxVolume / 100);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+  if (btnSfxVolDec) {
+    btnSfxVolDec.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.sfxVolume = Math.max(0, settingsState.sfxVolume - 5);
+      game.sound.setSFXVolume(settingsState.sfxVolume / 100);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+  if (btnSfxVolInc) {
+    btnSfxVolInc.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.sfxVolume = Math.min(100, settingsState.sfxVolume + 5);
+      game.sound.setSFXVolume(settingsState.sfxVolume / 100);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+
+  // 2. Music Toggle
+  if (settingMusicToggle) {
+    settingMusicToggle.addEventListener('change', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.musicEnabled = settingMusicToggle.checked;
+      game.sound.setMusicEnabled(settingsState.musicEnabled);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+
+  // Music Volume Slider & Stepper Buttons
+  if (settingMusicVolume) {
+    settingMusicVolume.addEventListener('input', () => {
+      settingsState.musicVolume = parseInt(settingMusicVolume.value, 10);
+      game.sound.setMusicVolume(settingsState.musicVolume / 100);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+  if (btnMusicVolDec) {
+    btnMusicVolDec.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.musicVolume = Math.max(0, settingsState.musicVolume - 5);
+      game.sound.setMusicVolume(settingsState.musicVolume / 100);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+  if (btnMusicVolInc) {
+    btnMusicVolInc.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.musicVolume = Math.min(100, settingsState.musicVolume + 5);
+      game.sound.setMusicVolume(settingsState.musicVolume / 100);
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+
+  // 3. Control Mode Toggle Buttons (Mouse vs Keyboard)
+  if (btnModeMouse) {
+    btnModeMouse.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.controlMode = 'MOUSE';
+      input.setControlMode('MOUSE');
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+  if (btnModeKeyboard) {
+    btnModeKeyboard.addEventListener('click', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      settingsState.controlMode = 'KEYBOARD';
+      input.setControlMode('KEYBOARD');
+      saveSettings();
+      syncSettingsUI();
+    });
+  }
+
+  // 4. Auto-Fire Default Setting
+  if (settingAutofireToggle) {
+    settingAutofireToggle.addEventListener('change', () => {
+      game.sound.init();
+      game.sound.playUiClick();
+      input.setAutoFire(settingAutofireToggle.checked);
+    });
+  }
+
+  // Guide Modal Tab Navigation & Audio Micro-Interactions
   const tabButtons = document.querySelectorAll('.clay-tab-btn');
   const tabPanes = document.querySelectorAll('.tab-pane');
 
@@ -301,8 +921,8 @@ function initGameApp() {
     });
   });
 
-  // Weapon cards and buttons micro-interaction sound effects
-  document.querySelectorAll('.weapon-card, .clay-btn, .hud-icon-btn, .world-item, .instruction-item').forEach(el => {
+  // Weapon cards, buttons, steppers, and chips micro-interaction sound effects
+  document.querySelectorAll('.weapon-card, .clay-btn, .clay-nav-btn, .world-item, .instruction-item, .clay-subtle-cheat-btn, .quick-chip, .clay-step-btn, .clay-opt-toggle, .mode-seg-btn, .shortcut-pill, .difficulty-btn').forEach(el => {
     el.addEventListener('mouseenter', () => {
       if (game.sound && game.sound.initialized) {
         game.sound.playUiHover();

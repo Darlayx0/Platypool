@@ -13,17 +13,34 @@ export class InputManager {
     this.controlMode = 'MOUSE'; // 'MOUSE' or 'KEYBOARD'
     this.autoFire = false;
     this.pauseRequested = false;
+    this.onAutoFireChanged = null;
 
     this.bindEvents();
   }
 
   bindEvents() {
+    // Prevent default context menu on game canvas so right click is responsive
+    this.canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+
     // Keyboard events
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.code);
 
       if (e.code === 'KeyP' || e.code === 'Escape') {
         this.pauseRequested = true;
+      }
+
+      // Keyboard M: Toggle Auto-Fire
+      if (e.code === 'KeyM') {
+        // Only trigger during active game if no text input focused
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+          return;
+        }
+        e.preventDefault();
+        this.toggleAutoFire();
       }
 
       // Switch to keyboard mode if arrow or WASD pressed
@@ -49,8 +66,13 @@ export class InputManager {
 
     this.canvas.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
+        // Left click: shoot
         this.mouse.isDown = true;
         this.mouse.active = true;
+      } else if (e.button === 2) {
+        // Right click: toggle auto-fire
+        e.preventDefault();
+        this.toggleAutoFire();
       }
     });
 
@@ -115,13 +137,29 @@ export class InputManager {
     return { dx, dy };
   }
 
+  setControlMode(mode) {
+    this.controlMode = mode === 'KEYBOARD' ? 'KEYBOARD' : 'MOUSE';
+    return this.controlMode;
+  }
+
   toggleControlMode() {
     this.controlMode = this.controlMode === 'MOUSE' ? 'KEYBOARD' : 'MOUSE';
     return this.controlMode;
   }
 
+  setAutoFire(enabled, notify = true) {
+    this.autoFire = Boolean(enabled);
+    if (notify && this.onAutoFireChanged) {
+      this.onAutoFireChanged(this.autoFire);
+    }
+    return this.autoFire;
+  }
+
   toggleAutoFire() {
     this.autoFire = !this.autoFire;
+    if (this.onAutoFireChanged) {
+      this.onAutoFireChanged(this.autoFire);
+    }
     return this.autoFire;
   }
 

@@ -616,6 +616,16 @@ export const STAGE_CONFIGS = [
   }
 ];
 
+// Default Cheat Configuration
+export const DEFAULT_CHEAT_CONFIG = {
+  enabled: false,
+  startStage: 1, // 1 to 20
+  infiniteLives: false,
+  startingLives: 10, // 1 to 20
+  infiniteWeaponDuration: false,
+  weaponDuration: 15 // 5 to 60
+};
+
 export class Game {
   constructor(canvas, uiHooks) {
     this.canvas = canvas;
@@ -633,6 +643,14 @@ export class Game {
     this.difficulty = DIFFICULTY_CONFIGS[savedDiff] ? savedDiff : 'NORMAL';
     this.difficultyConfig = DIFFICULTY_CONFIGS[this.difficulty];
 
+    // Cheat configuration (Overridden values take precedence over difficulty settings)
+    let savedCheats = null;
+    try {
+      const str = localStorage.getItem('platypus_cheat_config');
+      if (str) savedCheats = JSON.parse(str);
+    } catch (e) {}
+    this.cheatConfig = Object.assign({}, DEFAULT_CHEAT_CONFIG, savedCheats || {});
+
     // Subsystems
     this.sound = new SoundController();
     this.camera = new Camera(this.width, this.height);
@@ -640,9 +658,10 @@ export class Game {
     this.particles = new ParticleSystem();
     this.hud = new HUD();
     this.hud.setDifficulty(this.difficulty, this.difficultyConfig);
+    this.hud.setCheatActive(this.isCheatActive());
 
     this.player = new Player(this.width, this.height);
-    this.player.reset(this.difficultyConfig);
+    this.player.reset(this.difficultyConfig, this.getCheatOverrides());
 
     // Entity lists
     this.bullets = [];
@@ -650,9 +669,9 @@ export class Game {
     this.collectibles = [];
     this.boss = null;
 
-    // 15-Stage System State
+    // 20-Stage System State
     this.currentStage = 1;
-    this.totalStages = STAGE_CONFIGS.length; // 15
+    this.totalStages = STAGE_CONFIGS.length; // 20
     this.currentWave = 1;
     this.waveTimer = 0;
     this.waveInProgress = false;
@@ -671,6 +690,48 @@ export class Game {
     requestAnimationFrame((t) => this.loop(t));
   }
 
+  isCheatActive() {
+    return Boolean(this.cheatConfig && this.cheatConfig.enabled);
+  }
+
+  getCheatOverrides() {
+    if (!this.isCheatActive()) return null;
+    return {
+      infiniteLives: Boolean(this.cheatConfig.infiniteLives),
+      startingLives: parseInt(this.cheatConfig.startingLives, 10) || 10,
+      infiniteWeaponDuration: Boolean(this.cheatConfig.infiniteWeaponDuration),
+      weaponDuration: parseFloat(this.cheatConfig.weaponDuration) || 15
+    };
+  }
+
+  setCheatConfig(newConfig) {
+    this.cheatConfig = Object.assign({}, this.cheatConfig, newConfig);
+    try {
+      localStorage.setItem('platypus_cheat_config', JSON.stringify(this.cheatConfig));
+    } catch (e) {}
+    if (this.hud) {
+      this.hud.setCheatActive(this.isCheatActive());
+    }
+    if (this.state === GAME_STATES.MENU && this.player) {
+      this.player.reset(this.difficultyConfig, this.getCheatOverrides());
+    }
+  }
+
+  goToMainMenu() {
+    this.state = GAME_STATES.MENU;
+    this.sound.stopMusic();
+    this.sound.setBossMode(false);
+    this.bullets = [];
+    this.enemies = [];
+    this.collectibles = [];
+    this.boss = null;
+    this.particles.clear();
+    this.spawnQueue = [];
+    this.hud.bannerLife = 0;
+    this.hud.setCheatActive(this.isCheatActive());
+    this.player.reset(this.difficultyConfig, this.getCheatOverrides());
+  }
+
   setDifficulty(diffId) {
     if (DIFFICULTY_CONFIGS[diffId]) {
       this.difficulty = diffId;
@@ -682,7 +743,7 @@ export class Game {
         this.hud.setDifficulty(diffId, this.difficultyConfig);
       }
       if (this.state === GAME_STATES.MENU) {
-        this.player.reset(this.difficultyConfig);
+        this.player.reset(this.difficultyConfig, this.getCheatOverrides());
       }
     }
   }
@@ -711,7 +772,8 @@ export class Game {
   start() {
     this.sound.init();
     this.sound.setBossMode(false);
-    this.player.reset(this.difficultyConfig);
+    this.hud.setCheatActive(this.isCheatActive());
+    this.player.reset(this.difficultyConfig, this.getCheatOverrides());
     this.bullets = [];
     this.enemies = [];
     this.collectibles = [];
@@ -720,8 +782,14 @@ export class Game {
     this.spawnQueue = [];
     this.weaponDropTimer = this.getRandomWeaponDropInterval();
 
-    this.currentStage = 1;
-    Enemy.currentStage = 1;
+    // Determine starting stage (Stage 1 or Cheat starting stage 1..20)
+    let startStage = 1;
+    if (this.isCheatActive() && this.cheatConfig.startStage) {
+      startStage = Math.max(1, Math.min(this.totalStages, parseInt(this.cheatConfig.startStage, 10)));
+    }
+
+    this.currentStage = startStage;
+    Enemy.currentStage = startStage;
     this.currentWave = 1;
     this.waveTimer = 0;
     this.waveInProgress = false;
@@ -735,7 +803,7 @@ export class Game {
 
     this.state = GAME_STATES.PLAYING;
     this.lastTime = performance.now();
-    this.hud.showBanner(`STAGE 1: ${cfg.title}`, cfg.subtitle, 3.5);
+    this.hud.showBanner(`STAGE ${startStage}: ${cfg.title}`, cfg.subtitle, 3.5);
   }
 
   restart() {
@@ -1272,7 +1340,7 @@ export class Game {
       this.camera.addTrauma(0.6);
       this.particles.createClaySplat(this.player.x, this.player.y, 25, '#cfd8dc', '#e53935');
 
-      if (this.player.lives <= 0) {
+      if (this.player.lives <= 0 && !this.player.infiniteLives) {
         this.triggerGameOver();
       } else {
         this.player.respawn();
@@ -1290,7 +1358,8 @@ export class Game {
         this.totalStages,
         this.currentWave,
         this.hud.highScore,
-        this.difficultyConfig
+        this.difficultyConfig,
+        this.isCheatActive()
       );
     }
   }
@@ -1300,7 +1369,12 @@ export class Game {
     this.sound.stopMusic();
     this.hud.showBanner('MISI SELESAI!', `SELAMAT, SELURUH ${this.totalStages} STAGE TELAH DITAKLUKKAN!`, 5.0, '#66bb6a');
     if (this.uiHooks.onVictory) {
-      this.uiHooks.onVictory(Math.floor(this.player.score), this.totalStages, this.difficultyConfig);
+      this.uiHooks.onVictory(
+        Math.floor(this.player.score),
+        this.totalStages,
+        this.difficultyConfig,
+        this.isCheatActive()
+      );
     }
   }
 

@@ -19,11 +19,11 @@ const jsContent = fs.readFileSync(path.join(distDir, 'dist', 'assets', jsMatch[1
 let cleanHtml = distIndex.replace(/<script>[\s\S]*?window\.location\.replace[\s\S]*?<\/script>/i, '');
 
 // Clean any modulepreload links or scripts from head
-cleanHtml = cleanHtml.replace(/<link rel="stylesheet"[^>]+>/, `<style>\n${cssContent}\n</style>`);
+cleanHtml = cleanHtml.replace(/<link rel="stylesheet"[^>]+>/, () => `<style>\n${cssContent}\n</style>`);
 cleanHtml = cleanHtml.replace(/<script type="module"[^>]+><\/script>/, '');
 
-// Insert standalone inline JS before closing body tag so all DOM elements exist
-const standalone = cleanHtml.replace('</body>', `<script>\n${jsContent}\n</script>\n</body>`);
+// Insert standalone inline JS before closing body tag so all DOM elements exist (use function replacer to prevent $ pattern corruption)
+const standalone = cleanHtml.replace('</body>', () => `<script>\n${jsContent}\n</script>\n</body>`);
 
 fs.writeFileSync(path.join(distDir, 'play.html'), standalone, 'utf-8');
 fs.writeFileSync(path.join(distDir, 'dist', 'play.html'), standalone, 'utf-8');
