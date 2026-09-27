@@ -26,4 +26,6 @@ cleanHtml = cleanHtml.replace(/<script type="module"[^>]+><\/script>/, '');
 const standalone = cleanHtml.replace('</body>', `<script>\n${jsContent}\n</script>\n</body>`);
 
 fs.writeFileSync(path.join(distDir, 'play.html'), standalone, 'utf-8');
+fs.writeFileSync(path.join(distDir, 'dist', 'play.html'), standalone, 'utf-8');
 console.log(`Standalone play.html created successfully (${(standalone.length / 1024).toFixed(1)} KB)!`);
+
