@@ -1,0 +1,848 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Luckiest+Guy&display=swap');
+
+:root {
+  --clay-cream: #f4ecd8;
+  --clay-brown: #6d4c41;
+  --clay-dark-brown: #3e2723;
+  --clay-yellow: #fbc02d;
+  --clay-orange: #f57c00;
+  --clay-red: #e53935;
+  --clay-blue: #1e88e5;
+  --clay-green: #43a047;
+  --clay-shadow: rgba(0, 0, 0, 0.35);
+  --clay-highlight: rgba(255, 255, 255, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background: #0c1015;
+  color: var(--clay-cream);
+  font-family: 'Fredoka', cursive, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#game-wrapper {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: #0c1015;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#game-canvas {
+  width: 100vw;
+  height: 56.25vw;
+  max-height: 100vh;
+  max-width: 177.78vh;
+  aspect-ratio: 16 / 9;
+  display: block;
+  image-rendering: auto;
+  cursor: crosshair;
+}
+
+/* UI Overlays */
+.ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Clay Button Styles with Tactile Micro-Interactions */
+.clay-btn {
+  pointer-events: auto;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 1.25rem;
+  letter-spacing: 1px;
+  color: #fff;
+  background: linear-gradient(180deg, #ff7043, #d84315);
+  border: none;
+  border-radius: 25px;
+  padding: 12px 30px;
+  cursor: pointer;
+  box-shadow: 
+    inset 0 4px 6px var(--clay-highlight),
+    inset 0 -5px 6px rgba(0, 0, 0, 0.4),
+    0 8px 18px rgba(0, 0, 0, 0.45),
+    0 4px 0 #bf360c;
+  text-shadow: 2px 2px 0 #bf360c, 0 0 5px rgba(0,0,0,0.5);
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s ease, box-shadow 0.12s ease;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.clay-btn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    inset 0 4px 6px var(--clay-highlight),
+    inset 0 -5px 6px rgba(0, 0, 0, 0.4),
+    0 12px 22px rgba(0, 0, 0, 0.5),
+    0 5px 0 #bf360c;
+}
+
+.clay-btn:active {
+  transform: translateY(3px) scale(0.98);
+  box-shadow: 
+    inset 0 2px 4px var(--clay-highlight),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.4),
+    0 1px 0 #bf360c;
+}
+
+.clay-btn.primary-launch {
+  font-size: 1.35rem;
+  padding: 14px 38px;
+  background: linear-gradient(180deg, #ff8a65, #e64a19);
+  box-shadow: 
+    inset 0 4px 8px var(--clay-highlight),
+    inset 0 -6px 8px rgba(0, 0, 0, 0.4),
+    0 10px 24px rgba(230, 74, 25, 0.45),
+    0 5px 0 #bf360c;
+}
+
+.clay-btn.secondary {
+  background: linear-gradient(180deg, #42a5f5, #1565c0);
+  box-shadow: 
+    inset 0 4px 6px var(--clay-highlight),
+    inset 0 -5px 6px rgba(0, 0, 0, 0.4),
+    0 8px 15px rgba(0, 0, 0, 0.4),
+    0 4px 0 #0d47a1;
+  text-shadow: 2px 2px 0 #0d47a1;
+}
+
+.clay-btn.green {
+  background: linear-gradient(180deg, #66bb6a, #2e7d32);
+  box-shadow: 
+    inset 0 4px 6px var(--clay-highlight),
+    inset 0 -5px 6px rgba(0, 0, 0, 0.4),
+    0 8px 15px rgba(0, 0, 0, 0.4),
+    0 4px 0 #1b5e20;
+  text-shadow: 2px 2px 0 #1b5e20;
+}
+
+/* Modal Screens with Glass-Clay Backdrop */
+.modal-screen {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 14, 20, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 50;
+  padding: 16px;
+}
+
+.modal-screen.active {
+  display: flex !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Clay Card Architecture */
+.clay-card {
+  background: linear-gradient(145deg, #e8dac0, #cbb694);
+  border: 6px solid #8d6e63;
+  border-radius: 28px;
+  padding: 30px 42px;
+  box-shadow: 
+    inset 0 6px 14px rgba(255, 255, 255, 0.65),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.35),
+    0 24px 50px rgba(0, 0, 0, 0.7);
+  max-width: 600px;
+  width: 95%;
+  color: #3e2723;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4);
+  animation: clayCardEntrance 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.main-menu-card {
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.main-menu-card::-webkit-scrollbar {
+  width: 6px;
+}
+.main-menu-card::-webkit-scrollbar-thumb {
+  background: #a1887f;
+  border-radius: 3px;
+}
+
+@keyframes clayCardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Floating Title & Header */
+.menu-pill-badge {
+  background: #5d4037;
+  color: #ffe082;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 6px;
+  border: 1px solid #8d6e63;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  display: inline-block;
+}
+
+.game-title {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 3.6rem;
+  letter-spacing: 2px;
+  color: #ffd54f;
+  text-shadow: 
+    4px 4px 0 #e65100,
+    -2px -2px 0 #fff,
+    6px 6px 16px rgba(0, 0, 0, 0.6);
+  margin-bottom: 2px;
+  transform: rotate(-1.5deg);
+  animation: floatTitle 3s ease-in-out infinite;
+}
+
+@keyframes floatTitle {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-4px) rotate(-1.5deg); }
+}
+
+.game-subtitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #5d4037;
+  margin-bottom: 18px;
+}
+
+/* Segmented Clay Tab Navigation */
+.clay-tab-bar {
+  display: flex;
+  gap: 8px;
+  background: rgba(62, 39, 35, 0.15);
+  padding: 5px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 540px;
+  border: 2px solid rgba(141, 110, 99, 0.4);
+}
+
+.clay-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+  padding: 8px 10px;
+  font-family: 'Fredoka', cursive, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #5d4037;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.18s ease;
+}
+
+.clay-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  color: #3e2723;
+}
+
+.clay-tab-btn.active {
+  background: linear-gradient(180deg, #ff8a65, #d84315);
+  color: #ffffff;
+  box-shadow: 
+    inset 0 2px 4px var(--clay-highlight),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+    0 4px 8px rgba(0, 0, 0, 0.25);
+  text-shadow: 1px 1px 0 #bf360c;
+}
+
+.tab-icon {
+  font-size: 1rem;
+}
+
+/* Tab Panes */
+.tab-pane {
+  display: none;
+  width: 100%;
+  animation: tabFade 0.22s ease-out;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+@keyframes tabFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab 1: Control Grid */
+.control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.instruction-item {
+  background: rgba(255, 255, 255, 0.52);
+  border: 2px solid #bcaaa4;
+  border-radius: 14px;
+  padding: 10px 12px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.instruction-item:hover {
+  transform: translateY(-2px);
+  border-color: #8d6e63;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.instruction-badge {
+  display: inline-block;
+  align-self: flex-start;
+  background: #5d4037;
+  color: #ffe082;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.instruction-text strong {
+  font-size: 0.85rem;
+  color: #3e2723;
+}
+
+.instruction-text p {
+  font-size: 0.78rem;
+  color: #4e342e;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.instruction-text code {
+  background: #4e342e;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+/* Tab 2: Arsenal Grid */
+.weapon-notice-banner {
+  background: rgba(255, 235, 59, 0.35);
+  border: 2px dashed #fbc02d;
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #3e2723;
+  margin-bottom: 12px;
+}
+
+.arsenal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.weapon-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 2px solid #bcaaa4;
+  border-radius: 14px;
+  padding: 8px 14px;
+  text-align: left;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  cursor: default;
+}
+
+.weapon-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-spread:hover { border-color: #e53935; }
+.card-laser:hover { border-color: #00e5ff; }
+.card-homing:hover { border-color: #00e676; }
+.card-flak:hover { border-color: #ffd600; }
+.card-plasma:hover { border-color: #e040fb; }
+
+.weapon-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.weapon-card-name {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.95rem;
+  color: #3e2723;
+  letter-spacing: 0.5px;
+}
+
+.weapon-card-desc {
+  font-size: 0.78rem;
+  color: #5d4037;
+  line-height: 1.3;
+}
+
+.weapon-stat {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #795548;
+  margin-top: 3px;
+}
+
+.weapon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.4);
+}
+
+.chip-red { background: #e53935; }
+.chip-blue { background: #1e88e5; }
+.chip-green { background: #43a047; }
+.chip-yellow { background: #fbc02d; color: #3e2723; text-shadow: none; }
+.chip-purple { background: #ab47bc; }
+
+.weapon-preview-row-quick {
+  background: rgba(255, 255, 255, 0.45);
+  border: 2px dashed #bcaaa4;
+  border-radius: 14px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.preview-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #5d4037;
+  letter-spacing: 0.5px;
+}
+
+.weapon-chips-wrap {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weapon-chips-wrap .weapon-chip {
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.weapon-chips-wrap .weapon-chip:hover {
+  transform: translateY(-2px) scale(1.08);
+  filter: brightness(1.15);
+}
+
+/* Tab 3: Worlds Timeline */
+.worlds-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.world-item {
+  background: rgba(255, 255, 255, 0.55);
+  border: 2px solid #bcaaa4;
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.world-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.world-badge {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.8rem;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 10px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+}
+
+.badge-valley { background: #689f38; }
+.badge-canyon { background: #b86b4d; }
+.badge-cyber { background: #1e88e5; }
+.badge-cosmic { background: #7c3aed; }
+
+.world-info strong {
+  font-size: 0.88rem;
+  color: #3e2723;
+  display: block;
+}
+
+.world-info p {
+  font-size: 0.76rem;
+  color: #5d4037;
+  margin-top: 1px;
+}
+
+/* Difficulty Selection Section */
+.difficulty-section {
+  width: 100%;
+  max-width: 540px;
+  background: rgba(62, 39, 35, 0.15);
+  border: 2px solid rgba(141, 110, 99, 0.4);
+  border-radius: 20px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.difficulty-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #5d4037;
+}
+
+.difficulty-title-icon {
+  font-size: 0.9rem;
+}
+
+.difficulty-options {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.difficulty-btn {
+  flex: 1;
+  border: 2px solid rgba(141, 110, 99, 0.5);
+  border-radius: 16px;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-family: 'Fredoka', cursive, sans-serif;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+  outline: none;
+}
+
+.difficulty-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
+}
+
+.difficulty-btn:active {
+  transform: translateY(1px);
+}
+
+.diff-btn-icon {
+  font-size: 1rem;
+}
+
+.diff-btn-name {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 1.15rem;
+  letter-spacing: 0.5px;
+}
+
+.diff-btn-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+/* Individual difficulty button coloring */
+.difficulty-btn.diff-easy {
+  color: #2e7d32;
+}
+.difficulty-btn.diff-easy .diff-btn-badge {
+  background: rgba(67, 160, 71, 0.18);
+  color: #1b5e20;
+}
+.difficulty-btn.diff-easy.active {
+  background: linear-gradient(180deg, #66bb6a, #2e7d32);
+  color: #ffffff;
+  border-color: #1b5e20;
+  box-shadow: 
+    inset 0 2px 4px var(--clay-highlight),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.3),
+    0 4px 10px rgba(46, 125, 50, 0.4);
+}
+.difficulty-btn.diff-easy.active .diff-btn-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #e8f5e9;
+}
+
+.difficulty-btn.diff-normal {
+  color: #e65100;
+}
+.difficulty-btn.diff-normal .diff-btn-badge {
+  background: rgba(245, 124, 0, 0.18);
+  color: #bf360c;
+}
+.difficulty-btn.diff-normal.active {
+  background: linear-gradient(180deg, #ffa726, #e65100);
+  color: #ffffff;
+  border-color: #bf360c;
+  box-shadow: 
+    inset 0 2px 4px var(--clay-highlight),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.3),
+    0 4px 10px rgba(230, 81, 0, 0.4);
+}
+.difficulty-btn.diff-normal.active .diff-btn-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff8e1;
+}
+
+.difficulty-btn.diff-hard {
+  color: #c62828;
+}
+.difficulty-btn.diff-hard .diff-btn-badge {
+  background: rgba(229, 57, 53, 0.18);
+  color: #b71c1c;
+}
+.difficulty-btn.diff-hard.active {
+  background: linear-gradient(180deg, #ef5350, #b71c1c);
+  color: #ffffff;
+  border-color: #7f0000;
+  box-shadow: 
+    inset 0 2px 4px var(--clay-highlight),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.3),
+    0 4px 10px rgba(183, 28, 28, 0.4);
+}
+.difficulty-btn.diff-hard.active .diff-btn-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffebee;
+}
+
+.difficulty-desc-box {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid #bcaaa4;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: #4e342e;
+  line-height: 1.35;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.difficulty-desc-box .desc-highlight {
+  font-weight: 800;
+  color: #d84315;
+}
+
+/* Modal difficulty badges */
+.modal-diff-badge {
+  display: inline-block;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+}
+.diff-badge-easy {
+  background: #43a047;
+}
+.diff-badge-normal {
+  background: #f57c00;
+}
+.diff-badge-hard {
+  background: #e53935;
+}
+
+/* Action Area & Keyboard Tip */
+.menu-action-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.keyboard-tip {
+  font-size: 0.82rem;
+  color: #5d4037;
+  font-weight: 600;
+}
+
+.keyboard-tip kbd {
+  background: #4e342e;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 0 #271612;
+}
+
+/* In-game HUD controls topbar */
+#hud-topbar {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.hud-icon-btn {
+  background: rgba(46, 32, 28, 0.88);
+  color: #ffecb3;
+  border: 2px solid #8d6e63;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  transition: transform 0.12s, background 0.2s, border-color 0.2s;
+  padding: 0;
+}
+
+.hud-svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.hud-icon-btn:hover {
+  transform: scale(1.1);
+  background: #4e342e;
+  border-color: #bcaaa4;
+}
+
+.hud-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive Scaling */
+@media (max-width: 640px) {
+  .game-title {
+    font-size: 2.6rem;
+  }
+  .clay-card {
+    padding: 18px 16px;
+  }
+  .control-grid {
+    grid-template-columns: 1fr;
+  }
+  .clay-tab-btn {
+    font-size: 0.75rem;
+    padding: 6px 4px;
+  }
+  .clay-btn.primary-launch {
+    font-size: 1.1rem;
+    padding: 10px 24px;
+  }
+}
