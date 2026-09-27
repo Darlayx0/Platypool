@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <script>
+    if (window.location.protocol === 'file:' && !window.location.href.includes('play.html')) {
+      window.location.replace('./play.html');
+    }
+  </script>
+  <title>Platypus: Clay Wings - Retro Arcade Shmup</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23e53935%22/><text y=%2260%22 font-size=%2245%22 text-anchor=%22middle%22 x=%2250%22 fill=%22white%22 font-family=%22sans-serif%22 font-weight=%22bold%22>P</text></svg>">
+  <script type="module" crossorigin src="./assets/index-Cl8rpc_u.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Cr93v-XU.css">
+</head>
+<body>
+  <div id="game-wrapper">
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+    <!-- Top in-game quick control buttons -->
+    <div id="hud-topbar">
+      <div class="hud-group">
+        <button id="btn-sound" class="hud-icon-btn" title="Toggle Suara (SFX)">
+          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+        <button id="btn-music" class="hud-icon-btn" title="Toggle Musik">
+          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        </button>
+      </div>
+      <div class="hud-group">
+        <button id="btn-control-mode" class="hud-icon-btn" title="Ganti Mode Kontrol (Mouse / Keyboard)">
+          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 1.07V9h7c0-4.08-3.05-7.44-7-7.93zM4 15c0 4.42 3.58 8 8 8s8-3.58 8-8v-4H4v4zm7-13.93C7.05 1.56 4 4.92 4 9h7V1.07z"/></svg>
+        </button>
+        <button id="btn-autofire" class="hud-icon-btn" title="Toggle Auto-Fire">
+          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+        </button>
+        <button id="btn-pause" class="hud-icon-btn" title="Jeda (Pause)">
+          <svg class="hud-svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Start / Main Menu Modal -->
+    <!-- Start / Main Menu Modal -->
+    <div id="modal-start" class="modal-screen active">
+      <div class="clay-card main-menu-card">
+        <!-- Floating Clay Header Badge -->
+        <div class="menu-pill-badge">
+          <span>ARCADE SHOOT 'EM UP • EDISI MASTER</span>
+        </div>
+
+        <h1 class="game-title">PLATYPUS</h1>
+        <p class="game-subtitle">CLAY WINGS • RETRO CLAYMATION SHOOTER</p>
+
+        <!-- Segmented Tab Navigation -->
+        <div class="clay-tab-bar">
+          <button type="button" class="clay-tab-btn active" data-tab="tab-control">
+            <span class="tab-icon">🎮</span> KONTROL & PANDUAN
+          </button>
+          <button type="button" class="clay-tab-btn" data-tab="tab-weapons">
+            <span class="tab-icon">⚡</span> ARSENAL SENJATA (15S)
+          </button>
+          <button type="button" class="clay-tab-btn" data-tab="tab-worlds">
+            <span class="tab-icon">🏆</span> 4 DUNIA & BOSS
+          </button>
+        </div>
+
+        <!-- Tab 1: Kontrol & Mekanik -->
+        <div id="tab-control" class="tab-pane active">
+          <div class="control-grid">
+            <div class="instruction-item">
+              <span class="instruction-badge">KONTROL</span>
+              <div class="instruction-text">
+                <strong>Gerakan Fleksibel:</strong>
+                <p>Gunakan <code>Mouse</code> (mengikuti kursor) atau <code>W, A, S, D</code> / <code>Tombol Panah</code>.</p>
+              </div>
+            </div>
+            <div class="instruction-item">
+              <span class="instruction-badge">TEMBAK</span>
+              <div class="instruction-text">
+                <strong>Tembakan Utama:</strong>
+                <p>Tahan <code>Klik Kiri</code> atau <code>Spasi</code>. Tersedia tombol <strong>Auto-Fire (⚡)</strong> di atas.</p>
+              </div>
+            </div>
+            <div class="instruction-item">
+              <span class="instruction-badge">SENJATA</span>
+              <div class="instruction-text">
+                <strong>Drop Senjata 10–40 Detik:</strong>
+                <p>Kapsul senjata spesial muncul berkala setiap <strong>10–40 detik</strong> di kondisi apapun (termasuk saat melawan Boss!).</p>
+              </div>
+            </div>
+            <div class="instruction-item">
+              <span class="instruction-badge">NYAWA</span>
+              <div class="instruction-text">
+                <strong>Regulasi Ketahanan:</strong>
+                <p>Nyawa ekstra hanya diperoleh setiap kelipatan <strong>250.000 skor</strong> & mengalahkan Boss Kolosal!</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="weapon-preview-row-quick">
+            <span class="preview-label">5 ARSENAL SPESIAL (15S):</span>
+            <div class="weapon-chips-wrap">
+              <span class="weapon-chip chip-red" data-target-weapon="SPREAD" title="Spread Shot">SPREAD</span>
+              <span class="weapon-chip chip-blue" data-target-weapon="LASER" title="Sonic Laser">LASER</span>
+              <span class="weapon-chip chip-green" data-target-weapon="HOMING" title="Homing Missiles">HOMING</span>
+              <span class="weapon-chip chip-yellow" data-target-weapon="FLAK" title="Clay Flak Bomb">FLAK</span>
+              <span class="weapon-chip chip-purple" data-target-weapon="PLASMA" title="Plasma Arc (Listrik)">PLASMA</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Arsenal Senjata (15 Detik) -->
+        <div id="tab-weapons" class="tab-pane">
+          <div class="weapon-notice-banner">
+            <span>⏱️ Seluruh 5 tipe senjata spesial memiliki durasi aktif <strong>15 detik</strong> sebelum kembali ke Pea-Shooter!</span>
+          </div>
+          <div class="arsenal-grid">
+            <div class="weapon-card card-spread" data-weapon="SPREAD">
+              <div class="weapon-card-header">
+                <span class="weapon-chip chip-red">SPR</span>
+                <span class="weapon-card-name">SPREAD SHOT</span>
+              </div>
+              <p class="weapon-card-desc">Tembakan 3 arah menyebar, sangat efektif memusnahkan kawanan musuh yang padat.</p>
+              <span class="weapon-stat">Durasi: 15s • Area Luas</span>
+            </div>
+
+            <div class="weapon-card card-laser" data-weapon="LASER">
+              <div class="weapon-card-header">
+                <span class="weapon-chip chip-blue">LSR</span>
+                <span class="weapon-card-name">SONIC LASER</span>
+              </div>
+              <p class="weapon-card-desc">Berkas sinar laser kontinu berkecepatan tinggi yang menembus armor musuh berderet.</p>
+              <span class="weapon-stat">Durasi: 15s • Menembus Target</span>
+            </div>
+
+            <div class="weapon-card card-homing" data-weapon="HOMING">
+              <div class="weapon-card-header">
+                <span class="weapon-chip chip-green">HOM</span>
+                <span class="weapon-card-name">HOMING MISSILES</span>
+              </div>
+              <p class="weapon-card-desc">Rudal pintar pencari panas yang secara otomatis memburu dan menghantam target terdekat.</p>
+              <span class="weapon-stat">Durasi: 15s • Pelacak Otomatis</span>
+            </div>
+
+            <div class="weapon-card card-flak" data-weapon="FLAK">
+              <div class="weapon-card-header">
+                <span class="weapon-chip chip-yellow">FLK</span>
+                <span class="weapon-card-name">CLAY FLAK BOMB</span>
+              </div>
+              <p class="weapon-card-desc">Bom fragmentasi tanah liat dengan ledakan area radial yang meluluhlantakkan formasi.</p>
+              <span class="weapon-stat">Durasi: 15s • Ledakan Radius</span>
+            </div>
+
+            <div class="weapon-card card-plasma" data-weapon="PLASMA">
+              <div class="weapon-card-header">
+                <span class="weapon-chip chip-purple">PLS</span>
+                <span class="weapon-card-name">PLASMA ARC</span>
+              </div>
+              <p class="weapon-card-desc">Arc energi plasma petir ungu yang melompat antar musuh dengan efek kejut mematikan.</p>
+              <span class="weapon-stat">Durasi: 15s • Sambaran Listrik</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Ekspedisi 4 Dunia & Boss -->
+        <div id="tab-worlds" class="tab-pane">
+          <div class="worlds-timeline">
+            <div class="world-item">
+              <span class="world-badge badge-valley">WORLD 1</span>
+              <div class="world-info">
+                <strong>Lembah Tanah Liat (Stage 1–5)</strong>
+                <p>Boss Stage 5: <em>The Iron Clay Dreadnought</em></p>
+              </div>
+            </div>
+            <div class="world-item">
+              <span class="world-badge badge-canyon">WORLD 2</span>
+              <div class="world-info">
+                <strong>Ngarai Senja Sandstone (Stage 6–10)</strong>
+                <p>Boss Stage 10: <em>The Clay Goliath Zeppelin</em></p>
+              </div>
+            </div>
+            <div class="world-item">
+              <span class="world-badge badge-cyber">WORLD 3</span>
+              <div class="world-info">
+                <strong>Malam Siber Sintesis (Stage 11–15)</strong>
+                <p>Boss Stage 15: <em>The Ultimate Clay Leviathan</em></p>
+              </div>
+            </div>
+            <div class="world-item">
+              <span class="world-badge badge-cosmic">WORLD 4</span>
+              <div class="world-info">
+                <strong>Singularitas Kosmis (Stage 16–20)</strong>
+                <p>Boss Stage 20: <em>The Omega Clay Colossus</em></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Difficulty Selection Section -->
+        <div class="difficulty-section">
+          <div class="difficulty-header">
+            <span class="difficulty-title-icon">⚙️</span>
+            <span class="difficulty-title-text">TINGKAT KESULITAN (DIFFICULTY)</span>
+          </div>
+          <div class="difficulty-options">
+            <button type="button" class="difficulty-btn diff-easy" data-difficulty="EASY">
+              <span class="diff-btn-icon">🟢</span>
+              <span class="diff-btn-name">EASY</span>
+              <span class="diff-btn-badge">15 NYAWA</span>
+            </button>
+            <button type="button" class="difficulty-btn diff-normal active" data-difficulty="NORMAL">
+              <span class="diff-btn-icon">🟡</span>
+              <span class="diff-btn-name">NORMAL</span>
+              <span class="diff-btn-badge">10 NYAWA</span>
+            </button>
+            <button type="button" class="difficulty-btn diff-hard" data-difficulty="HARD">
+              <span class="diff-btn-icon">🔴</span>
+              <span class="diff-btn-name">HARD</span>
+              <span class="diff-btn-badge">5 NYAWA</span>
+            </button>
+          </div>
+          <div id="difficulty-description-banner" class="difficulty-desc-box">
+            <span class="desc-highlight">Klasik Arcade:</span> Max 10 Nyawa • Durasi Senjata 15s • Senjata Hancur Saat Mati • +1 Nyawa tiap 250k Skor & Boss
+          </div>
+        </div>
+
+        <!-- Launch CTA -->
+        <div class="menu-action-area">
+          <button id="btn-play-game" class="clay-btn primary-launch">
+            <span>MULAI PERTEMPURAN (20 STAGE)</span>
+          </button>
+          <p class="keyboard-tip">
+            💡 Tekan <kbd>SPASI</kbd> atau <kbd>ENTER</kbd> untuk mulai bermain
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="modal-pause" class="modal-screen">
+      <div class="clay-card">
+        <div id="pause-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
+        <h2 class="game-title" style="font-size: 2.8rem;">GAME DIJEDA</h2>
+        <p class="game-subtitle">Tarik napas sejenak, pilot tanah liat!</p>
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+          <button id="btn-resume" class="clay-btn green">LANJUT (ESC)</button>
+          <button id="btn-restart-pause" class="clay-btn secondary">ULANGI</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="modal-gameover" class="modal-screen">
+      <div class="clay-card">
+        <div id="gameover-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
+        <h2 class="game-title" style="color: #ef5350; text-shadow: 4px 4px 0 #b71c1c;">GAME OVER</h2>
+        <p id="gameover-stats" style="font-size: 1.2rem; margin: 15px 0; color: #4e342e; font-weight: 700;">
+          Skor: 0 | Stage: 1 / 20
+        </p>
+        <p id="gameover-highscore" style="font-size: 1rem; color: #795548; margin-bottom: 25px;">
+          Skor Tertinggi: 0
+        </p>
+        <button id="btn-retry" class="clay-btn">COBA LAGI</button>
+      </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="modal-victory" class="modal-screen">
+      <div class="clay-card">
+        <div id="victory-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
+        <h2 class="game-title" style="color: #66bb6a; text-shadow: 4px 4px 0 #1b5e20;">MISI SUKSES!</h2>
+        <p class="game-subtitle">Seluruh 20 stage dan 4 boss kolosal telah ditaklukkan!</p>
+        <p id="victory-stats" style="font-size: 1.3rem; margin: 15px 0; color: #4e342e; font-weight: 700;">
+          Skor Akhir: 0 | 20 / 20 STAGE COMPLETED!
+        </p>
+        <button id="btn-play-again" class="clay-btn green">MAIN LAGI</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
