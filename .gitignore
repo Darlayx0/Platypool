@@ -3,6 +3,7 @@ node_modules/
 
 # Production build output
 dist/
+.vite/
 
 # OS and Editor files
 .DS_Store
