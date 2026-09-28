@@ -1,4 +1,4 @@
-// Parallax Background with High-Fidelity Claymorphism for 4 Biomes
+// Parallax Background with High-Fidelity Claymorphism for 4 Biomes (Optimized Engine)
 import { ClayRenderer } from './ClayRenderer.js';
 
 export const BIOMES = {
@@ -105,13 +105,32 @@ export class ParallaxBackground {
     this.currentBiomeKey = 'VALLEY';
     this.biome = BIOMES.VALLEY;
 
+    // Zero-allocation flat coordinate buffers for mountain and hill ridge passes
+    this.maxTerrainPoints = 128;
+    this.ridgeX = new Float32Array(this.maxTerrainPoints);
+    this.ridgeY = new Float32Array(this.maxTerrainPoints);
+
+    this.dpr = 1;
+
+    // Linear gradient flyweight cache per biome
+    this.gradientCache = new Map();
+
     this.initFeatures();
+    this.bakeCloudSprites();
+  }
+
+  onResize(dpr = 1) {
+    if (this.dpr !== dpr) {
+      this.dpr = dpr;
+      this.bakeCloudSprites();
+    }
   }
 
   setBiome(biomeKey) {
-    if (BIOMES[biomeKey]) {
+    if (BIOMES[biomeKey] && this.currentBiomeKey !== biomeKey) {
       this.currentBiomeKey = biomeKey;
       this.biome = BIOMES[biomeKey];
+      this.bakeCloudSprites();
     }
   }
 
@@ -141,7 +160,12 @@ export class ParallaxBackground {
           { dx: 28, dy: 8, rx: 32 + Math.random() * 14, ry: 26 + Math.random() * 10 },
           { dx: -52, dy: 14, rx: 20 + Math.random() * 10, ry: 16 + Math.random() * 8 },
           { dx: 52, dy: 16, rx: 22 + Math.random() * 10, ry: 18 + Math.random() * 8 }
-        ]
+        ],
+        cachedCanvas: null,
+        anchorX: 0,
+        anchorY: 0,
+        canvasW: 0,
+        canvasH: 0
       });
     }
 
@@ -178,6 +202,103 @@ export class ParallaxBackground {
     }
   }
 
+  // Pre-render volumetric clouds into cached offscreen canvases per biome with UHD Hi-DPI sharpness
+  bakeCloudSprites() {
+    const b = this.biome;
+    const dpr = Math.min(this.dpr || 1, 2.5);
+    for (const c of this.clouds) {
+      let minX = 0, maxX = 0, minY = 0, maxY = 0;
+      for (const blob of c.blobs) {
+        minX = Math.min(minX, blob.dx - blob.rx - 8);
+        maxX = Math.max(maxX, blob.dx + blob.rx + 12);
+        minY = Math.min(minY, blob.dy - blob.ry - 8);
+        maxY = Math.max(maxY, blob.dy + blob.ry + 18);
+      }
+
+      const rawW = Math.ceil((maxX - minX) * c.scale);
+      const rawH = Math.ceil((maxY - minY) * c.scale);
+      const padding = 16;
+      const canvasW = rawW + padding * 2;
+      const canvasH = rawH + padding * 2;
+      c.canvasW = canvasW;
+      c.canvasH = canvasH;
+
+      let offCanvas = c.cachedCanvas;
+      if (!offCanvas) {
+        offCanvas = document.createElement('canvas');
+        c.cachedCanvas = offCanvas;
+      }
+      offCanvas.width = Math.ceil(canvasW * dpr);
+      offCanvas.height = Math.ceil(canvasH * dpr);
+
+      const offCtx = offCanvas.getContext('2d');
+      offCtx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+      offCtx.save();
+      offCtx.scale(dpr, dpr);
+
+      c.anchorX = (-minX * c.scale) + padding;
+      c.anchorY = (-minY * c.scale) + padding;
+
+      offCtx.translate(c.anchorX, c.anchorY);
+      offCtx.scale(c.scale, c.scale);
+
+      for (const blob of c.blobs) {
+        // Blob drop shadow
+        offCtx.beginPath();
+        offCtx.ellipse(blob.dx + 4, blob.dy + 8, blob.rx, blob.ry, 0, 0, Math.PI * 2);
+        offCtx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+        offCtx.fill();
+
+        // Clay blob radial shading (plasticine gradient)
+        const lightX = blob.dx - blob.rx * 0.35;
+        const lightY = blob.dy - blob.ry * 0.35;
+        const grad = offCtx.createRadialGradient(lightX, lightY, blob.rx * 0.1, blob.dx, blob.dy, Math.max(blob.rx, blob.ry));
+        grad.addColorStop(0, b.cloudHighlight);
+        grad.addColorStop(0.3, b.cloudBase);
+        grad.addColorStop(0.85, b.cloudBase);
+        grad.addColorStop(1, b.cloudShadow);
+
+        offCtx.beginPath();
+        offCtx.ellipse(blob.dx, blob.dy, blob.rx, blob.ry, 0, 0, Math.PI * 2);
+        offCtx.fillStyle = grad;
+        offCtx.fill();
+
+        // Rim highlight on upper-left ridge
+        offCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        offCtx.lineWidth = 2.5;
+        offCtx.stroke();
+      }
+      offCtx.restore();
+    }
+  }
+
+  getSkyGradient(ctx) {
+    const key = `sky_${this.currentBiomeKey}_${this.height}`;
+    let grad = this.gradientCache.get(key);
+    if (!grad) {
+      const b = this.biome;
+      grad = ctx.createLinearGradient(0, 0, 0, this.height);
+      grad.addColorStop(0, b.sky[0]);
+      grad.addColorStop(0.45, b.sky[1]);
+      grad.addColorStop(1, b.sky[2]);
+      this.gradientCache.set(key, grad);
+    }
+    return grad;
+  }
+
+  getLayerGradient(ctx, key, y0, y1, palette) {
+    const cacheKey = `${key}_${this.currentBiomeKey}_${y0}_${y1}`;
+    let grad = this.gradientCache.get(cacheKey);
+    if (!grad) {
+      grad = ctx.createLinearGradient(0, y0, 0, y1);
+      grad.addColorStop(0, palette[0]);
+      grad.addColorStop(0.35, palette[1]);
+      grad.addColorStop(1, palette[2]);
+      this.gradientCache.set(cacheKey, grad);
+    }
+    return grad;
+  }
+
   update(dt, speedMultiplier = 1) {
     this.tick += dt;
     const baseSpeed = 80 * speedMultiplier * dt;
@@ -191,7 +312,8 @@ export class ParallaxBackground {
     this.islandOffset = (this.islandOffset + baseSpeed * 2.85) % (this.width * 2);
 
     // Update ambient particles
-    for (const p of this.ambientParticles) {
+    for (let i = 0; i < this.ambientParticles.length; i++) {
+      const p = this.ambientParticles[i];
       p.x += p.vx * dt;
       p.y += (p.vy + Math.sin(this.tick * p.bobSpeed + p.phase) * 15) * dt;
 
@@ -207,12 +329,8 @@ export class ParallaxBackground {
   draw(ctx) {
     const b = this.biome;
 
-    // 1. Sky Gradient & Atmospheric Depth
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-    skyGrad.addColorStop(0, b.sky[0]);
-    skyGrad.addColorStop(0.45, b.sky[1]);
-    skyGrad.addColorStop(1, b.sky[2]);
-    ctx.fillStyle = skyGrad;
+    // 1. Sky Gradient & Atmospheric Depth (cached)
+    ctx.fillStyle = this.getSkyGradient(ctx);
     ctx.fillRect(0, 0, this.width, this.height);
 
     // 1b. Stars if in Cyber Night or Cosmic Void
@@ -220,20 +338,26 @@ export class ParallaxBackground {
       this.drawStars(ctx);
     }
 
-    // 2. Sculpted Clay Clouds Layer (with 3D volumetric shading)
-    this.drawClayClouds(ctx, b);
+    // 2. Sculpted Clay Clouds Layer (accelerated via pre-rendered offscreen sprite cache)
+    this.drawClayClouds(ctx);
 
     // 3. Distant Far Mountain Range
-    this.drawMountainRange(ctx, this.farMountainOffset, b.mountainFar, 270, 0.004, 0.010, 50, 25, 0.15);
+    this.drawMountainRange(ctx, 'mountain_far', this.farMountainOffset, b.mountainFar, 270, 0.004, 0.010, 50, 25, 0.15);
+
+    // Soft atmospheric haze for realistic aerial perspective depth
+    this.drawAtmosphericHaze(ctx, b, 240, 0.06);
 
     // 4. Near Mountain Range with Clay Ridges
-    this.drawMountainRange(ctx, this.nearMountainOffset, b.mountainNear, 210, 0.006, 0.015, 65, 30, 0.25);
+    this.drawMountainRange(ctx, 'mountain_near', this.nearMountainOffset, b.mountainNear, 210, 0.006, 0.015, 65, 30, 0.25);
+
+    // Midground atmospheric haze
+    this.drawAtmosphericHaze(ctx, b, 170, 0.07);
 
     // 5. Midground Rolling Clay Hills
-    this.drawRollingClayHills(ctx, this.midHillOffset, b.hillMid, 150, 0.007, 0.016, 48, 22, 0.35);
+    this.drawRollingClayHills(ctx, 'hill_mid', this.midHillOffset, b.hillMid, 150, 0.007, 0.016, 48, 22, 0.35);
 
     // 6. Near Ground Rolling Clay Hills
-    this.drawRollingClayHills(ctx, this.nearHillOffset, b.hillNear, 90, 0.009, 0.022, 38, 16, 0.45);
+    this.drawRollingClayHills(ctx, 'hill_near', this.nearHillOffset, b.hillNear, 90, 0.009, 0.022, 38, 16, 0.45);
 
     // 7. Foreground Floating Clay Islands (with geologic strata & trees)
     this.drawClayIslands(ctx, b);
@@ -242,9 +366,22 @@ export class ParallaxBackground {
     this.drawAmbientParticles(ctx, b);
   }
 
+  drawAtmosphericHaze(ctx, b, baseHeight, alpha = 0.07) {
+    ctx.save();
+    const h = this.height;
+    const grad = ctx.createLinearGradient(0, h - baseHeight - 40, 0, h);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+    grad.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.35})`);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, h - baseHeight - 40, this.width, baseHeight + 40);
+    ctx.restore();
+  }
+
   drawStars(ctx) {
     ctx.save();
-    for (const s of this.stars) {
+    for (let i = 0; i < this.stars.length; i++) {
+      const s = this.stars[i];
       const alpha = 0.3 + Math.sin(this.tick * s.twinkleSpeed * 12 + s.phase) * 0.45;
       ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, alpha)})`;
       ctx.beginPath();
@@ -262,82 +399,52 @@ export class ParallaxBackground {
     ctx.restore();
   }
 
-  drawClayClouds(ctx, b) {
-    ctx.save();
-    for (const c of this.clouds) {
+  drawClayClouds(ctx) {
+    for (let i = 0; i < this.clouds.length; i++) {
+      const c = this.clouds[i];
       let cx = (c.x - this.cloudOffset);
       if (cx < -200) cx += this.width * 2;
 
-      ctx.save();
-      ctx.translate(cx, c.y);
-      ctx.scale(c.scale, c.scale);
-
-      // Draw each cloud blob with 3D volumetric clay shading
-      for (const blob of c.blobs) {
-        // Blob drop shadow
-        ctx.beginPath();
-        ctx.ellipse(blob.dx + 4, blob.dy + 8, blob.rx, blob.ry, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
-        ctx.fill();
-
-        // Clay blob radial shading (plasticine gradient)
-        const lightX = blob.dx - blob.rx * 0.35;
-        const lightY = blob.dy - blob.ry * 0.35;
-        const grad = ctx.createRadialGradient(lightX, lightY, blob.rx * 0.1, blob.dx, blob.dy, Math.max(blob.rx, blob.ry));
-        grad.addColorStop(0, b.cloudHighlight);
-        grad.addColorStop(0.3, b.cloudBase);
-        grad.addColorStop(0.85, b.cloudBase);
-        grad.addColorStop(1, b.cloudShadow);
-
-        ctx.beginPath();
-        ctx.ellipse(blob.dx, blob.dy, blob.rx, blob.ry, 0, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Rim highlight on upper-left ridge
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
+      if (c.cachedCanvas) {
+        const destW = c.canvasW || (c.cachedCanvas.width / (this.dpr || 1));
+        const destH = c.canvasH || (c.cachedCanvas.height / (this.dpr || 1));
+        ctx.drawImage(c.cachedCanvas, 0, 0, c.cachedCanvas.width, c.cachedCanvas.height, cx - c.anchorX, c.y - c.anchorY, destW, destH);
       }
-      ctx.restore();
     }
-    ctx.restore();
   }
 
-  drawMountainRange(ctx, offset, palette, baseHeight, freq1, freq2, amp1, amp2, ridgeHighlightAlpha) {
+  drawMountainRange(ctx, cacheKey, offset, palette, baseHeight, freq1, freq2, amp1, amp2, ridgeHighlightAlpha) {
     ctx.save();
     const h = this.height;
     const step = 60;
-    const totalPoints = Math.ceil(this.width / step) + 3;
+    const totalPoints = Math.min(this.maxTerrainPoints - 1, Math.ceil(this.width / step) + 3);
 
     ctx.beginPath();
     ctx.moveTo(0, h);
 
-    const points = [];
+    const stepMod = offset % step;
+    const stepBase = Math.floor(offset / step) * step;
+
     for (let i = 0; i <= totalPoints; i++) {
-      const x = i * step - (offset % step);
-      const worldX = i * step + Math.floor(offset / step) * step;
+      const x = i * step - stepMod;
+      const worldX = i * step + stepBase;
       const y = h - baseHeight - Math.sin(worldX * freq1) * amp1 - Math.cos(worldX * freq2) * amp2;
-      points.push({ x, y });
+      this.ridgeX[i] = x;
+      this.ridgeY[i] = y;
       ctx.lineTo(x, y);
     }
 
     ctx.lineTo(this.width, h);
     ctx.closePath();
 
-    // Multi-stop mountain gradient
-    const grad = ctx.createLinearGradient(0, h - baseHeight - amp1 - amp2, 0, h);
-    grad.addColorStop(0, palette[0]);
-    grad.addColorStop(0.4, palette[1]);
-    grad.addColorStop(1, palette[2]);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = this.getLayerGradient(ctx, cacheKey, h - baseHeight - amp1 - amp2, h, palette);
     ctx.fill();
 
-    // Sculpted Clay Bevel Ridge Line
+    // Sculpted Clay Bevel Ridge Line (Zero heap allocations, reuse ridge buffer)
     ctx.beginPath();
-    for (let i = 0; i < points.length; i++) {
-      if (i === 0) ctx.moveTo(points[i].x, points[i].y);
-      else ctx.lineTo(points[i].x, points[i].y);
+    ctx.moveTo(this.ridgeX[0], this.ridgeY[0]);
+    for (let i = 1; i <= totalPoints; i++) {
+      ctx.lineTo(this.ridgeX[i], this.ridgeY[i]);
     }
     ctx.strokeStyle = `rgba(255, 255, 255, ${ridgeHighlightAlpha})`;
     ctx.lineWidth = 4;
@@ -346,39 +453,38 @@ export class ParallaxBackground {
     ctx.restore();
   }
 
-  drawRollingClayHills(ctx, offset, palette, baseHeight, freq1, freq2, amp1, amp2, highlightAlpha) {
+  drawRollingClayHills(ctx, cacheKey, offset, palette, baseHeight, freq1, freq2, amp1, amp2, highlightAlpha) {
     ctx.save();
     const h = this.height;
     const step = 45;
-    const totalPoints = Math.ceil(this.width / step) + 3;
+    const totalPoints = Math.min(this.maxTerrainPoints - 1, Math.ceil(this.width / step) + 3);
 
     ctx.beginPath();
     ctx.moveTo(0, h);
 
-    const points = [];
+    const stepMod = offset % step;
+    const stepBase = Math.floor(offset / step) * step;
+
     for (let i = 0; i <= totalPoints; i++) {
-      const x = i * step - (offset % step);
-      const worldX = i * step + Math.floor(offset / step) * step;
+      const x = i * step - stepMod;
+      const worldX = i * step + stepBase;
       const y = h - baseHeight - Math.sin(worldX * freq1) * amp1 - Math.sin(worldX * freq2) * amp2;
-      points.push({ x, y });
+      this.ridgeX[i] = x;
+      this.ridgeY[i] = y;
       ctx.lineTo(x, y);
     }
 
     ctx.lineTo(this.width, h);
     ctx.closePath();
 
-    const hillGrad = ctx.createLinearGradient(0, h - baseHeight - amp1 - amp2, 0, h);
-    hillGrad.addColorStop(0, palette[0]);
-    hillGrad.addColorStop(0.3, palette[1]);
-    hillGrad.addColorStop(1, palette[2]);
-    ctx.fillStyle = hillGrad;
+    ctx.fillStyle = this.getLayerGradient(ctx, cacheKey, h - baseHeight - amp1 - amp2, h, palette);
     ctx.fill();
 
-    // Beveled ridge highlight (giving the tangible plasticine rim)
+    // Beveled ridge highlight (Zero heap allocations)
     ctx.beginPath();
-    for (let i = 0; i < points.length; i++) {
-      if (i === 0) ctx.moveTo(points[i].x, points[i].y);
-      else ctx.lineTo(points[i].x, points[i].y);
+    ctx.moveTo(this.ridgeX[0], this.ridgeY[0]);
+    for (let i = 1; i <= totalPoints; i++) {
+      ctx.lineTo(this.ridgeX[i], this.ridgeY[i]);
     }
     ctx.strokeStyle = `rgba(255, 255, 255, ${highlightAlpha})`;
     ctx.lineWidth = 5;
@@ -389,7 +495,8 @@ export class ParallaxBackground {
 
   drawClayIslands(ctx, b) {
     ctx.save();
-    for (const isl of this.islands) {
+    for (let k = 0; k < this.islands.length; k++) {
+      const isl = this.islands[k];
       let ix = (isl.x - this.islandOffset);
       if (ix < -300) ix += this.width * 2;
 
@@ -403,7 +510,8 @@ export class ParallaxBackground {
       ctx.fill();
 
       // Hanging clay roots & vines
-      for (const root of isl.mossRoots) {
+      for (let r = 0; r < isl.mossRoots.length; r++) {
+        const root = isl.mossRoots[r];
         ClayRenderer.drawClayCapsule(ctx, root.dx, isl.height * 0.4 + root.len / 2, root.r * 2, root.len, b.islandRockDark, '#140d0a');
         ClayRenderer.drawClayBlob(ctx, root.dx, isl.height * 0.4 + root.len, root.r + 1, root.r + 1, b.islandTopDark, '#140d0a');
       }
@@ -439,17 +547,21 @@ export class ParallaxBackground {
 
   drawAmbientParticles(ctx, b) {
     ctx.save();
-    for (const p of this.ambientParticles) {
+    const len = this.ambientParticles.length;
+    for (let i = 0; i < len; i++) {
+      const p = this.ambientParticles[i];
       ctx.fillStyle = `${b.ambientColor}${p.alpha})`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
 
       // Soft glow aura
-      ctx.fillStyle = `${b.ambientColor}${p.alpha * 0.35})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
-      ctx.fill();
+      if (p.size > 2) {
+        ctx.fillStyle = `${b.ambientColor}${p.alpha * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }

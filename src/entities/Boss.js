@@ -4,10 +4,13 @@ import { Bullet } from './Bullet.js';
 import { Enemy } from './Enemy.js';
 
 export class Boss {
-  constructor(canvasWidth, canvasHeight, bossType = 'DREADNOUGHT') {
+  constructor(canvasWidth, canvasHeight, bossType = 'DREADNOUGHT', options = {}) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
     this.bossType = bossType; // DREADNOUGHT, GOLIATH_ZEPPELIN, LEVIATHAN_TITAN
+    this.options = options;
+    this.rageThreshold = options.rageThreshold !== undefined ? options.rageThreshold : 0.30;
+    this.hpMult = options.hpMult !== undefined ? options.hpMult : 1.0;
 
     this.x = 1500; // starts offscreen
     this.y = canvasHeight / 2;
@@ -29,34 +32,61 @@ export class Boss {
   }
 
   initBossComponents() {
+    const hpM = this.hpMult || 1.0;
     switch (this.bossType) {
+      case 'OMEGA_CORE_SPAWN':
+        this.title = 'THE OMEGA APEX CORE';
+        this.radius = 75;
+        this.coreHp = Math.round(1200 * hpM);
+        this.maxTotalHp = this.coreHp;
+
+        // Dash mechanics: forward rush and backward retreat
+        this.dashState = 'IDLE'; // 'IDLE', 'TELEGRAPH', 'RUSH', 'HOLD', 'RETREAT'
+        this.dashCooldown = 6.5;
+        this.dashTimer = 0;
+        this.homeX = 1040;
+        this.targetDashX = 260;
+        this.targetDashY = this.canvasHeight / 2;
+
+        // Invulnerable barrier skill
+        this.isInvulnerable = false;
+        this.invulnerableCooldown = 11.0;
+        this.invulnerableTimer = 0;
+        this.shieldDuration = 2.4;
+
+        // Bullet & Attack timers
+        this.spiralShootTimer = 0.55;
+        this.missileSalvoTimer = 3.2;
+        this.droneSpawnTimer = 5.5;
+        break;
+
       case 'OMEGA_COLOSSUS':
         this.title = 'THE OMEGA CLAY COLOSSUS';
         this.radius = 135;
-        this.railTopHp = 800;
+        this.railTopHp = Math.round(400 * hpM);
         this.railTopAlive = true;
-        this.railBottomHp = 800;
+        this.railBottomHp = Math.round(400 * hpM);
         this.railBottomAlive = true;
-        this.droneCoreHp = 900;
+        this.droneCoreHp = Math.round(500 * hpM);
         this.droneCoreAlive = true;
-        this.coreHp = 2000;
-        this.maxTotalHp = 4500; // Colossal World 4 climax endurance
+        this.coreHp = Math.round(1100 * hpM);
+        this.maxTotalHp = Math.round(2400 * hpM); // Colossal World 4 climax Phase 1
 
-        this.railgunTimer = 2.4;
-        this.droneDeployTimer = 4.0;
-        this.singularityWaveTimer = 1.6;
-        this.rageBarrageTimer = 0.20;
+        this.railgunTimer = 2.2;
+        this.droneDeployTimer = 3.8;
+        this.singularityWaveTimer = 1.5;
+        this.rageBarrageTimer = 0.18;
         break;
 
       case 'GOLIATH_ZEPPELIN':
         this.title = 'THE CLAY GOLIATH ZEPPELIN';
         this.radius = 110;
-        this.mortarHp = 260;
+        this.mortarHp = Math.round(260 * hpM);
         this.mortarAlive = true;
-        this.hangarHp = 240;
+        this.hangarHp = Math.round(240 * hpM);
         this.hangarAlive = true;
-        this.coreHp = 700;
-        this.maxTotalHp = 1200; // World 2 airship fortress
+        this.coreHp = Math.round(700 * hpM);
+        this.maxTotalHp = Math.round(1200 * hpM); // World 2 airship fortress
 
         this.mortarTimer = 2.4;
         this.broadsideTimer = 1.6;
@@ -67,14 +97,14 @@ export class Boss {
       case 'LEVIATHAN_TITAN':
         this.title = 'THE ULTIMATE CLAY LEVIATHAN';
         this.radius = 120;
-        this.wingTopHp = 420;
+        this.wingTopHp = Math.round(300 * hpM);
         this.wingTopAlive = true;
-        this.wingBottomHp = 420;
+        this.wingBottomHp = Math.round(300 * hpM);
         this.wingBottomAlive = true;
-        this.missilePodHp = 460;
+        this.missilePodHp = Math.round(350 * hpM);
         this.missilePodAlive = true;
-        this.coreHp = 1100;
-        this.maxTotalHp = 2400; // World 3 heavyweight bio-mech
+        this.coreHp = Math.round(850 * hpM);
+        this.maxTotalHp = Math.round(1800 * hpM); // World 3 heavyweight bio-mech (1800 HP)
 
         this.isChargingLaser = false;
         this.laserChargeTime = 0;
@@ -88,12 +118,12 @@ export class Boss {
       default:
         this.title = 'THE IRON CLAY DREADNOUGHT';
         this.radius = 95;
-        this.turretTopHp = 110;
-        this.turretBottomHp = 110;
+        this.turretTopHp = Math.round(110 * hpM);
+        this.turretBottomHp = Math.round(110 * hpM);
         this.turretTopAlive = true;
         this.turretBottomAlive = true;
-        this.coreHp = 380;
-        this.maxTotalHp = 600; // World 1 armored dreadnought
+        this.coreHp = Math.round(380 * hpM);
+        this.maxTotalHp = Math.round(600 * hpM); // World 1 armored dreadnought
 
         this.topTurretAngle = Math.PI;
         this.bottomTurretAngle = Math.PI;
@@ -105,7 +135,9 @@ export class Boss {
   }
 
   get totalHp() {
-    if (this.bossType === 'OMEGA_COLOSSUS') {
+    if (this.bossType === 'OMEGA_CORE_SPAWN') {
+      return Math.max(0, this.coreHp);
+    } else if (this.bossType === 'OMEGA_COLOSSUS') {
       return Math.max(0, (this.railTopAlive ? this.railTopHp : 0) +
                          (this.railBottomAlive ? this.railBottomHp : 0) +
                          (this.droneCoreAlive ? this.droneCoreHp : 0) +
@@ -169,8 +201,8 @@ export class Boss {
       return true;
     }
 
-    // Universal 30% HP Enrage Upgrade
-    if (!this.rageMode && this.hpRatio <= 0.30) {
+    // Universal HP Enrage Upgrade
+    if (!this.rageMode && this.hpRatio <= this.rageThreshold) {
       this.rageMode = true;
       if (sound) sound.playBossAlarm();
       if (camera) camera.addTrauma(0.5);
@@ -179,6 +211,9 @@ export class Boss {
 
     // Boss Type Updates
     switch (this.bossType) {
+      case 'OMEGA_CORE_SPAWN':
+        this.updateOmegaCoreSpawn(dt, player, bullets, sound, camera, particles, extraEnemies);
+        break;
       case 'OMEGA_COLOSSUS':
         this.updateOmegaColossus(dt, player, bullets, sound, camera, particles, extraEnemies);
         break;
@@ -295,7 +330,8 @@ export class Boss {
       if (this.mortarTimer <= 0) {
         this.mortarTimer = this.rageMode ? 1.4 : 2.5;
         const mortarOffsets = this.rageMode ? [-70, 0, 70] : [-40, 40];
-        mortarOffsets.forEach(vxOff => {
+        for (let m = 0; m < mortarOffsets.length; m++) {
+          const vxOff = mortarOffsets[m];
           bullets.push(new Bullet({
             x: mortarX,
             y: mortarY,
@@ -307,7 +343,7 @@ export class Boss {
             life: 3.5,
             isEnemy: true
           }));
-        });
+        }
         sound.playShoot('FLAK');
         camera.addTrauma(0.2);
       }
@@ -401,7 +437,8 @@ export class Boss {
       if (this.missileSalvoTimer <= 0) {
         this.missileSalvoTimer = this.rageMode ? 1.9 : 3.8;
         const offsets = this.rageMode ? [-50, -25, 25, 50] : [-42, 42];
-        offsets.forEach(yOff => {
+        for (let m = 0; m < offsets.length; m++) {
+          const yOff = offsets[m];
           bullets.push(new Bullet({
             x: this.x - 20,
             y: this.y + yOff,
@@ -412,7 +449,7 @@ export class Boss {
             life: 4.5,
             isEnemy: true
           }));
-        });
+        }
         sound.playShoot('HOMING');
       }
     }
@@ -446,12 +483,12 @@ export class Boss {
     // 1. Dual High-Velocity Railgun Beams
     this.railgunTimer -= dt;
     if (this.railgunTimer <= 0) {
-      this.railgunTimer = this.rageMode ? 1.1 : 2.6;
+      this.railgunTimer = this.rageMode ? 1.5 : 2.6;
       if (this.railTopAlive) {
         bullets.push(new Bullet({
           x: this.x - 70,
           y: this.y - 85,
-          vx: this.rageMode ? -850 : -700,
+          vx: this.rageMode ? -800 : -700,
           vy: 0,
           radius: 10,
           type: 'ENEMY_SNIPER',
@@ -463,7 +500,7 @@ export class Boss {
         bullets.push(new Bullet({
           x: this.x - 70,
           y: this.y + 85,
-          vx: this.rageMode ? -850 : -700,
+          vx: this.rageMode ? -800 : -700,
           vy: 0,
           radius: 10,
           type: 'ENEMY_SNIPER',
@@ -479,7 +516,7 @@ export class Boss {
     if (this.droneCoreAlive) {
       this.droneDeployTimer -= dt;
       if (this.droneDeployTimer <= 0) {
-        this.droneDeployTimer = this.rageMode ? 2.4 : 4.5;
+        this.droneDeployTimer = this.rageMode ? 3.5 : 4.5;
         const count = this.rageMode ? 2 : 1;
         for (let d = 0; d < count; d++) {
           const type = Math.random() > 0.4 ? 'ACE' : 'SPINNER';
@@ -495,19 +532,19 @@ export class Boss {
       }
     }
 
-    // 3. Singularity Bullet Hell Ring Waves (16 bullets when enraged!)
+    // 3. Singularity Bullet Hell Ring Waves (12 bullets when enraged instead of 16)
     this.singularityWaveTimer -= dt;
     if (this.singularityWaveTimer <= 0) {
-      this.singularityWaveTimer = this.rageMode ? 0.8 : 1.5;
-      const ringCount = this.rageMode ? 16 : 8;
+      this.singularityWaveTimer = this.rageMode ? 1.2 : 1.6;
+      const ringCount = this.rageMode ? 12 : 8;
       const baseAngle = this.tick * 0.1;
       for (let i = 0; i < ringCount; i++) {
         const angle = baseAngle + (i * Math.PI * 2) / ringCount;
         bullets.push(new Bullet({
           x: this.x - 90,
           y: this.y,
-          vx: Math.cos(angle) * (this.rageMode ? 360 : 270),
-          vy: Math.sin(angle) * (this.rageMode ? 360 : 270),
+          vx: Math.cos(angle) * (this.rageMode ? 310 : 260),
+          vy: Math.sin(angle) * (this.rageMode ? 310 : 260),
           radius: 7,
           isEnemy: true
         }));
@@ -515,17 +552,17 @@ export class Boss {
       sound.playEnemyShoot();
     }
 
-    // 4. Overcharge Rage Barrage
+    // 4. Overcharge Rage Barrage (Dodgeable tempo)
     if (this.rageMode) {
       this.rageBarrageTimer -= dt;
       if (this.rageBarrageTimer <= 0) {
-        this.rageBarrageTimer = 0.15;
-        const fanAngle = Math.sin(this.tick * 0.25) * 0.55;
+        this.rageBarrageTimer = 0.22;
+        const fanAngle = Math.sin(this.tick * 0.25) * 0.50;
         bullets.push(new Bullet({
           x: this.x - 110,
           y: this.y,
-          vx: Math.cos(Math.PI + fanAngle) * 480,
-          vy: Math.sin(Math.PI + fanAngle) * 480,
+          vx: Math.cos(Math.PI + fanAngle) * 410,
+          vy: Math.sin(Math.PI + fanAngle) * 410,
           radius: 8,
           isEnemy: true
         }));
@@ -534,8 +571,236 @@ export class Boss {
     }
   }
 
+  updateOmegaCoreSpawn(dt, player, bullets, sound, camera, particles, extraEnemies) {
+    // 1. Invulnerability Barrier Skill Logic
+    if (this.isInvulnerable) {
+      this.invulnerableTimer -= dt;
+      if (this.invulnerableTimer <= 0) {
+        this.isInvulnerable = false;
+        if (particles) particles.createElectricSpark(this.x, this.y, 10, '#00e5ff', '#ffffff');
+      }
+    } else {
+      this.invulnerableCooldown -= dt;
+      if (this.invulnerableCooldown <= 0) {
+        this.isInvulnerable = true;
+        this.invulnerableTimer = this.shieldDuration;
+        this.invulnerableCooldown = this.rageMode ? 8.5 : 11.0;
+        if (sound) sound.playBossAlarm();
+        if (camera) camera.addTrauma(0.3);
+        if (particles) {
+          particles.createElectricSpark(this.x, this.y, 20, '#00e5ff', '#ffffff');
+          particles.createFloatingText(this.x, this.y - 60, '🛡️ PERISAI KEBAL DIAKTIFKAN!', '#00e5ff');
+        }
+      }
+    }
+
+    // 2. Hyper-Rush Dash Mechanic (Maju seketika ke depan lalu ke belakang kembali)
+    switch (this.dashState) {
+      case 'TELEGRAPH':
+        this.dashTimer -= dt;
+        // Vibration and lightning sparks
+        this.x += (Math.random() - 0.5) * 8;
+        this.y += (Math.random() - 0.5) * 6;
+        if (particles && this.tick % 3 === 0) {
+          particles.createElectricSpark(this.x - 20, this.y + (Math.random() - 0.5) * 40, 2, '#ff1744', '#ffd54f');
+        }
+        if (this.dashTimer <= 0) {
+          this.dashState = 'RUSH';
+          this.targetDashY = Math.max(120, Math.min(600, player ? player.y : this.y));
+          if (sound) sound.playShoot('LASER');
+          if (camera) camera.addTrauma(0.35);
+        }
+        break;
+
+      case 'RUSH': {
+        const rushSpeed = this.rageMode ? 1150 : 920;
+        this.x -= rushSpeed * dt;
+        this.y += (this.targetDashY - this.y) * 4.5 * dt;
+
+        // Shockwave particles & needle bullets during charge
+        if (particles && this.tick % 2 === 0) {
+          particles.createClaySplat(this.x + 30, this.y, 8, '#d500f9', '#4a148c');
+        }
+
+        // Fire needle spread during rush (fair interval)
+        if (this.tick % 7 === 0) {
+          const angles = [-0.25, 0, 0.25];
+          for (let m = 0; m < 3; m++) {
+            const ang = angles[m];
+            bullets.push(new Bullet({
+              x: this.x - 40,
+              y: this.y,
+              vx: Math.cos(Math.PI + ang) * (this.rageMode ? 560 : 480),
+              vy: Math.sin(Math.PI + ang) * (this.rageMode ? 560 : 480),
+              radius: 8,
+              type: 'ENEMY_SNIPER',
+              life: 2.2,
+              isEnemy: true
+            }));
+          }
+          if (sound) sound.playEnemyShoot();
+        }
+
+        if (this.x <= this.targetDashX) {
+          this.x = this.targetDashX;
+          this.dashState = 'HOLD';
+          this.dashTimer = this.rageMode ? 0.30 : 0.45;
+          if (camera) camera.addTrauma(0.4);
+
+          // Radial Nova Shockwave upon reaching front!
+          const blastCount = this.rageMode ? 10 : 8;
+          for (let i = 0; i < blastCount; i++) {
+            const a = (i * Math.PI * 2) / blastCount;
+            bullets.push(new Bullet({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(a) * 300,
+              vy: Math.sin(a) * 300,
+              radius: 7,
+              isEnemy: true
+            }));
+          }
+          if (sound) sound.playExplosion('small');
+        }
+        break;
+      }
+
+      case 'HOLD':
+        this.dashTimer -= dt;
+        if (this.dashTimer <= 0) {
+          this.dashState = 'RETREAT';
+        }
+        break;
+
+      case 'RETREAT': {
+        const retreatSpeed = this.rageMode ? 850 : 680;
+        this.x += retreatSpeed * dt;
+        this.y += ((this.canvasHeight / 2) - this.y) * 2.5 * dt;
+
+        if (particles && this.tick % 3 === 0) {
+          particles.createSmokePuff(this.x - 20, this.y, 1, 10);
+        }
+
+        if (this.x >= this.homeX) {
+          this.x = this.homeX;
+          this.dashState = 'IDLE';
+          this.dashCooldown = this.rageMode ? 5.5 : 7.5;
+        }
+        break;
+      }
+
+      case 'IDLE':
+      default: {
+        const hoverSpeed = this.rageMode ? 0.07 : 0.045;
+        const hoverRange = this.rageMode ? 160 : 120;
+        this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
+        this.x = this.homeX + Math.sin(this.tick * hoverSpeed * 0.7) * 25;
+
+        this.dashCooldown -= dt;
+        if (this.dashCooldown <= 0) {
+          this.dashState = 'TELEGRAPH';
+          this.dashTimer = 0.95;
+          if (sound) sound.playBossAlarm();
+        }
+        break;
+      }
+    }
+
+    // 3. Counter-Rotating Dual-Spiral Bullet Hell (Balanced tempo)
+    this.spiralShootTimer -= dt;
+    if (this.spiralShootTimer <= 0) {
+      this.spiralShootTimer = this.rageMode ? 0.35 : 0.55;
+      const baseAng = this.tick * 0.15;
+      const arms = 3;
+      for (let i = 0; i < arms; i++) {
+        const a1 = baseAng + (i * Math.PI * 2) / arms;
+        bullets.push(new Bullet({
+          x: this.x - 45,
+          y: this.y,
+          vx: Math.cos(a1) * (this.rageMode ? 330 : 270),
+          vy: Math.sin(a1) * (this.rageMode ? 330 : 270),
+          radius: 7,
+          isEnemy: true
+        }));
+
+        const a2 = -baseAng + (i * Math.PI * 2) / arms;
+        bullets.push(new Bullet({
+          x: this.x - 45,
+          y: this.y,
+          vx: Math.cos(a2) * (this.rageMode ? 330 : 270),
+          vy: Math.sin(a2) * (this.rageMode ? 330 : 270),
+          radius: 6,
+          isEnemy: true
+        }));
+      }
+      sound.playEnemyShoot();
+    }
+
+    // 4. Mutant Homing Spore Salvo
+    this.missileSalvoTimer -= dt;
+    if (this.missileSalvoTimer <= 0) {
+      this.missileSalvoTimer = this.rageMode ? 2.8 : 4.0;
+      const count = this.rageMode ? 3 : 2;
+      for (let i = 0; i < count; i++) {
+        const yOff = (i - (count - 1) / 2) * 36;
+        bullets.push(new Bullet({
+          x: this.x - 30,
+          y: this.y + yOff,
+          vx: -210,
+          vy: yOff * 3.5,
+          radius: 8,
+          type: 'ENEMY_HOMING',
+          life: 4.0,
+          isEnemy: true
+        }));
+      }
+      sound.playShoot('HOMING');
+    }
+
+    // 5. Spawn Drone Matrix Support (Mini Mutant Drones)
+    this.droneSpawnTimer -= dt;
+    if (this.droneSpawnTimer <= 0) {
+      this.droneSpawnTimer = this.rageMode ? 3.5 : 6.0;
+      const spawnCount = this.rageMode ? 2 : 1;
+      for (let d = 0; d < spawnCount; d++) {
+        extraEnemies.push(new Enemy({
+          type: Math.random() > 0.5 ? 'SPINNER' : 'INTERCEPTOR',
+          x: this.x - 30,
+          y: this.y + (d === 0 ? -60 : 60),
+          stage: 20
+        }));
+      }
+      if (particles) particles.createClaySplat(this.x - 30, this.y, 16, '#00e5ff', '#7b1fa2');
+    }
+  }
+
   takeDamage(amount, hitY, particles, sound) {
     if (this.isDying) return false;
+
+    if (this.bossType === 'OMEGA_CORE_SPAWN') {
+      if (this.isInvulnerable) {
+        if (particles) {
+          particles.createElectricSpark(this.x - 40, hitY, 8, '#00e5ff', '#ffffff');
+          particles.createFloatingText(this.x - 30, hitY - 15, 'KEBAL!', '#00e5ff');
+        }
+        if (sound) sound.playEnemyHit();
+        return false;
+      }
+
+      this.coreHp -= amount;
+      if (!this.rageMode && (this.coreHp <= 360 * (this.hpMult || 1.0) || this.hpRatio <= this.rageThreshold)) {
+        this.rageMode = true;
+        if (sound) sound.playBossAlarm();
+        if (particles) particles.createClaySplat(this.x, this.y, 40, '#ff1744', '#7b1fa2');
+      }
+
+      if (this.coreHp <= 0) {
+        this.coreHp = 0;
+        this.isDying = true;
+        return true;
+      }
+      return false;
+    }
 
     if (this.bossType === 'OMEGA_COLOSSUS') {
       if (this.railTopAlive && hitY < this.y - 55) {
@@ -563,7 +828,7 @@ export class Boss {
         this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= 0.30 || (!this.railTopAlive && !this.railBottomAlive) || this.coreHp < 600)) {
+      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.railTopAlive && !this.railBottomAlive) || this.coreHp < 350 * (this.hpMult || 1.0))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 35, '#ff1744', '#b71c1c');
@@ -587,7 +852,7 @@ export class Boss {
         this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= 0.30 || !this.mortarAlive || !this.hangarAlive || this.coreHp < 250)) {
+      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || !this.mortarAlive || !this.hangarAlive || this.coreHp < 250 * (this.hpMult || 1.0))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 30, '#ff1744', '#b71c1c');
@@ -619,7 +884,7 @@ export class Boss {
         this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= 0.30 || (!this.wingTopAlive && !this.wingBottomAlive) || this.coreHp < 380)) {
+      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.wingTopAlive && !this.wingBottomAlive) || this.coreHp < 280 * (this.hpMult || 1.0))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 30, '#ff1744', '#b71c1c');
@@ -644,7 +909,7 @@ export class Boss {
         this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= 0.30 || (!this.turretTopAlive && !this.turretBottomAlive) || this.coreHp < 130)) {
+      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.turretTopAlive && !this.turretBottomAlive) || this.coreHp < 130 * (this.hpMult || 1.0))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 25, '#ff1744', '#b71c1c');

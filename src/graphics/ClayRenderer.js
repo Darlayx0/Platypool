@@ -1,5 +1,42 @@
 // Procedural Claymation Graphics Engine for Platypus AI
 export class ClayRenderer {
+  // Flyweight cache for radial and linear CanvasGradient objects
+  static gradientCache = new Map();
+
+  static getRadialGradient(ctx, lx, ly, r0, r1, baseColor, shadowColor) {
+    const key = `rad_${Math.round(lx)}_${Math.round(ly)}_${Math.round(r0)}_${Math.round(r1)}_${baseColor}_${shadowColor}`;
+    let grad = ClayRenderer.gradientCache.get(key);
+    if (!grad) {
+      if (ClayRenderer.gradientCache.size > 300) {
+        ClayRenderer.gradientCache.clear();
+      }
+      grad = ctx.createRadialGradient(lx, ly, r0, 0, 0, r1);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.2, baseColor);
+      grad.addColorStop(0.8, baseColor);
+      grad.addColorStop(1, shadowColor);
+      ClayRenderer.gradientCache.set(key, grad);
+    }
+    return grad;
+  }
+
+  static getLinearGradient(ctx, r, baseColor, shadowColor) {
+    const key = `lin_${Math.round(r)}_${baseColor}_${shadowColor}`;
+    let grad = ClayRenderer.gradientCache.get(key);
+    if (!grad) {
+      if (ClayRenderer.gradientCache.size > 300) {
+        ClayRenderer.gradientCache.clear();
+      }
+      grad = ctx.createLinearGradient(0, -r, 0, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.7)');
+      grad.addColorStop(0.18, baseColor);
+      grad.addColorStop(0.8, baseColor);
+      grad.addColorStop(1, shadowColor);
+      ClayRenderer.gradientCache.set(key, grad);
+    }
+    return grad;
+  }
+
   /**
    * Helper to draw a shaded clay sphere/blob with 3D depth and specular highlight
    */
@@ -7,37 +44,38 @@ export class ClayRenderer {
     ctx.save();
     ctx.translate(x, y);
 
-    // Drop shadow
-    ctx.save();
+    // Organic clay drop shadow
     ctx.beginPath();
-    ctx.ellipse(3, 4, radiusX, radiusY, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.ellipse(2, 3, radiusX * 1.02, radiusY * 1.02, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.fill();
-    ctx.restore();
 
-    // Base body gradient (plasticine bevel)
-    const lx = Math.cos(lightAngle) * radiusX * 0.4;
-    const ly = Math.sin(lightAngle) * radiusY * 0.4;
-    const grad = ctx.createRadialGradient(lx, ly, radiusX * 0.1, 0, 0, Math.max(radiusX, radiusY));
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.2, baseColor);
-    grad.addColorStop(0.8, baseColor);
-    grad.addColorStop(1, shadowColor);
+    // Base body gradient (plasticine bevel with flyweight cache)
+    const lx = Math.cos(lightAngle) * radiusX * 0.42;
+    const ly = Math.sin(lightAngle) * radiusY * 0.42;
+    const maxR = Math.max(radiusX, radiusY);
+    const grad = ClayRenderer.getRadialGradient(ctx, lx, ly, radiusX * 0.08, maxR, baseColor, shadowColor);
 
     ctx.beginPath();
     ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Rim highlight / inner glow
-    ctx.lineWidth = Math.max(1.5, radiusX * 0.08);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    // Outer rim highlight / inner glow
+    ctx.lineWidth = Math.max(1.5, radiusX * 0.075);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.40)';
     ctx.stroke();
 
-    // Specular shine dot
+    // Specular shine 1: soft diffused shine
     ctx.beginPath();
-    ctx.ellipse(lx * 0.8, ly * 0.8, radiusX * 0.22, radiusY * 0.16, lightAngle, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.ellipse(lx * 0.76, ly * 0.76, radiusX * 0.28, radiusY * 0.20, lightAngle, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fill();
+
+    // Specular shine 2: crisp glint point
+    ctx.beginPath();
+    ctx.ellipse(lx * 0.88, ly * 0.88, Math.max(1.2, radiusX * 0.12), Math.max(1.2, radiusY * 0.09), lightAngle, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.90)';
     ctx.fill();
 
     ctx.restore();
@@ -49,7 +87,9 @@ export class ClayRenderer {
   static drawClayCapsule(ctx, x, y, width, height, baseColor, shadowColor, rotation = 0) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(rotation);
+    if (rotation !== 0) {
+      ctx.rotate(rotation);
+    }
 
     const r = height / 2;
     const hw = width / 2;
@@ -62,12 +102,7 @@ export class ClayRenderer {
     ctx.arc(-hw + r, 0, r, Math.PI / 2, -Math.PI / 2);
     ctx.closePath();
 
-    const grad = ctx.createLinearGradient(0, -r, 0, r);
-    grad.addColorStop(0, 'rgba(255,255,255,0.7)');
-    grad.addColorStop(0.18, baseColor);
-    grad.addColorStop(0.8, baseColor);
-    grad.addColorStop(1, shadowColor);
-
+    const grad = ClayRenderer.getLinearGradient(ctx, r, baseColor, shadowColor);
     ctx.fillStyle = grad;
     ctx.fill();
 
@@ -104,21 +139,22 @@ export class ClayRenderer {
     if (invulnerable) {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(0, 0, 42, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(66, 165, 245, 0.8)';
-      ctx.lineWidth = 3;
+      ctx.arc(0, 0, 44, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(66, 165, 245, 0.85)';
+      ctx.lineWidth = 3.5;
       ctx.setLineDash([8, 6]);
       ctx.lineDashOffset = -engineTick * 4;
       ctx.stroke();
-      ctx.fillStyle = 'rgba(33, 150, 243, 0.15)';
+      ctx.fillStyle = 'rgba(33, 150, 243, 0.18)';
       ctx.fill();
       ctx.restore();
     }
 
-    // Engine exhaust clay fire puffs
-    const flameSize = 10 + Math.sin(engineTick * 0.8) * 4;
-    this.drawClayBlob(ctx, -34 - flameSize * 0.4, 0, flameSize, flameSize * 0.6, '#ff9800', '#d84315');
-    this.drawClayBlob(ctx, -28, 0, 7, 5, '#ffee58', '#f57c00');
+    // Engine exhaust clay fire plumes (animated dual-layer)
+    const flameSize = 11 + Math.sin(engineTick * 0.8) * 4;
+    this.drawClayBlob(ctx, -34 - flameSize * 0.45, 0, flameSize, flameSize * 0.55, '#ff9800', '#d84315');
+    this.drawClayBlob(ctx, -28 - flameSize * 0.2, 0, flameSize * 0.65, flameSize * 0.4, '#fff59d', '#f57c00');
+    this.drawClayBlob(ctx, -24, 0, 5, 4, '#ffffff', '#ffee58');
 
     // Tail fin (vertical rudder)
     this.drawClayCapsule(ctx, -26, -14, 18, 10, '#cfd8dc', '#78909c', -0.3);
@@ -145,24 +181,54 @@ export class ClayRenderer {
     this.drawClayBlob(ctx, 16, -18, 6, 6, '#e53935', '#b71c1c');
     this.drawClayBlob(ctx, 16, 18, 6, 6, '#e53935', '#b71c1c');
 
+    // Active special weapon energy aura on wing pylons
+    const weaponGlows = {
+      SPREAD: '#ff5252',
+      LASER: '#00e5ff',
+      HOMING: '#69f0ae',
+      FLAK: '#ffd54f',
+      PLASMA: '#e040fb'
+    };
+    if (weaponType && weaponGlows[weaponType]) {
+      const glowCol = weaponGlows[weaponType];
+      ctx.save();
+      ctx.shadowColor = glowCol;
+      ctx.shadowBlur = 8;
+      this.drawClayBlob(ctx, 16, -18, 4, 4, glowCol, '#ffffff');
+      this.drawClayBlob(ctx, 16, 18, 4, 4, glowCol, '#ffffff');
+      ctx.restore();
+    }
+
     // Dual gun barrels on wings
     this.drawClayCapsule(ctx, 14, -10, 16, 5, '#37474f', '#212121');
     this.drawClayCapsule(ctx, 14, 10, 16, 5, '#37474f', '#212121');
 
-    // Cockpit Canopy (Yellow clay glass bubble)
+    // Cockpit Canopy (Yellow clay glass bubble with curved specular highlights)
     this.drawClayBlob(ctx, 6, -3, 14, 9, '#fff176', '#fbc02d', -Math.PI / 3);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(5, -4, 6, -Math.PI * 0.8, -Math.PI * 0.2);
+    ctx.stroke();
+    ctx.restore();
 
     // Nose cone (Red clay bulb)
     this.drawClayBlob(ctx, 27, 0, 8, 8, '#e53935', '#b71c1c');
 
-    // Spinning propeller
+    // Spinning propeller with motion blur disc
     ctx.save();
     ctx.translate(34, 0);
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.fill();
+
     const propAngle = engineTick * 0.9;
     ctx.rotate(propAngle);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
     ctx.fillRect(-2, -18, 4, 36);
-    this.drawClayBlob(ctx, 0, 0, 4, 4, '#ffb300', '#ff6f00');
+    this.drawClayBlob(ctx, 0, 0, 5, 5, '#ffb300', '#ff6f00');
     ctx.restore();
 
     ctx.restore();
@@ -613,26 +679,184 @@ export class ClayRenderer {
   }
 
   /**
-   * Main Boss Dispatcher
+   * Draw Enemy: Clay Interceptor (high-speed cloaking dart jet)
    */
-  static drawBoss(ctx, boss) {
-    if (boss.rageMode) {
-      // Crimson rage aura for bosses under 30% HP / enraged
-      ctx.save();
-      const auraPulse = Math.sin(boss.tick * 0.25) * 6 + 10;
-      ctx.beginPath();
-      ctx.ellipse(boss.x, boss.y, boss.radius + auraPulse + 14, boss.radius * 0.75 + auraPulse, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 23, 68, 0.22)';
-      ctx.fill();
+  static drawInterceptor(ctx, x, y, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
 
-      // Sharp electric warning halo
-      ctx.strokeStyle = 'rgba(255, 82, 82, 0.6)';
+    // Glowing cyan plasma exhaust trail
+    const flame = 18 + Math.sin(tick * 0.8) * 5;
+    this.drawClayBlob(ctx, 22 + flame * 0.3, 0, flame, flame * 0.4, '#00e5ff', '#0097a7');
+
+    // Sharp forward-swept dart wings (neon violet & magenta)
+    this.drawClayCapsule(ctx, 2, -18, 30, 7, '#ab47bc', '#6a1b9a', -0.45);
+    this.drawClayCapsule(ctx, 2, 18, 30, 7, '#ab47bc', '#6a1b9a', 0.45);
+
+    // Main needle fuselage
+    this.drawClayCapsule(ctx, 0, 0, 48, 14, '#7b1fa2', '#4a148c');
+
+    // Cockpit visor
+    this.drawClayBlob(ctx, -8, 0, 10, 5, '#e040fb', '#aa00ff');
+
+    // Twin nose needle blasters
+    this.drawClayCapsule(ctx, -25, -3, 12, 3, '#212121', '#000000');
+    this.drawClayCapsule(ctx, -25, 3, 12, 3, '#212121', '#000000');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-20, -28, 40, 5);
+      ctx.fillStyle = '#e040fb';
+      ctx.fillRect(-20, -28, 40 * hpRatio, 5);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Clay Juggernaut (armored heavy fortress ship)
+   */
+  static drawJuggernaut(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // 1. Dual Heavy Engines
+    const enginePulse = 18 + Math.sin(tick * 0.4) * 4;
+    this.drawClayBlob(ctx, 42, -16, enginePulse, enginePulse * 0.5, '#ff9100', '#d50000');
+    this.drawClayBlob(ctx, 42, 16, enginePulse, enginePulse * 0.5, '#ff9100', '#d50000');
+
+    // 2. Heavy Armored Hull (Dark Obsidian Clay)
+    this.drawClayCapsule(ctx, 0, 0, 84, 46, '#263238', '#000a12');
+
+    // Armor plating slabs
+    [-15, 10].forEach(sx => {
+      this.drawClayCapsule(ctx, sx, 0, 18, 40, '#37474f', '#1b2327');
+    });
+
+    // Hazard yellow/black chevrons on sides
+    this.drawClayBlob(ctx, 5, -18, 8, 5, '#ffd54f', '#f57f17');
+    this.drawClayBlob(ctx, 5, 18, 8, 5, '#ffd54f', '#f57f17');
+
+    // Dual Twin Heavy Cannon Barrels
+    this.drawClayCapsule(ctx, -38, -14, 26, 8, '#1e293b', '#0f172a');
+    this.drawClayCapsule(ctx, -38, 14, 26, 8, '#1e293b', '#0f172a');
+
+    // Bridge / Command Dome
+    this.drawClayBlob(ctx, -6, 0, 16, 12, '#ff5252', '#b71c1c');
+
+    // Energy Shield Barrier (when shield active)
+    if (shieldRatio > 0) {
+      ctx.save();
+      const sAlpha = 0.25 + shieldRatio * 0.35 + Math.sin(tick * 0.2) * 0.1;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 52, 34, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 229, 255, ${sAlpha})`;
+      ctx.fill();
+      ctx.strokeStyle = '#00e5ff';
       ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.restore();
     }
 
-    if (boss.bossType === 'OMEGA_COLOSSUS') {
+    if (hpRatio < 1 || shieldRatio < 1) {
+      // Shield bar
+      if (shieldRatio > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(-30, -38, 60, 4);
+        ctx.fillStyle = '#00e5ff';
+        ctx.fillRect(-30, -38, 60 * shieldRatio, 4);
+      }
+      // HP bar
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-30, -32, 60, 5);
+      ctx.fillStyle = hpRatio > 0.4 ? '#4caf50' : '#f44336';
+      ctx.fillRect(-30, -32, 60 * hpRatio, 5);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Clay Vortex Drone (cosmic gravitational anomaly)
+   */
+  static drawVortexDrone(ctx, x, y, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Concentric rotating cosmic aura rings
+    ctx.save();
+    ctx.rotate(tick * 0.05);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 28, 14, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.rotate(Math.PI / 2);
+    ctx.strokeStyle = 'rgba(213, 0, 249, 0.6)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 28, 14, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Central pulsing anomaly sphere
+    const pulse = 20 + Math.sin(tick * 0.15) * 3;
+    this.drawClayBlob(ctx, 0, 0, pulse, pulse, '#4a148c', '#12005e');
+
+    // Inner glowing core
+    this.drawClayBlob(ctx, 0, 0, 9, 9, '#00e5ff', '#0097a7');
+
+    // Satellite clay nodes rotating around core
+    for (let i = 0; i < 3; i++) {
+      const a = (i * Math.PI * 2) / 3 + tick * 0.08;
+      const nx = Math.cos(a) * 22;
+      const ny = Math.sin(a) * 16;
+      this.drawClayBlob(ctx, nx, ny, 5, 5, '#e040fb', '#7b1fa2');
+    }
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -32, 36, 5);
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-18, -32, 36 * hpRatio, 5);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Main Boss Dispatcher
+   */
+  static drawBoss(ctx, boss) {
+    if (boss.rageMode) {
+      // Crimson rage aura with flame lobes and embers for enraged bosses
+      ctx.save();
+      const auraPulse = Math.sin(boss.tick * 0.25) * 6 + 12;
+      ctx.beginPath();
+      ctx.ellipse(boss.x, boss.y, boss.radius + auraPulse + 16, boss.radius * 0.75 + auraPulse, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 23, 68, 0.24)';
+      ctx.fill();
+
+      // Pulsing outer warning halo
+      ctx.strokeStyle = 'rgba(255, 82, 82, 0.75)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Dynamic flame lobes around perimeter
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI * 2) / 6 + boss.tick * 0.1;
+        const dist = boss.radius + 8 + Math.sin(boss.tick * 0.4 + i) * 6;
+        const fx = boss.x + Math.cos(a) * dist;
+        const fy = boss.y + Math.sin(a) * (dist * 0.75);
+        this.drawClayBlob(ctx, fx, fy, 8, 8, '#ff5252', '#d50000');
+        this.drawClayBlob(ctx, fx, fy, 4, 4, '#ffeb3b', '#ff6f00');
+      }
+      ctx.restore();
+    }
+
+    if (boss.bossType === 'OMEGA_CORE_SPAWN') {
+      this.drawOmegaCoreSpawn(ctx, boss);
+    } else if (boss.bossType === 'OMEGA_COLOSSUS') {
       this.drawOmegaBoss(ctx, boss);
     } else if (boss.bossType === 'GOLIATH_ZEPPELIN') {
       this.drawGoliathBoss(ctx, boss);
@@ -726,6 +950,110 @@ export class ClayRenderer {
     // 8. Front Menacing Heavy Ramming Prow
     this.drawClayCapsule(ctx, -125, -34, 60, 20, '#38324f', '#19152b', 0.28);
     this.drawClayCapsule(ctx, -125, 34, 60, 20, '#38324f', '#19152b', -0.28);
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Stage 20 Phase 2 Boss: "The Omega Apex Core" (Anak Core Boss Lanjutan)
+   */
+  static drawOmegaCoreSpawn(ctx, boss) {
+    ctx.save();
+    ctx.translate(boss.x, boss.y);
+
+    // Sinusoidal floating hover
+    const hoverY = Math.sin(boss.tick * 0.06) * 6;
+    ctx.translate(0, hoverY);
+
+    // 1. Telegraph Charge Warning & Dash Trails
+    if (boss.dashState === 'TELEGRAPH') {
+      // Crackling energy arcs and warning aura
+      ctx.save();
+      const tPulse = 18 + Math.sin(boss.tick * 0.8) * 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, boss.radius + tPulse, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ff1744';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 6]);
+      ctx.stroke();
+      ctx.restore();
+    } else if (boss.dashState === 'RUSH') {
+      // Hyper-speed supersonic cone trailing to the right
+      ctx.save();
+      const coneGrad = ctx.createLinearGradient(0, 0, 160, 0);
+      coneGrad.addColorStop(0, 'rgba(213, 0, 249, 0.7)');
+      coneGrad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(-10, -boss.radius * 0.7);
+      ctx.lineTo(160, -boss.radius * 1.3);
+      ctx.lineTo(160, boss.radius * 1.3);
+      ctx.lineTo(-10, boss.radius * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 2. Writhing Organic Clay Bio-Tentacles / Winglets
+    [-1, 1].forEach(side => {
+      for (let i = 0; i < 4; i++) {
+        const wave = Math.sin(boss.tick * 0.12 + i * 0.8) * 12;
+        const tx = 30 + i * 18;
+        const ty = (side * (32 + i * 14)) + wave;
+        const r = 16 - i * 2.5;
+        this.drawClayBlob(ctx, tx, ty, r, r * 0.8, '#6a1b9a', '#38006b');
+        this.drawClayBlob(ctx, tx - 5, ty, r * 0.5, r * 0.5, '#ab47bc', '#4a148c');
+      }
+    });
+
+    // 3. Central Mutant Core Body (Alien Cyber-Clay Embryo)
+    const corePulse = Math.sin(boss.tick * 0.18) * 4;
+    this.drawClayBlob(ctx, 0, 0, boss.radius + corePulse, boss.radius * 0.82 + corePulse, '#311b92', '#000051');
+    this.drawClayCapsule(ctx, -10, 0, boss.radius * 1.4, boss.radius * 0.8, '#4a148c', '#12005e');
+
+    // Clay bio-chitin armored plates
+    [-35, -5, 25].forEach(sx => {
+      this.drawClayCapsule(ctx, sx, 0, 22, boss.radius * 0.9, '#6a1b9a', '#38006b');
+    });
+
+    // 4. Central Giant Robotic Eye / Core Reactor
+    const eyeSize = 34 + Math.sin(boss.tick * 0.25) * 4;
+    this.drawClayBlob(ctx, -20, 0, eyeSize, eyeSize, '#1a237e', '#000051');
+    this.drawClayBlob(ctx, -22, 0, eyeSize * 0.65, eyeSize * 0.65, boss.rageMode ? '#ff1744' : '#00e5ff', boss.rageMode ? '#b71c1c' : '#00838f');
+
+    // Dynamic Eye Pupil looking forward / at player
+    const pupilX = boss.dashState === 'RUSH' ? -30 : -25;
+    this.drawClayBlob(ctx, pupilX, 0, 7, 7, '#ffffff', '#e0e0e0');
+
+    // 5. Invulnerable Skill Barrier (Kubah Perisai Kebal Holografik)
+    if (boss.isInvulnerable) {
+      ctx.save();
+      const shieldR = boss.radius + 28 + Math.sin(boss.tick * 0.3) * 4;
+      const sGrad = ctx.createRadialGradient(0, 0, boss.radius * 0.5, 0, 0, shieldR);
+      sGrad.addColorStop(0, 'rgba(0, 229, 255, 0.08)');
+      sGrad.addColorStop(0.7, 'rgba(0, 229, 255, 0.35)');
+      sGrad.addColorStop(1, 'rgba(255, 215, 64, 0.85)');
+
+      ctx.beginPath();
+      ctx.arc(0, 0, shieldR, 0, Math.PI * 2);
+      ctx.fillStyle = sGrad;
+      ctx.fill();
+
+      // Shimmering outer barrier ring
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Rotating hexagonal crystal nodes around shield
+      ctx.rotate(boss.tick * 0.04);
+      for (let h = 0; h < 6; h++) {
+        const hAng = (h * Math.PI * 2) / 6;
+        const hx = Math.cos(hAng) * shieldR;
+        const hy = Math.sin(hAng) * shieldR;
+        this.drawClayBlob(ctx, hx, hy, 8, 8, '#ffd54f', '#ff8f00');
+      }
+      ctx.restore();
+    }
 
     ctx.restore();
   }
@@ -1010,13 +1338,21 @@ export class ClayRenderer {
   /**
    * Draw Bonus Score Fruits & Stars (dropped when eliminating enemy formations)
    */
-  static drawFruit(ctx, x, y, type = 'CHERRY', tick = 0) {
+  /**
+   * Draw Bonus Score Fruits (6 types: CHERRY, BANANA, APPLE, WATERMELON, DRAGONFRUIT, GOLDEN_FRUIT)
+   */
+  static drawFruit(ctx, x, y, type = 'CHERRY', tick = 0, angle = 0) {
     ctx.save();
     ctx.translate(x, y);
     const floatY = Math.sin(tick * 0.1) * 3;
     ctx.translate(0, floatY);
 
+    if (angle) {
+      ctx.rotate(angle);
+    }
+
     if (type === 'CHERRY') {
+      // 1. CHERRY (Common / Ordinary - Base 2,000)
       // Twin clay cherries
       this.drawClayBlob(ctx, -6, 4, 8, 8, '#d32f2f', '#851414');
       this.drawClayBlob(ctx, 6, 2, 8, 8, '#d32f2f', '#851414');
@@ -1031,13 +1367,17 @@ export class ClayRenderer {
       ctx.stroke();
       this.drawClayBlob(ctx, 3, -13, 4, 3, '#81c784', '#2e7d32', 0.5);
     } else if (type === 'BANANA') {
+      // 2. BANANA (Common / Ordinary - Base 5,000)
       // Yellow clay banana curve
       this.drawClayCapsule(ctx, 0, 0, 26, 9, '#fdd835', '#f57f17', 0.35);
       this.drawClayBlob(ctx, -12, -4, 3, 3, '#5d4037', '#3e2723');
       this.drawClayBlob(ctx, 12, 4, 3, 3, '#7cb342', '#33691e');
     } else if (type === 'APPLE') {
-      // Red clay apple
-      this.drawClayBlob(ctx, 0, 2, 12, 12, '#e53935', '#b71c1c');
+      // 3. APPLE (Standard - Base 12,000)
+      // Red clay apple body
+      this.drawClayBlob(ctx, 0, 2, 13, 13, '#e53935', '#b71c1c');
+      // Top indentation highlight
+      this.drawClayBlob(ctx, -2, 0, 4, 4, '#ff8a80', '#c62828');
       // Stem & leaf
       ctx.strokeStyle = '#5d4037';
       ctx.lineWidth = 2.5;
@@ -1046,18 +1386,76 @@ export class ClayRenderer {
       ctx.lineTo(1, -15);
       ctx.stroke();
       this.drawClayBlob(ctx, 5, -13, 5, 3, '#4caf50', '#1b5e20', 0.4);
-    } else {
-      // Golden Clay Star
+    } else if (type === 'WATERMELON') {
+      // 4. WATERMELON (Rare - Base 25,000)
+      // Green outer rind curve
       ctx.save();
-      ctx.rotate(tick * 0.04);
-      this.drawClayBlob(ctx, 0, 0, 13, 13, '#ffeb3b', '#f57f17');
-      // Star points
+      ctx.beginPath();
+      ctx.arc(0, -4, 16, 0.25, Math.PI - 0.25);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#2e7d32';
+      ctx.stroke();
+
+      // Pale green/white inner border
+      ctx.beginPath();
+      ctx.arc(0, -4, 13, 0.3, Math.PI - 0.3);
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#c8e6c9';
+      ctx.stroke();
+      ctx.restore();
+
+      // Sweet juicy red flesh wedge
+      this.drawClayBlob(ctx, 0, 2, 12, 9, '#e53935', '#b71c1c');
+      // Little black clay watermelon seeds
+      this.drawClayBlob(ctx, -4, 1, 2, 2, '#212121', '#000000');
+      this.drawClayBlob(ctx, 3, 3, 2, 2, '#212121', '#000000');
+      this.drawClayBlob(ctx, -1, 5, 2, 2, '#212121', '#000000');
+      this.drawClayBlob(ctx, 4, 0, 1.8, 1.8, '#212121', '#000000');
+    } else if (type === 'DRAGONFRUIT') {
+      // 5. DRAGONFRUIT (Very Rare - Base 42,000)
+      // Exotic magenta dragonfruit body
+      this.drawClayBlob(ctx, 0, 2, 13, 16, '#d81b60', '#880e4f');
+      // Green flame-like scales curling out
+      this.drawClayBlob(ctx, -9, 0, 5, 7, '#00e676', '#1b5e20', -0.5);
+      this.drawClayBlob(ctx, 9, 1, 5, 7, '#00e676', '#1b5e20', 0.5);
+      this.drawClayBlob(ctx, -6, 9, 4, 6, '#76ff03', '#2e7d32', -0.8);
+      this.drawClayBlob(ctx, 6, 8, 4, 6, '#76ff03', '#2e7d32', 0.8);
+      // Top crown scale
+      this.drawClayBlob(ctx, 0, -11, 5, 8, '#76ff03', '#2e7d32');
+      // Central speckled clay flesh highlight
+      this.drawClayBlob(ctx, 0, 1, 7, 9, '#f8bbd0', '#c2185b');
+      this.drawClayBlob(ctx, -1, 0, 1.5, 1.5, '#212121', '#000000');
+      this.drawClayBlob(ctx, 1, 3, 1.5, 1.5, '#212121', '#000000');
+    } else {
+      // 6. GOLDEN_FRUIT / STAR (Special / Legendary - Base 60,000)
+      // Radiant mythical glowing golden fruit with sparkles
+      const pulse = 1 + Math.sin(tick * 0.12) * 0.1;
+      ctx.save();
+      ctx.scale(pulse, pulse);
+
+      // Golden Aura Glow
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.28)';
+      ctx.fill();
+
+      // Golden starburst body
+      this.drawClayBlob(ctx, 0, 0, 14, 14, '#ffd700', '#ff8f00');
+      // 5 Radiant Golden Starpoints
       for (let i = 0; i < 5; i++) {
-        const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+        const a = (i * Math.PI * 2) / 5 - Math.PI / 2 + (tick * 0.02);
         const px = Math.cos(a) * 16;
         const py = Math.sin(a) * 16;
-        this.drawClayBlob(ctx, px, py, 5, 5, '#ffee58', '#f57f17');
+        this.drawClayBlob(ctx, px, py, 6, 6, '#fff176', '#f57f17');
       }
+
+      // Royal Golden Leaf Crown
+      this.drawClayBlob(ctx, -4, -13, 5, 4, '#ffca28', '#ff6f00', -0.3);
+      this.drawClayBlob(ctx, 4, -13, 5, 4, '#ffca28', '#ff6f00', 0.3);
+      this.drawClayBlob(ctx, 0, -16, 4, 5, '#ffee58', '#f57f17');
+
+      // Brilliant diamond glint highlight
+      this.drawClayBlob(ctx, -3, -3, 4, 4, '#ffffff', '#fff59d');
       ctx.restore();
     }
 
@@ -1065,13 +1463,37 @@ export class ClayRenderer {
   }
 
   /**
-   * Draw Clay Splat Particles
+   * Draw Clay Splat Particles (direct single-pass rendering)
    */
   static drawClayChunk(ctx, x, y, size, color, shadowColor, angle) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(angle);
-    this.drawClayBlob(ctx, 0, 0, size, size * 0.7, color, shadowColor);
+    if (angle !== 0) ctx.rotate(angle);
+
+    const rx = size;
+    const ry = size * 0.7;
+
+    // Drop shadow
+    ctx.beginPath();
+    ctx.ellipse(2, 3, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fill();
+
+    // Plasticine body with cached radial gradient
+    const lx = -rx * 0.28;
+    const ly = -ry * 0.28;
+    const grad = ClayRenderer.getRadialGradient(ctx, lx, ly, rx * 0.1, rx, color, shadowColor);
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Rim highlight
+    ctx.lineWidth = Math.max(1.2, rx * 0.08);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.stroke();
+
     ctx.restore();
   }
 }

@@ -21,6 +21,7 @@ export class Bullet {
     this.gravity = options.gravity || 0;
     this.arcTimer = options.arcTimer || 0;
     this.activeArcs = [];
+    this.dead = false;
   }
 
   update(dt, enemies = [], particles = null, player = null, boss = null, game = null) {
@@ -35,13 +36,18 @@ export class Bullet {
     // Player Homing rocket logic: find and track nearest living enemy or boss
     if (this.type === 'HOMING' && !this.isEnemy) {
       if (!this.target || this.target.dead || (this.target.x < this.x - 60)) {
-        let closestDist = Infinity;
+        let closestDistSq = Infinity;
         let bestTarget = null;
-        for (const e of enemies) {
-          if (!e.dead && e.x > this.x - 50) {
-            const dist = Math.hypot(e.x - this.x, e.y - this.y);
-            if (dist < closestDist) {
-              closestDist = dist;
+        const bx = this.x;
+        const by = this.y;
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          if (!e.dead && e.x > bx - 50) {
+            const dx = e.x - bx;
+            const dy = e.y - by;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < closestDistSq) {
+              closestDistSq = distSq;
               bestTarget = e;
             }
           }

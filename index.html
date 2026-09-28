@@ -16,6 +16,68 @@
   <div id="game-wrapper">
     <canvas id="game-canvas" width="1280" height="720"></canvas>
 
+    <!-- Floating UHD In-Game Quick Action Pill Bar (Modern Minimalist Claymorphism) -->
+    <header id="hud-top-bar" class="hud-top-bar hidden" aria-label="Game Quick Controls">
+      <!-- Left: Stage & World & Difficulty Micro-Badges -->
+      <div class="hud-bar-left">
+        <div class="hud-quick-pill stage-pill" id="hud-stage-badge" title="Tahapan Misi Permainan">
+          <span class="hud-pill-icon">🗺️</span>
+          <span id="hud-stage-text" class="hud-pill-text">STAGE 1 / 20</span>
+        </div>
+        <div class="hud-quick-pill diff-pill" id="hud-diff-badge" title="Tingkat Kesulitan Aktif">
+          <span id="hud-diff-text" class="hud-pill-text">NORMAL</span>
+        </div>
+      </div>
+
+      <!-- Right: Tactical Quick Action Buttons -->
+      <div class="hud-bar-right">
+        <!-- Auto-Fire Toggle Button -->
+        <button type="button" id="btn-hud-autofire" class="hud-action-btn" title="Toggle Auto-Fire Otomatis (Tombol M / Klik Kanan)" aria-label="Toggle Auto-Fire">
+          <span class="btn-glyph">⚡</span>
+          <span class="btn-label">AUTO-FIRE</span>
+          <span class="btn-status-pip" id="hud-autofire-pip">OFF</span>
+          <kbd class="hud-kbd-mini">M</kbd>
+        </button>
+
+        <!-- Control Mode Toggle Button -->
+        <button type="button" id="btn-hud-mode" class="hud-action-btn" title="Ganti Mode Kemudi (Mouse / WASD)" aria-label="Ganti Mode Kemudi">
+          <span class="btn-glyph" id="hud-mode-icon">🖱️</span>
+          <span class="btn-label" id="hud-mode-label">MOUSE</span>
+          <kbd class="hud-kbd-mini">WASD</kbd>
+        </button>
+
+        <!-- UHD Sharpness Mode Toggle -->
+        <button type="button" id="btn-hud-uhd" class="hud-action-btn active" title="Toggle Mode Resolusi UHD Super Tajam (Hi-DPI / 4K)" aria-label="Toggle UHD">
+          <span class="btn-glyph">💎</span>
+          <span class="btn-label">UHD</span>
+          <span class="btn-status-pip on" id="hud-uhd-pip">ON</span>
+        </button>
+
+        <!-- Audio Mute Toggle Button -->
+        <button type="button" id="btn-hud-audio" class="hud-action-btn" title="Mute / Nyalakan Suara Permainan" aria-label="Audio Mute">
+          <span class="btn-glyph" id="hud-audio-icon">🔊</span>
+          <span class="btn-label" id="hud-audio-label">SUARA</span>
+        </button>
+
+        <!-- Settings Quick Button -->
+        <button type="button" id="btn-hud-settings" class="hud-action-btn" title="Buka Pengaturan Permainan (Tombol O)" aria-label="Pengaturan">
+          <span class="btn-glyph">⚙️</span>
+          <kbd class="hud-kbd-mini">O</kbd>
+        </button>
+
+        <!-- Fullscreen Toggle Button -->
+        <button type="button" id="btn-hud-fullscreen" class="hud-action-btn" title="Mode Layar Penuh (Fullscreen)" aria-label="Layar Penuh">
+          <span class="btn-glyph" id="hud-fs-icon">⛶</span>
+        </button>
+
+        <!-- Pause Quick Button -->
+        <button type="button" id="btn-hud-pause" class="hud-action-btn pause-btn" title="Jeda Permainan (ESC / P)" aria-label="Jeda Permainan">
+          <span class="btn-glyph">⏸️</span>
+          <kbd class="hud-kbd-mini">ESC</kbd>
+        </button>
+      </div>
+    </header>
+
     <!-- Dynamic In-Game Micro-Interaction Toast Notification (Auto-Fire, Controls) -->
     <div id="hud-toast" class="hud-toast"></div>
 
@@ -30,31 +92,41 @@
         <h1 class="game-title">PLATYPUS</h1>
         <p class="game-subtitle">CLAY WINGS • RETRO CLAYMATION SHOOTER</p>
 
-        <!-- Difficulty Selection Section -->
-        <div class="difficulty-section">
-          <div class="difficulty-header">
-            <span class="difficulty-title-icon">⚡</span>
-            <span class="difficulty-title-text">TINGKAT KESULITAN</span>
+        <!-- Elegant Minimalist Difficulty Stepper (Arrow Navigation & Color Feedback) -->
+        <div class="difficulty-stepper-section" id="difficulty-stepper-section">
+          <div class="difficulty-stepper-header">
+            <span class="difficulty-label-icon">⚡</span>
+            <span class="difficulty-label-title">TINGKAT KESULITAN</span>
           </div>
-          <div class="difficulty-options">
-            <button type="button" class="difficulty-btn diff-easy" data-difficulty="EASY">
-              <span class="diff-btn-icon">🟢</span>
-              <span class="diff-btn-name">EASY</span>
-              <span class="diff-btn-badge">15 NYAWA</span>
+
+          <div class="clay-stepper-row">
+            <!-- Left Arrow Button -->
+            <button type="button" id="btn-diff-prev" class="clay-stepper-arrow prev" title="Difficulty Sebelumnya (Tombol ◀ atau A)" aria-label="Difficulty Sebelumnya">
+              <svg class="stepper-arrow-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
             </button>
-            <button type="button" class="difficulty-btn diff-normal active" data-difficulty="NORMAL">
-              <span class="diff-btn-icon">🟡</span>
-              <span class="diff-btn-name">NORMAL</span>
-              <span class="diff-btn-badge">10 NYAWA</span>
-            </button>
-            <button type="button" class="difficulty-btn diff-hard" data-difficulty="HARD">
-              <span class="diff-btn-icon">🔴</span>
-              <span class="diff-btn-name">HARD</span>
-              <span class="diff-btn-badge">5 NYAWA</span>
+
+            <!-- Center Difficulty Capsule (Name Only + Dynamic Color Feedback) -->
+            <div class="clay-diff-pill" id="clay-diff-pill" role="status" aria-live="polite">
+              <span id="diff-current-name" class="diff-title-text">NORMAL</span>
+            </div>
+
+            <!-- Right Arrow Button -->
+            <button type="button" id="btn-diff-next" class="clay-stepper-arrow next" title="Difficulty Berikutnya (Tombol ▶ atau D)" aria-label="Difficulty Berikutnya">
+              <svg class="stepper-arrow-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </button>
           </div>
-          <div id="difficulty-description-banner" class="difficulty-desc-box">
-            <span class="desc-highlight">Klasik Arcade:</span> Max 10 Nyawa • Durasi Senjata 15s • +1 Nyawa tiap 250k Skor & Boss
+
+          <!-- Minimalist 5-Pip Stage Indicator Dots -->
+          <div class="diff-pips-indicator" id="diff-pips-indicator">
+            <button type="button" class="diff-pip" data-difficulty="BEGINNER" title="Beginner" aria-label="Pilih Beginner"></button>
+            <button type="button" class="diff-pip" data-difficulty="EASY" title="Easy" aria-label="Pilih Easy"></button>
+            <button type="button" class="diff-pip active" data-difficulty="NORMAL" title="Normal" aria-label="Pilih Normal"></button>
+            <button type="button" class="diff-pip" data-difficulty="HARD" title="Hard" aria-label="Pilih Hard"></button>
+            <button type="button" class="diff-pip" data-difficulty="EXTREME" title="Extreme" aria-label="Pilih Extreme"></button>
           </div>
         </div>
 
@@ -83,9 +155,17 @@
           </button>
         </div>
 
-        <p class="keyboard-tip">
-          💡 Tekan <kbd>ENTER</kbd> untuk mulai • <kbd>ESC</kbd> untuk jeda • <kbd>M</kbd> / <kbd>Klik Kanan</kbd> toggle auto-fire
-        </p>
+        <!-- Sleek Minimalist Keyboard Tip Bar -->
+        <div class="keyboard-tip-tray">
+          <span class="tip-icon">💡</span>
+          <span class="tip-segment"><kbd>ENTER</kbd> Mulai</span>
+          <span class="tip-divider">•</span>
+          <span class="tip-segment"><kbd>◀</kbd> <kbd>▶</kbd> Tingkat</span>
+          <span class="tip-divider">•</span>
+          <span class="tip-segment"><kbd>ESC</kbd> Jeda</span>
+          <span class="tip-divider">•</span>
+          <span class="tip-segment"><kbd>M</kbd> Auto-Fire</span>
+        </div>
       </div>
     </div>
 
@@ -100,7 +180,48 @@
         <p class="game-subtitle">Sesuaikan audio, volume, dan kendali permainan</p>
 
         <div class="settings-content-scroll">
-          <!-- Section 1: Audio Settings -->
+          <!-- Section 1: UHD & Display Quality -->
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span>💎 TAMPILAN & KUALITAS UHD</span>
+            </div>
+
+            <!-- UHD Hi-DPI Sharpness Setting -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon">💎</span>
+                  <div>
+                    <strong class="settings-name">Resolusi Ultra High Definition (UHD)</strong>
+                    <span class="settings-subdesc">Rendering tajam vektor tanah liat pada layar Hi-DPI, Retina, 1440p, dan 4K</span>
+                  </div>
+                </div>
+                <label class="clay-toggle-switch" title="Toggle Resolusi UHD">
+                  <input type="checkbox" id="setting-uhd-toggle" checked />
+                  <span class="clay-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Fullscreen Setting -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon">⛶</span>
+                  <div>
+                    <strong class="settings-name">Mode Layar Penuh (Fullscreen)</strong>
+                    <span class="settings-subdesc">Mainkan game memenuhi seluruh layar monitor Anda tanpa gangguan</span>
+                  </div>
+                </div>
+                <button type="button" id="btn-setting-fullscreen" class="clay-opt-toggle">
+                  <span class="opt-icon">⛶</span>
+                  <span id="setting-fs-btn-label">AKTIFKAN LAYAR PENUH</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Audio Settings -->
           <div class="settings-section">
             <div class="settings-section-title">
               <span>🎵 TATA SUARA & SOUNDTRACK</span>
@@ -261,13 +382,16 @@
         <!-- Segmented Tab Navigation -->
         <div class="clay-tab-bar">
           <button type="button" class="clay-tab-btn active" data-tab="tab-control">
-            <span class="tab-icon">🎮</span> KONTROL & PANDUAN
+            <span class="tab-icon">🎮</span> KONTROL
           </button>
           <button type="button" class="clay-tab-btn" data-tab="tab-weapons">
-            <span class="tab-icon">⚡</span> ARSENAL SENJATA (15S)
+            <span class="tab-icon">⚡</span> SENJATA (15S)
           </button>
           <button type="button" class="clay-tab-btn" data-tab="tab-worlds">
             <span class="tab-icon">🏆</span> 4 DUNIA & BOSS
+          </button>
+          <button type="button" class="clay-tab-btn" data-tab="tab-matrix">
+            <span class="tab-icon">📊</span> MATRIKS KESULITAN
           </button>
         </div>
 
@@ -300,7 +424,7 @@
                 <span class="instruction-badge">NYAWA</span>
                 <div class="instruction-text">
                   <strong>Regulasi Ketahanan:</strong>
-                  <p>Nyawa ekstra diperoleh setiap kelipatan <strong>250.000 skor</strong> & menumbangkan Boss Kolosal!</p>
+                  <p>Nyawa ekstra diperoleh berkala sesuai difficulty (<strong>100k</strong> di Beginner s/d <strong>50jt</strong> di Extreme) & bonus kalahkan Boss!</p>
                 </div>
               </div>
             </div>
@@ -403,6 +527,240 @@
               </div>
             </div>
           </div>
+
+          <!-- Tab 4: Matriks Konfigurasi Difficulty -->
+          <div id="tab-matrix" class="tab-pane">
+            <div class="matrix-hero-banner">
+              <div class="matrix-hero-icon">⚖️</div>
+              <div class="matrix-hero-text">
+                <h4>MATRIKS TINGKAT KESULITAN DINAMIS</h4>
+                <p>Prinsip <em>Risk vs Reward</em> presisi: Semakin tinggi tantangan, pengganda skor melonjak fantastis (hingga <strong>5.0x</strong>). Bonus penyelesaian stage dinaikkan untuk balancing: dihitung dari <strong>Multiplier World (1x–4x)</strong> terlebih dahulu lalu dikalikan <strong>Multiplier Difficulty (0.25x–5x)</strong>!</p>
+              </div>
+            </div>
+
+            <!-- Claymorphic Matrix Table Card -->
+            <div class="matrix-table-card">
+              <div class="matrix-table-title-row">
+                <span class="matrix-table-title">⚡ TABEL KOMPARASI LENGKAP 5 DIFFICULTY</span>
+                <span class="matrix-table-subtag">Geser horizontal bila di layar sempit ↔️</span>
+              </div>
+              <div class="matrix-scroll-wrap">
+                <table class="diff-matrix-table">
+                  <thead>
+                    <tr>
+                      <th class="col-param">PARAMETER / ATRIBUT</th>
+                      <th class="col-diff col-beginner">
+                        <span class="th-icon">🛡️</span>
+                        <span class="th-name">BEGINNER</span>
+                        <span class="th-sub">Pemula</span>
+                      </th>
+                      <th class="col-diff col-easy">
+                        <span class="th-icon">🟢</span>
+                        <span class="th-name">EASY</span>
+                        <span class="th-sub">Santai</span>
+                      </th>
+                      <th class="col-diff col-normal">
+                        <span class="th-icon">🟡</span>
+                        <span class="th-name">NORMAL</span>
+                        <span class="th-sub">Arcade</span>
+                      </th>
+                      <th class="col-diff col-hard">
+                        <span class="th-icon">🔴</span>
+                        <span class="th-name">HARD</span>
+                        <span class="th-sub">Tantangan</span>
+                      </th>
+                      <th class="col-diff col-extreme">
+                        <span class="th-icon">🔥</span>
+                        <span class="th-name">EXTREME</span>
+                        <span class="th-sub">Neraka</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">💎</span>
+                        <strong>Pengganda Skor</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-badge bg-beginner">0.25x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-easy">0.50x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-normal">1.00x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-hard">2.00x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-extreme">5.00x</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">❤️</span>
+                        <strong>Interval Skor +1 Nyawa</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">100.000</span></td>
+                      <td class="cell-val"><span class="matrix-pill">500.000</span></td>
+                      <td class="cell-val"><span class="matrix-pill">2.000.000</span></td>
+                      <td class="cell-val"><span class="matrix-pill">10.000.000</span></td>
+                      <td class="cell-val"><span class="matrix-pill">50.000.000</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🛡️</span>
+                        <strong>Pengganda HP Musuh</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">0.75x (-25%)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">1.00x (Standar)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">1.00x (Standar)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">1.00x (Standar)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">1.50x (+50%)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">⏱️</span>
+                        <strong>Jeda Tembak Musuh</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+20% Santai</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">Standar (1.0x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">Standar (1.0x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">-15% Rapat</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">-25% Agresif</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">⚡</span>
+                        <strong>Kecepatan Peluru Musuh</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">-20% (0.80x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">-10% (0.90x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">Standar (1.00x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">+15% (1.15x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">+30% (1.30x)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">💖</span>
+                        <strong>Nyawa Awal / Maksimal</strong>
+                      </td>
+                      <td class="cell-val"><strong>5</strong> / maks 20</td>
+                      <td class="cell-val"><strong>3</strong> / maks 15</td>
+                      <td class="cell-val"><strong>3</strong> / maks 10</td>
+                      <td class="cell-val"><strong>3</strong> / maks 5</td>
+                      <td class="cell-val"><strong>3</strong> / maks 3</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🔫</span>
+                        <strong>Durasi Senjata Spesial</strong>
+                      </td>
+                      <td class="cell-val">25 Detik</td>
+                      <td class="cell-val">20 Detik</td>
+                      <td class="cell-val">15 Detik</td>
+                      <td class="cell-val">10 Detik</td>
+                      <td class="cell-val">8 Detik</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🔄</span>
+                        <strong>Senjata Saat Tertembak</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">Tetap Aktif</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">Tetap Aktif</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">Hilang (Reset)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">Hilang (Reset)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">Hilang (Reset)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">👾</span>
+                        <strong>Bonus Kalahkan Boss</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+2 Nyawa</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+1 Nyawa</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+1 Nyawa</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">0 Nyawa</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">0 Nyawa</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">✨</span>
+                        <strong>Durasi Kebal (Invulnerable)</strong>
+                      </td>
+                      <td class="cell-val">4.0 Detik</td>
+                      <td class="cell-val">3.0 Detik</td>
+                      <td class="cell-val">2.5 Detik</td>
+                      <td class="cell-val">2.0 Detik</td>
+                      <td class="cell-val">1.5 Detik</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">💥</span>
+                        <strong>Mekanik Spesial / Gimmick</strong>
+                      </td>
+                      <td class="cell-val text-subtle">Sangat toleran, belajar pola musuh</td>
+                      <td class="cell-val text-subtle">Senjata awet tidak hilang saat jatuh</td>
+                      <td class="cell-val text-subtle">Keseimbangan arcade otentik 2002</td>
+                      <td class="cell-val text-subtle">Peluru cepat, tanpa nyawa dari boss</td>
+                      <td class="cell-val text-highlight-extreme">Revenge Bullets & Boss Rage 50% HP!</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 5 Detailed Mode Cards -->
+            <div class="matrix-cards-grid">
+              <div class="clay-diff-card card-beginner">
+                <div class="card-diff-header">
+                  <span class="diff-icon">🛡️</span>
+                  <div>
+                    <h5 class="diff-title">BEGINNER (PEMULA)</h5>
+                    <span class="diff-chip chip-beginner">Skor 0.25x • +Nyawa Tiap 100.000</span>
+                  </div>
+                </div>
+                <p class="diff-desc">Dibuat khusus untuk pengenalan visual, pemain baru, atau anak-anak. HP musuh 25% lebih empuk, tembakan pelan dan renggang, serta toleransi hingga 20 nyawa dan durasi kebal 4 detik.</p>
+              </div>
+
+              <div class="clay-diff-card card-easy">
+                <div class="card-diff-header">
+                  <span class="diff-icon">🟢</span>
+                  <div>
+                    <h5 class="diff-title">EASY (SANTAI)</h5>
+                    <span class="diff-chip chip-easy">Skor 0.50x • +Nyawa Tiap 500.000</span>
+                  </div>
+                </div>
+                <p class="diff-desc">Pengalaman santai dan nyaman. Senjata spesial bertahan 20 detik dan tidak hilang saat pesawat tertembak. Sangat cocok untuk eksplorasi semua 20 stage dan 4 dunia.</p>
+              </div>
+
+              <div class="clay-diff-card card-normal">
+                <div class="card-diff-header">
+                  <span class="diff-icon">🟡</span>
+                  <div>
+                    <h5 class="diff-title">NORMAL (KLASIK ARCADE)</h5>
+                    <span class="diff-chip chip-normal">Skor 1.00x • +Nyawa Tiap 2.000.000</span>
+                  </div>
+                </div>
+                <p class="diff-desc">Standar emas arcade otentik Platypus 2002. Keseimbangan presisi antara tantangan dan strategi pengelolaan senjata serta pengumpulan buah poin.</p>
+              </div>
+
+              <div class="clay-diff-card card-hard">
+                <div class="card-diff-header">
+                  <span class="diff-icon">🔴</span>
+                  <div>
+                    <h5 class="diff-title">HARD (TANTANGAN HARDCORE)</h5>
+                    <span class="diff-chip chip-hard">Skor 2.00x • +Nyawa Tiap 10.000.000</span>
+                  </div>
+                </div>
+                <p class="diff-desc">Bagi pilot terampil yang mencari tantangan tinggi. Peluru musuh melesat 15% lebih kencang, interval tembak lebih rapat, senjata hanya 10 detik, dan boss tidak lagi memberikan nyawa!</p>
+              </div>
+
+              <div class="clay-diff-card card-extreme">
+                <div class="card-diff-header">
+                  <span class="diff-icon">🔥</span>
+                  <div>
+                    <h5 class="diff-title">EXTREME (NERAKA PELURU)</h5>
+                    <span class="diff-chip chip-extreme">Skor 5.00x • +Nyawa Tiap 50.000.000</span>
+                  </div>
+                </div>
+                <p class="diff-desc">Tingkat kesulitan pamungkas! HP musuh 1.5x, peluru sangat cepat dan rapat. Musuh berarmor memuntahkan <em>Revenge Bullets</em> saat hancur, dan semua Boss memasuki <em>Rage Mode</em> saat HP &le; 50%!</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Guide Footer -->
@@ -414,72 +772,239 @@
       </div>
     </div>
 
-    <!-- Pause Modal (Claymorphism Polished) -->
+    <!-- Pause Modal (Claymorphism Polished & Vertical Actions) -->
     <div id="modal-pause" class="modal-screen">
       <div class="clay-card pause-modal-card">
+        <!-- Floating Pill Header -->
+        <div class="modal-pill-tag tag-pause">
+          <span class="tag-icon">⏸️</span>
+          <span>PERMAINAN DIJEDA</span>
+        </div>
+
         <div id="pause-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
-        <h2 class="game-title pause-title">GAME DIJEDA</h2>
-        <p class="game-subtitle">Tarik napas sejenak, pilot tanah liat!</p>
-        <div class="pause-actions-grid">
-          <button id="btn-resume" class="clay-btn green">
-            <span class="btn-icon">▶️</span>
-            <span>LANJUT (ENTER)</span>
+        <h2 class="game-title modal-clay-title pause-title">GAME DIJEDA</h2>
+        <p class="game-subtitle">Tarik napas sejenak, siapkan strategi tempur tanah liatmu!</p>
+
+        <!-- Live Session Inset Deck -->
+        <div class="clay-stat-tray pause-stat-tray">
+          <div class="clay-stat-chip">
+            <span class="chip-label">TAHAPAN</span>
+            <span id="pause-stage-val" class="chip-val">Stage 1 / 20</span>
+          </div>
+          <div class="clay-stat-chip">
+            <span class="chip-label">SKOR SEMENTARA</span>
+            <span id="pause-score-val" class="chip-val highlight">0</span>
+          </div>
+          <div class="clay-stat-chip">
+            <span class="chip-label">SISA NYAWA</span>
+            <span id="pause-lives-val" class="chip-val">❤️ 3</span>
+          </div>
+        </div>
+
+        <!-- Vertical Actions Stack -->
+        <div class="modal-vertical-actions">
+          <button id="btn-resume" class="clay-btn green vertical-action-btn primary-action" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">▶️</span>
+              <span class="btn-text">LANJUTKAN PERMAINAN</span>
+            </span>
+            <kbd class="clay-kbd-pill">ENTER</kbd>
           </button>
-          <button id="btn-settings-pause" class="clay-btn tertiary">
-            <span class="btn-icon">⚙️</span>
-            <span>PENGATURAN</span>
+
+          <button id="btn-settings-pause" class="clay-btn amber vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">⚙️</span>
+              <span class="btn-text">PENGATURAN & AUDIO</span>
+            </span>
+            <kbd class="clay-kbd-pill">O</kbd>
           </button>
-          <button id="btn-restart-pause" class="clay-btn secondary">
-            <span class="btn-icon">🔄</span>
-            <span>ULANGI (R)</span>
+
+          <button id="btn-restart-pause" class="clay-btn secondary vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">🔄</span>
+              <span class="btn-text">ULANGI PERMAINAN</span>
+            </span>
+            <kbd class="clay-kbd-pill">R</kbd>
           </button>
-          <button id="btn-menu-pause" class="clay-btn red">
-            <span class="btn-icon">🏠</span>
-            <span>MENU UTAMA (ESC)</span>
+
+          <button id="btn-menu-pause" class="clay-btn red vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">🏠</span>
+              <span class="btn-text">KEMBALI KE MENU UTAMA</span>
+            </span>
+            <kbd class="clay-kbd-pill">ESC</kbd>
           </button>
         </div>
-        <p class="keyboard-tip" style="margin-top: 16px;">
-          💡 Tekan <kbd>ESC</kbd> untuk kembali ke Menu Utama • <kbd>ENTER</kbd> untuk melanjutkan
-        </p>
+
+        <div class="modal-keyboard-hint">
+          <span>💡 Tekan <kbd>ENTER</kbd> lanjut • <kbd>O</kbd> pengaturan • <kbd>R</kbd> ulangi • <kbd>ESC</kbd> menu</span>
+        </div>
       </div>
     </div>
 
-    <!-- Game Over Modal -->
+    <!-- Game Over Modal (Claymorphism Polished & Vertical Actions) -->
     <div id="modal-gameover" class="modal-screen">
-      <div class="clay-card">
+      <div class="clay-card gameover-modal-card">
+        <!-- Floating Pill Header -->
+        <div class="modal-pill-tag tag-gameover">
+          <span class="tag-icon">💥</span>
+          <span>MISI GAGAL • ARMADA GUGUR</span>
+        </div>
+
         <div id="gameover-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
-        <h2 class="game-title" style="color: #ef5350; text-shadow: 4px 4px 0 #b71c1c;">GAME OVER</h2>
-        <p id="gameover-stats" style="font-size: 1.2rem; margin: 15px 0; color: #4e342e; font-weight: 700;">
-          Skor: 0 | Stage: 1 / 20
-        </p>
-        <p id="gameover-highscore" style="font-size: 1rem; color: #795548; margin-bottom: 20px;">
-          Skor Tertinggi: 0
-        </p>
+        <h2 class="game-title modal-clay-title gameover-title">GAME OVER</h2>
+        <p class="game-subtitle">Pesawat tanah liatmu gugur di pertempuran. Bangkit dan balas kembali!</p>
+
+        <!-- Structured Performance Deck -->
+        <div class="clay-stat-tray gameover-stat-tray">
+          <div class="stat-hero-card">
+            <div class="hero-label">SKOR DIPEROLEH</div>
+            <div id="gameover-score-display" class="hero-score-val">0</div>
+            <div id="gameover-new-record" class="stat-new-record-pill" style="display: none;">
+              <span class="record-star">⭐</span>
+              <span>REKOR TERTINGGI BARU!</span>
+            </div>
+          </div>
+
+          <div class="stat-subgrid">
+            <div class="clay-stat-chip">
+              <span class="chip-label">TAHAPAN TERCAPAI</span>
+              <span id="gameover-stage-val" class="chip-val">Stage 1 / 20</span>
+            </div>
+            <div class="clay-stat-chip">
+              <span class="chip-label">GELOMBANG MUSUH</span>
+              <span id="gameover-wave-val" class="chip-val">Gelombang 1</span>
+            </div>
+            <div class="clay-stat-chip">
+              <span class="chip-label">REKOR TERTINGGI</span>
+              <span id="gameover-highscore-val" class="chip-val">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legacy hook fallbacks (hidden, updated in JS for backward compatibility) -->
+        <p id="gameover-stats" style="display: none;"></p>
+        <p id="gameover-highscore" style="display: none;"></p>
+
+        <!-- Cheat Notice Warning -->
         <p id="gameover-cheat-notice" class="cheat-unrecorded-notice" style="display: none;">
           ⚠️ Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
         </p>
-        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-          <button id="btn-retry" class="clay-btn">COBA LAGI (R)</button>
-          <button id="btn-menu-gameover" class="clay-btn secondary">🏠 MENU UTAMA</button>
+
+        <!-- Vertical Actions Stack -->
+        <div class="modal-vertical-actions">
+          <button id="btn-retry" class="clay-btn primary-launch vertical-action-btn primary-action" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">🔄</span>
+              <span class="btn-text">COBA LAGI</span>
+            </span>
+            <kbd class="clay-kbd-pill">ENTER / R</kbd>
+          </button>
+
+          <button id="btn-settings-gameover" class="clay-btn amber vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">⚙️</span>
+              <span class="btn-text">PENGATURAN & AUDIO</span>
+            </span>
+            <kbd class="clay-kbd-pill">O</kbd>
+          </button>
+
+          <button id="btn-menu-gameover" class="clay-btn secondary vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">🏠</span>
+              <span class="btn-text">KEMBALI KE MENU UTAMA</span>
+            </span>
+            <kbd class="clay-kbd-pill">ESC</kbd>
+          </button>
+        </div>
+
+        <div class="modal-keyboard-hint">
+          <span>💡 Tekan <kbd>ENTER</kbd> atau <kbd>R</kbd> untuk coba lagi • <kbd>O</kbd> pengaturan • <kbd>ESC</kbd> menu</span>
         </div>
       </div>
     </div>
 
-    <!-- Victory Modal -->
+    <!-- Victory Modal (Claymorphism Polished & Vertical Actions) -->
     <div id="modal-victory" class="modal-screen">
-      <div class="clay-card">
+      <!-- Ambient Confetti Celebration Canvas -->
+      <canvas id="victory-confetti-canvas" class="victory-confetti-canvas"></canvas>
+
+      <div class="clay-card victory-modal-card">
+        <!-- Floating Pill Header -->
+        <div class="modal-pill-tag tag-victory">
+          <span class="tag-icon">🏆</span>
+          <span>MISI DITUNTASKAN • MASTER ACE</span>
+        </div>
+
         <div id="victory-difficulty-badge" class="modal-diff-badge diff-badge-normal">MODE: NORMAL</div>
-        <h2 class="game-title" style="color: #66bb6a; text-shadow: 4px 4px 0 #1b5e20;">MISI SUKSES!</h2>
-        <p class="game-subtitle">Seluruh 20 stage dan 4 boss kolosal telah ditaklukkan!</p>
-        <p id="victory-stats" style="font-size: 1.3rem; margin: 15px 0; color: #4e342e; font-weight: 700;">
-          Skor Akhir: 0 | 20 / 20 STAGE COMPLETED!
-        </p>
+        <h2 class="game-title modal-clay-title victory-title">MISI SUKSES!</h2>
+        <p class="game-subtitle">Luar biasa! Seluruh 20 stage dan 4 boss kolosal telah ditaklukkan!</p>
+
+        <!-- Victory Trophy & Performance Showcase Deck -->
+        <div class="clay-stat-tray victory-stat-tray">
+          <div class="victory-rank-pill">
+            <span class="rank-stars">⭐⭐⭐⭐⭐</span>
+            <span id="victory-rank-title" class="rank-text">RANK S+ • PENGUASA LANGIT</span>
+          </div>
+
+          <div class="stat-hero-card victory-hero">
+            <div class="hero-label">SKOR TOTAL AKHIR</div>
+            <div id="victory-score-display" class="hero-score-val victory-gold">0</div>
+            <div id="victory-new-record" class="stat-new-record-pill victory-record" style="display: none;">
+              <span class="record-star">🏆</span>
+              <span>REKOR TERTINGGI BARU TERCIPTA!</span>
+            </div>
+          </div>
+
+          <div class="stat-subgrid">
+            <div class="clay-stat-chip victory-chip">
+              <span class="chip-label">PROGRESS MISI</span>
+              <span id="victory-stage-val" class="chip-val">20 / 20 STAGE (100%)</span>
+            </div>
+            <div class="clay-stat-chip victory-chip">
+              <span class="chip-label">REKOR TERTINGGI</span>
+              <span id="victory-highscore-val" class="chip-val">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legacy hook fallbacks (hidden, updated in JS for backward compatibility) -->
+        <p id="victory-stats" style="display: none;"></p>
+
+        <!-- Cheat Notice Warning -->
         <p id="victory-cheat-notice" class="cheat-unrecorded-notice" style="display: none;">
           ⚠️ Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
         </p>
-        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-          <button id="btn-play-again" class="clay-btn green">MAIN LAGI</button>
-          <button id="btn-menu-victory" class="clay-btn secondary">🏠 MENU UTAMA</button>
+
+        <!-- Vertical Actions Stack -->
+        <div class="modal-vertical-actions">
+          <button id="btn-play-again" class="clay-btn green vertical-action-btn primary-action victory-action-glow" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">🌟</span>
+              <span class="btn-text">MAIN LAGI DENGAN MODE INI</span>
+            </span>
+            <kbd class="clay-kbd-pill">ENTER</kbd>
+          </button>
+
+          <button id="btn-settings-victory" class="clay-btn amber vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">⚙️</span>
+              <span class="btn-text">PENGATURAN & AUDIO</span>
+            </span>
+            <kbd class="clay-kbd-pill">O</kbd>
+          </button>
+
+          <button id="btn-menu-victory" class="clay-btn secondary vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">🏠</span>
+              <span class="btn-text">KEMBALI KE MENU UTAMA</span>
+            </span>
+            <kbd class="clay-kbd-pill">ESC</kbd>
+          </button>
+        </div>
+
+        <div class="modal-keyboard-hint">
+          <span>💡 Tekan <kbd>ENTER</kbd> main lagi • <kbd>O</kbd> pengaturan • <kbd>ESC</kbd> menu utama</span>
         </div>
       </div>
     </div>
@@ -500,14 +1025,14 @@
           <span class="cheat-warning-icon">⚠️</span>
           <div class="cheat-warning-body">
             <strong>PROTEKSI REKOR TERTINGGI:</strong>
-            <p>Skor dari sesi dengan mode curang aktif <strong>tidak akan dicatat dalam high rekor</strong>.</p>
+            <p>Jika mode curang aktif, skor sesi ini <strong>tidak dicatat dalam rekor tertinggi</strong>.</p>
           </div>
         </div>
 
         <!-- Master Switch: Aktifkan Mode Curang -->
         <div class="cheat-master-row">
           <div class="cheat-master-labels">
-            <span class="cheat-master-title">STATUS FITUR CURANG</span>
+            <span class="cheat-master-title">STATUS MASTER CURANG</span>
             <span id="cheat-master-status-desc" class="cheat-master-desc">Mode curang saat ini: <strong>NON-AKTIF</strong></span>
           </div>
           <label class="clay-toggle-switch" title="Toggle Mode Curang">
@@ -516,88 +1041,321 @@
           </label>
         </div>
 
+        <!-- Cheat Segmented Tabs -->
+        <div class="cheat-tab-bar" id="cheat-tab-bar">
+          <button type="button" class="cheat-tab-btn active" data-cheat-tab="cheat-tab-mission">
+            <span class="tab-icon">🚀</span> TAHAP & SENJATA
+          </button>
+          <button type="button" class="cheat-tab-btn" data-cheat-tab="cheat-tab-lives">
+            <span class="tab-icon">❤️</span> SISTEM NYAWA
+          </button>
+          <button type="button" class="cheat-tab-btn" data-cheat-tab="cheat-tab-enemy">
+            <span class="tab-icon">👾</span> PARAMETER MUSUH
+          </button>
+        </div>
+
         <!-- Cheat Settings Controls Panel -->
         <div id="cheat-controls-panel" class="cheat-controls-panel">
-          <!-- 1. Awal Stage (1 - 20) -->
-          <div class="cheat-control-group">
-            <div class="cheat-group-header">
-              <div class="cheat-group-label">
-                <span class="group-icon">🚀</span>
-                <span class="group-title">AWAL STAGE (STAGE 1 – 20)</span>
+          
+          <!-- TAB 1: TAHAP & SENJATA -->
+          <div id="cheat-tab-mission" class="cheat-tab-pane active">
+            <!-- 1. Awal Stage (1 - 20) (No toggle as per specification) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">🚀</span>
+                  <span class="group-title">AWAL STAGE (STAGE 1 – 20)</span>
+                </div>
+                <span id="cheat-stage-val-badge" class="cheat-val-badge">STAGE 1</span>
               </div>
-              <span id="cheat-stage-val-badge" class="cheat-val-badge">STAGE 1</span>
+              <div id="cheat-stage-desc" class="cheat-detail-info">
+                Lembah Tanah Liat (Misi 1: Sapu Penyelidik Musuh)
+              </div>
+              <div class="clay-stepper-wrap">
+                <button type="button" class="clay-step-btn" id="btn-stage-dec" title="Kurangi Stage">−</button>
+                <input type="range" id="cheat-stage-slider" min="1" max="20" value="1" class="clay-slider" />
+                <button type="button" class="clay-step-btn" id="btn-stage-inc" title="Tambah Stage">+</button>
+              </div>
+              <!-- Quick Preset Chips for Worlds & Bosses -->
+              <div class="cheat-quick-pills">
+                <button type="button" class="quick-chip" data-set-stage="1">W1: Stg 1</button>
+                <button type="button" class="quick-chip" data-set-stage="5">Boss 1 (Stg 5)</button>
+                <button type="button" class="quick-chip" data-set-stage="6">W2: Stg 6</button>
+                <button type="button" class="quick-chip" data-set-stage="10">Boss 2 (Stg 10)</button>
+                <button type="button" class="quick-chip" data-set-stage="11">W3: Stg 11</button>
+                <button type="button" class="quick-chip" data-set-stage="15">Boss 3 (Stg 15)</button>
+                <button type="button" class="quick-chip" data-set-stage="16">W4: Stg 16</button>
+                <button type="button" class="quick-chip" data-set-stage="20">Final (Stg 20)</button>
+              </div>
             </div>
-            <div id="cheat-stage-desc" class="cheat-detail-info">
-              Lembah Tanah Liat (Misi 1: Sapu Penyelidik Musuh)
-            </div>
-            <div class="clay-stepper-wrap">
-              <button type="button" class="clay-step-btn" id="btn-stage-dec" title="Kurangi Stage">−</button>
-              <input type="range" id="cheat-stage-slider" min="1" max="20" value="1" class="clay-slider" />
-              <button type="button" class="clay-step-btn" id="btn-stage-inc" title="Tambah Stage">+</button>
-            </div>
-            <!-- Quick Preset Chips for Worlds & Bosses -->
-            <div class="cheat-quick-pills">
-              <button type="button" class="quick-chip" data-set-stage="1">W1: Stg 1</button>
-              <button type="button" class="quick-chip" data-set-stage="5">Boss 1 (Stg 5)</button>
-              <button type="button" class="quick-chip" data-set-stage="6">W2: Stg 6</button>
-              <button type="button" class="quick-chip" data-set-stage="10">Boss 2 (Stg 10)</button>
-              <button type="button" class="quick-chip" data-set-stage="11">W3: Stg 11</button>
-              <button type="button" class="quick-chip" data-set-stage="15">Boss 3 (Stg 15)</button>
-              <button type="button" class="quick-chip" data-set-stage="16">W4: Stg 16</button>
-              <button type="button" class="quick-chip" data-set-stage="20">Final (Stg 20)</button>
+
+            <!-- 2. Durasi Senjata Spesial (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">⚡</span>
+                  <span class="group-title">DURASI SENJATA SPESIAL</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-weapon" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-weapon-val-badge" class="cheat-val-badge">15 DETIK</span>
+                </div>
+              </div>
+              <div class="cheat-detail-info">
+                Durasi aktif power-up senjata sebelum kembali ke tembakan standar
+              </div>
+              <div id="wrap-weapon-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-weapon-dec" title="Kurangi Durasi">−</button>
+                  <input type="range" id="cheat-weapon-slider" min="5" max="60" step="5" value="15" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-weapon-inc" title="Tambah Durasi">+</button>
+                </div>
+                <div class="cheat-toggle-option-row">
+                  <button type="button" id="btn-toggle-infinite-weapon" class="clay-opt-toggle">
+                    <span class="opt-icon">♾️</span>
+                    <span class="opt-text">Senjata Tak Terbatas (Infinite)</span>
+                  </button>
+                  <div class="cheat-quick-pills-inline">
+                    <button type="button" class="quick-chip" data-set-weapon="5">5s</button>
+                    <button type="button" class="quick-chip" data-set-weapon="15">15s</button>
+                    <button type="button" class="quick-chip" data-set-weapon="30">30s</button>
+                    <button type="button" class="quick-chip" data-set-weapon="60">60s</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 2. Jumlah Nyawa Awal (1 - 20 / Tak Terbatas) -->
-          <div class="cheat-control-group">
-            <div class="cheat-group-header">
-              <div class="cheat-group-label">
-                <span class="group-icon">❤️</span>
-                <span class="group-title">JUMLAH NYAWA AWAL (MAX 20 / TAK TERBATAS)</span>
+          <!-- TAB 2: SISTEM NYAWA -->
+          <div id="cheat-tab-lives" class="cheat-tab-pane">
+            <!-- 3. Nyawa Awal (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">❤️</span>
+                  <span class="group-title">JUMLAH NYAWA AWAL</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-starting-lives" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-lives-val-badge" class="cheat-val-badge">10 NYAWA</span>
+                </div>
               </div>
-              <span id="cheat-lives-val-badge" class="cheat-val-badge">10 NYAWA</span>
+              <div class="cheat-detail-info">
+                Jumlah nyawa pemain saat memulai petualangan baru
+              </div>
+              <div id="wrap-lives-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-lives-dec" title="Kurangi Nyawa">−</button>
+                  <input type="range" id="cheat-lives-slider" min="1" max="20" value="10" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-lives-inc" title="Tambah Nyawa">+</button>
+                </div>
+                <div class="cheat-toggle-option-row">
+                  <button type="button" id="btn-toggle-infinite-lives" class="clay-opt-toggle">
+                    <span class="opt-icon">♾️</span>
+                    <span class="opt-text">Nyawa Tak Terbatas (Infinite / Godmode)</span>
+                  </button>
+                  <div class="cheat-quick-pills-inline">
+                    <button type="button" class="quick-chip" data-set-lives="1">1</button>
+                    <button type="button" class="quick-chip" data-set-lives="3">3</button>
+                    <button type="button" class="quick-chip" data-set-lives="5">5</button>
+                    <button type="button" class="quick-chip" data-set-lives="10">10</button>
+                    <button type="button" class="quick-chip" data-set-lives="20">20</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="clay-stepper-wrap" id="wrap-lives-slider">
-              <button type="button" class="clay-step-btn" id="btn-lives-dec" title="Kurangi Nyawa">−</button>
-              <input type="range" id="cheat-lives-slider" min="1" max="20" value="10" class="clay-slider" />
-              <button type="button" class="clay-step-btn" id="btn-lives-inc" title="Tambah Nyawa">+</button>
+
+            <!-- 4. Nyawa Maksimal (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">🛡️</span>
+                  <span class="group-title">BATAS NYAWA MAKSIMAL</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-max-lives" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-max-lives-val-badge" class="cheat-val-badge">20 NYAWA</span>
+                </div>
+              </div>
+              <div class="cheat-detail-info">
+                Kapasitas maksimum penampungan nyawa dari bonus skor dan drop
+              </div>
+              <div id="wrap-max-lives-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-max-lives-dec" title="Kurangi Nyawa Maks">−</button>
+                  <input type="range" id="cheat-max-lives-slider" min="1" max="50" value="20" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-max-lives-inc" title="Tambah Nyawa Maks">+</button>
+                </div>
+                <div class="cheat-quick-pills">
+                  <button type="button" class="quick-chip" data-set-max-lives="3">3 Nyawa</button>
+                  <button type="button" class="quick-chip" data-set-max-lives="5">5 Nyawa</button>
+                  <button type="button" class="quick-chip" data-set-max-lives="10">10 Nyawa</button>
+                  <button type="button" class="quick-chip" data-set-max-lives="20">20 Nyawa</button>
+                  <button type="button" class="quick-chip" data-set-max-lives="50">50 Maksimal</button>
+                </div>
+              </div>
             </div>
-            <div class="cheat-toggle-option-row">
-              <button type="button" id="btn-toggle-infinite-lives" class="clay-opt-toggle">
-                <span class="opt-icon">♾️</span>
-                <span class="opt-text">Nyawa Tak Terbatas (Infinite)</span>
-              </button>
-              <span class="cheat-priority-tag">⭐ Diprioritaskan di atas Difficulty</span>
+
+            <!-- 5. Interval Skor +1 Nyawa (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">🎁</span>
+                  <span class="group-title">INTERVAL SKOR +1 NYAWA</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-score-interval" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-score-interval-val-badge" class="cheat-val-badge">2.000.000 PTS</span>
+                </div>
+              </div>
+              <div class="cheat-detail-info">
+                Bonus +1 nyawa otomatis setiap pemain melampaui kelipatan skor ini
+              </div>
+              <div id="wrap-score-interval-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-score-interval-dec" title="Kurangi Interval">−</button>
+                  <input type="range" id="cheat-score-interval-slider" min="0" max="8" value="4" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-score-interval-inc" title="Tambah Interval">+</button>
+                </div>
+                <div class="cheat-quick-pills">
+                  <button type="button" class="quick-chip" data-set-score-interval="100000">100 Rb</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="500000">500 Rb</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="1000000">1 Juta</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="2000000">2 Juta</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="5000000">5 Juta</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="10000000">10 Juta</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="50000000">50 Juta</button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 3. Durasi Senjata (Max 60 Detik / Tak Terbatas) -->
-          <div class="cheat-control-group">
-            <div class="cheat-group-header">
-              <div class="cheat-group-label">
-                <span class="group-icon">⚡</span>
-                <span class="group-title">DURASI SENJATA (MAX 60 DETIK / TAK TERBATAS)</span>
+          <!-- TAB 3: PARAMETER MUSUH -->
+          <div id="cheat-tab-enemy" class="cheat-tab-pane">
+            <!-- 6. Pengganda HP Musuh (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">🩸</span>
+                  <span class="group-title">PENGGANDA HP MUSUH</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-enemy-hp" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-enemy-hp-val-badge" class="cheat-val-badge">1.00× HP</span>
+                </div>
               </div>
-              <span id="cheat-weapon-val-badge" class="cheat-val-badge">15 DETIK</span>
+              <div class="cheat-detail-info">
+                Ketahanan darah musuh biasa dan boss (0.25x = Rapuh | 5.0x = Baja Monster)
+              </div>
+              <div id="wrap-enemy-hp-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-enemy-hp-dec" title="Kurangi HP">−</button>
+                  <input type="range" id="cheat-enemy-hp-slider" min="0.25" max="5.0" step="0.05" value="1.0" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-enemy-hp-inc" title="Tambah HP">+</button>
+                </div>
+                <div class="cheat-quick-pills">
+                  <button type="button" class="quick-chip" data-set-enemy-hp="0.25">0.25x Kertas</button>
+                  <button type="button" class="quick-chip" data-set-enemy-hp="0.5">0.5x Rapuh</button>
+                  <button type="button" class="quick-chip" data-set-enemy-hp="1.0">1.0x Normal</button>
+                  <button type="button" class="quick-chip" data-set-enemy-hp="1.5">1.5x Keras</button>
+                  <button type="button" class="quick-chip" data-set-enemy-hp="2.0">2.0x Tebal</button>
+                  <button type="button" class="quick-chip" data-set-enemy-hp="3.0">3.0x Monster</button>
+                </div>
+              </div>
             </div>
-            <div class="clay-stepper-wrap" id="wrap-weapon-slider">
-              <button type="button" class="clay-step-btn" id="btn-weapon-dec" title="Kurangi Durasi">−</button>
-              <input type="range" id="cheat-weapon-slider" min="5" max="60" step="5" value="15" class="clay-slider" />
-              <button type="button" class="clay-step-btn" id="btn-weapon-inc" title="Tambah Durasi">+</button>
+
+            <!-- 7. Jeda Tembak Musuh (Cooldown) (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">⏱️</span>
+                  <span class="group-title">JEDA TEMBAK MUSUH</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-shoot-cooldown" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-shoot-cooldown-val-badge" class="cheat-val-badge">1.00× JEDA</span>
+                </div>
+              </div>
+              <div class="cheat-detail-info">
+                Jeda interval tembakan musuh (&lt; 1.0x Tembakan Cepat/Brutal | &gt; 1.0x Tembakan Lambat/Santai)
+              </div>
+              <div id="wrap-shoot-cooldown-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-shoot-cooldown-dec" title="Kurangi Jeda Tembak">−</button>
+                  <input type="range" id="cheat-shoot-cooldown-slider" min="0.25" max="4.0" step="0.05" value="1.0" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-shoot-cooldown-inc" title="Tambah Jeda Tembak">+</button>
+                </div>
+                <div class="cheat-quick-pills">
+                  <button type="button" class="quick-chip" data-set-shoot-cooldown="0.25">0.25x Brutal</button>
+                  <button type="button" class="quick-chip" data-set-shoot-cooldown="0.5">0.5x Cepat</button>
+                  <button type="button" class="quick-chip" data-set-shoot-cooldown="0.75">0.75x Agresif</button>
+                  <button type="button" class="quick-chip" data-set-shoot-cooldown="1.0">1.0x Standar</button>
+                  <button type="button" class="quick-chip" data-set-shoot-cooldown="1.5">1.5x Tenang</button>
+                  <button type="button" class="quick-chip" data-set-shoot-cooldown="2.0">2.0x Santai</button>
+                </div>
+              </div>
             </div>
-            <div class="cheat-toggle-option-row">
-              <button type="button" id="btn-toggle-infinite-weapon" class="clay-opt-toggle">
-                <span class="opt-icon">♾️</span>
-                <span class="opt-text">Durasi Senjata Tak Terbatas (Infinite)</span>
-              </button>
-              <span class="cheat-priority-tag">⭐ Diprioritaskan di atas Difficulty</span>
+
+            <!-- 8. Kecepatan Peluru Musuh (HAS TOGGLE) -->
+            <div class="cheat-control-group">
+              <div class="cheat-group-header">
+                <div class="cheat-group-label">
+                  <span class="group-icon">☄️</span>
+                  <span class="group-title">KECEPATAN PELURU MUSUH</span>
+                </div>
+                <div class="cheat-header-right">
+                  <button type="button" id="btn-toggle-diff-bullet-speed" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
+                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-text">SESUAI DIFFICULTY</span>
+                  </button>
+                  <span id="cheat-bullet-speed-val-badge" class="cheat-val-badge">1.00× KEC.</span>
+                </div>
+              </div>
+              <div class="cheat-detail-info">
+                Laju kecepatan lesatan proyektil musuh di layar (0.25x = Lambat Melayang | 3.0x = Supersonik)
+              </div>
+              <div id="wrap-bullet-speed-controls" class="cheat-subcontrols-wrap">
+                <div class="clay-stepper-wrap">
+                  <button type="button" class="clay-step-btn" id="btn-bullet-speed-dec" title="Kurangi Kecepatan">−</button>
+                  <input type="range" id="cheat-bullet-speed-slider" min="0.25" max="3.0" step="0.05" value="1.0" class="clay-slider" />
+                  <button type="button" class="clay-step-btn" id="btn-bullet-speed-inc" title="Tambah Kecepatan">+</button>
+                </div>
+                <div class="cheat-quick-pills">
+                  <button type="button" class="quick-chip" data-set-bullet-speed="0.25">0.25x Merayap</button>
+                  <button type="button" class="quick-chip" data-set-bullet-speed="0.5">0.5x Lambat</button>
+                  <button type="button" class="quick-chip" data-set-bullet-speed="0.75">0.75x Santai</button>
+                  <button type="button" class="quick-chip" data-set-bullet-speed="1.0">1.0x Normal</button>
+                  <button type="button" class="quick-chip" data-set-bullet-speed="1.3">1.3x Kencang</button>
+                  <button type="button" class="quick-chip" data-set-bullet-speed="2.0">2.0x Kilat</button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Priority Notice -->
+          <!-- Priority & Logic Notice -->
           <div class="cheat-priority-info-box">
-            <span class="priority-badge">🎯 ATURAN PRIORITAS KELAYAKAN</span>
-            <p>Pilihan pada konfigurasi curang akan <strong>selalu diprioritaskan dibanding difficulty</strong>. Misalnya jika Anda memilih difficulty <em>Hard</em> tetapi mengatur <em>Nyawa Tak Terbatas</em>, Anda akan tetap memiliki nyawa tak terbatas di permainan!</p>
+            <span class="priority-badge">🎯 LOGIKA EKSEKUSI STRICT & PRIORITAS</span>
+            <p>
+              Jika <strong>Status Master Curang NON-AKTIF</strong>, seluruh konfigurasi di halaman ini <strong>diabaikan secara tegas</strong> dan game murni mengikuti difficulty. Jika AKTIF, konfigurasi bertanda <strong>⚙️ KUSTOM</strong> akan menimpa difficulty, sedangkan yang bertanda <strong>🔒 SESUAI DIFFICULTY</strong> tetap memakai parameter bawaan difficulty yang dipilih!
+            </p>
           </div>
         </div>
 

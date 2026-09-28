@@ -1,63 +1,139 @@
-// Clay Splat, Smoke & Floating Text Particles
+// High-Performance Zero-Allocation Particle Pool & Floating Text System
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
+
+class ParticleObject {
+  constructor() {
+    this.active = false;
+    this.type = 'CLAY_CHUNK';
+    this.x = 0;
+    this.y = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.size = 0;
+    this.color = '#e53935';
+    this.shadowColor = '#b71c1c';
+    this.rotation = 0;
+    this.vRot = 0;
+    this.life = 0;
+    this.maxLife = 1;
+    this.gravity = 0;
+    this.growth = 0;
+  }
+
+  reset() {
+    this.active = false;
+    this.gravity = 0;
+    this.vRot = 0;
+    this.growth = 0;
+  }
+}
+
+class FloatingTextObject {
+  constructor() {
+    this.active = false;
+    this.x = 0;
+    this.y = 0;
+    this.text = '';
+    this.color = '#ffd54f';
+    this.vy = -55;
+    this.life = 0;
+    this.maxLife = 0.9;
+  }
+
+  reset() {
+    this.active = false;
+    this.text = '';
+  }
+}
 
 export class ParticleSystem {
   constructor() {
-    this.particles = [];
-    this.texts = [];
-    this.maxParticles = 220; // Safe ceiling to maintain 60 FPS under heavy spam
+    this.maxParticles = 250;
+    this.activeCount = 0;
+    this.pool = new Array(this.maxParticles);
+    for (let i = 0; i < this.maxParticles; i++) {
+      this.pool[i] = new ParticleObject();
+    }
+
+    this.maxTexts = 32;
+    this.activeTextCount = 0;
+    this.textPool = new Array(this.maxTexts);
+    for (let i = 0; i < this.maxTexts; i++) {
+      this.textPool[i] = new FloatingTextObject();
+    }
   }
 
   // Ultra-fast glowing electric spark particles for Plasma weapon
   createElectricSpark(x, y, count = 2, color = '#ea80fc', shadowColor = '#aa00ff') {
-    if (this.particles.length > this.maxParticles) {
-      // Drop excess oldest particles to preserve 60 FPS
-      this.particles.splice(0, count);
-    }
     for (let i = 0; i < count; i++) {
+      let p;
+      if (this.activeCount < this.maxParticles) {
+        p = this.pool[this.activeCount++];
+      } else {
+        // Recycle oldest particle at index 0 (swap to active end)
+        p = this.pool[0];
+        for (let k = 0; k < this.activeCount - 1; k++) {
+          this.pool[k] = this.pool[k + 1];
+        }
+        this.pool[this.activeCount - 1] = p;
+      }
+
+      p.active = true;
+      p.type = 'ELECTRIC_SPARK';
+      p.x = x + (Math.random() - 0.5) * 6;
+      p.y = y + (Math.random() - 0.5) * 6;
       const angle = Math.random() * Math.PI * 2;
       const speed = 40 + Math.random() * 200;
-      this.particles.push({
-        type: 'ELECTRIC_SPARK',
-        x: x + (Math.random() - 0.5) * 6,
-        y: y + (Math.random() - 0.5) * 6,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: 3 + Math.random() * 4,
-        color,
-        shadowColor,
-        life: 0.16 + Math.random() * 0.14,
-        maxLife: 0.30
-      });
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.size = 3 + Math.random() * 4;
+      p.color = color;
+      p.shadowColor = shadowColor;
+      p.life = 0.16 + Math.random() * 0.14;
+      p.maxLife = 0.30;
+      p.rotation = 0;
+      p.vRot = 0;
+      p.gravity = 0;
+      p.growth = 0;
     }
   }
 
   // Spawn bursting chunks of clay (Classic Platypus death splat)
   createClaySplat(x, y, count = 12, color = '#e53935', shadowColor = '#b71c1c') {
-    if (this.particles.length + count > this.maxParticles) {
+    // Dynamic throttling if pool is nearly saturated
+    if (this.activeCount + count > this.maxParticles) {
       count = Math.max(3, Math.floor(count * 0.5));
-      if (this.particles.length > this.maxParticles - count) {
-        this.particles.splice(0, count);
-      }
     }
+
     for (let i = 0; i < count; i++) {
+      let p;
+      if (this.activeCount < this.maxParticles) {
+        p = this.pool[this.activeCount++];
+      } else {
+        p = this.pool[0];
+        for (let k = 0; k < this.activeCount - 1; k++) {
+          this.pool[k] = this.pool[k + 1];
+        }
+        this.pool[this.activeCount - 1] = p;
+      }
+
+      p.active = true;
+      p.type = 'CLAY_CHUNK';
+      p.x = x;
+      p.y = y;
       const angle = Math.random() * Math.PI * 2;
       const speed = 60 + Math.random() * 280;
-      this.particles.push({
-        type: 'CLAY_CHUNK',
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: 4 + Math.random() * 8,
-        color,
-        shadowColor,
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 8,
-        life: 0.6 + Math.random() * 0.4,
-        maxLife: 1.0,
-        gravity: 260
-      });
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.size = 4 + Math.random() * 8;
+      p.color = color;
+      p.shadowColor = shadowColor;
+      p.rotation = Math.random() * Math.PI * 2;
+      p.vRot = (Math.random() - 0.5) * 8;
+      p.life = 0.6 + Math.random() * 0.4;
+      p.maxLife = 1.0;
+      p.gravity = 260;
+      p.growth = 0;
     }
 
     // Add some soft smoke puffs too
@@ -67,77 +143,116 @@ export class ParticleSystem {
   // Engine or explosion smoke puffs
   createSmokePuff(x, y, count = 1, baseSize = 14) {
     for (let i = 0; i < count; i++) {
-      this.particles.push({
-        type: 'SMOKE',
-        x: x + (Math.random() - 0.5) * 12,
-        y: y + (Math.random() - 0.5) * 12,
-        vx: (Math.random() - 0.5) * 40 - 30, // drifts back
-        vy: (Math.random() - 0.5) * 40,
-        size: baseSize * (0.6 + Math.random() * 0.8),
-        color: '#eceff1',
-        shadowColor: '#90a4ae',
-        life: 0.4 + Math.random() * 0.3,
-        maxLife: 0.7,
-        growth: 25
-      });
+      let p;
+      if (this.activeCount < this.maxParticles) {
+        p = this.pool[this.activeCount++];
+      } else {
+        p = this.pool[0];
+        for (let k = 0; k < this.activeCount - 1; k++) {
+          this.pool[k] = this.pool[k + 1];
+        }
+        this.pool[this.activeCount - 1] = p;
+      }
+
+      p.active = true;
+      p.type = 'SMOKE';
+      p.x = x + (Math.random() - 0.5) * 12;
+      p.y = y + (Math.random() - 0.5) * 12;
+      p.vx = (Math.random() - 0.5) * 40 - 30; // drifts back
+      p.vy = (Math.random() - 0.5) * 40;
+      p.size = baseSize * (0.6 + Math.random() * 0.8);
+      p.color = '#eceff1';
+      p.shadowColor = '#90a4ae';
+      p.life = 0.4 + Math.random() * 0.3;
+      p.maxLife = 0.7;
+      p.growth = 25;
+      p.rotation = 0;
+      p.vRot = 0;
+      p.gravity = 0;
     }
   }
 
   // Floating score or bonus text
   createFloatingText(x, y, text, color = '#ffd54f') {
-    this.texts.push({
-      x,
-      y,
-      text,
-      color,
-      vy: -55,
-      life: 0.9,
-      maxLife: 0.9
-    });
+    let t;
+    if (this.activeTextCount < this.maxTexts) {
+      t = this.textPool[this.activeTextCount++];
+    } else {
+      t = this.textPool[0];
+      for (let k = 0; k < this.activeTextCount - 1; k++) {
+        this.textPool[k] = this.textPool[k + 1];
+      }
+      this.textPool[this.activeTextCount - 1] = t;
+    }
+
+    t.active = true;
+    t.x = x;
+    t.y = y;
+    t.text = text;
+    t.color = color;
+    t.vy = -55;
+    t.life = 0.9;
+    t.maxLife = 0.9;
   }
 
   update(dt) {
-    // Update particles
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
+    // 1. Update active particles (O(1) Swap-and-Pop on expiration)
+    for (let i = 0; i < this.activeCount; i++) {
+      const p = this.pool[i];
       p.life -= dt;
 
       if (p.life <= 0) {
-        this.particles.splice(i, 1);
+        // Swap with last active particle
+        this.activeCount--;
+        if (i < this.activeCount) {
+          const temp = this.pool[i];
+          this.pool[i] = this.pool[this.activeCount];
+          this.pool[this.activeCount] = temp;
+          i--; // Re-check swapped element
+        }
         continue;
       }
 
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
-      if (p.gravity) {
+      if (p.gravity !== 0) {
         p.vy += p.gravity * dt;
       }
 
-      if (p.vRot) {
+      if (p.vRot !== 0) {
         p.rotation += p.vRot * dt;
       }
 
-      if (p.growth) {
+      if (p.growth !== 0) {
         p.size += p.growth * dt;
       }
     }
 
-    // Update floating texts
-    for (let i = this.texts.length - 1; i >= 0; i--) {
-      const t = this.texts[i];
+    // 2. Update active floating texts (O(1) Swap-and-Pop on expiration)
+    for (let i = 0; i < this.activeTextCount; i++) {
+      const t = this.textPool[i];
       t.life -= dt;
+
       if (t.life <= 0) {
-        this.texts.splice(i, 1);
+        this.activeTextCount--;
+        if (i < this.activeTextCount) {
+          const temp = this.textPool[i];
+          this.textPool[i] = this.textPool[this.activeTextCount];
+          this.textPool[this.activeTextCount] = temp;
+          i--;
+        }
         continue;
       }
+
       t.y += t.vy * dt;
     }
   }
 
   draw(ctx) {
-    // Draw particles
-    for (const p of this.particles) {
+    // 1. Draw active particles
+    for (let i = 0; i < this.activeCount; i++) {
+      const p = this.pool[i];
       const alpha = Math.max(0, p.life / p.maxLife);
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -164,28 +279,37 @@ export class ParticleSystem {
       ctx.restore();
     }
 
-    // Draw floating score texts
-    ctx.save();
-    ctx.font = 'bold 22px Luckiest Guy, cursive';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    for (const t of this.texts) {
-      const alpha = Math.max(0, t.life / t.maxLife);
+    // 2. Draw active floating score texts
+    if (this.activeTextCount > 0) {
       ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = t.color;
+      ctx.font = 'bold 22px Luckiest Guy, cursive';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.strokeStyle = '#3e2723';
       ctx.lineWidth = 4;
-      ctx.strokeText(t.text, t.x, t.y);
-      ctx.fillText(t.text, t.x, t.y);
+
+      for (let i = 0; i < this.activeTextCount; i++) {
+        const t = this.textPool[i];
+        const alpha = Math.max(0, t.life / t.maxLife);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = t.color;
+        ctx.strokeText(t.text, t.x, t.y);
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+      }
       ctx.restore();
     }
-    ctx.restore();
   }
 
   clear() {
-    this.particles = [];
-    this.texts = [];
+    this.activeCount = 0;
+    this.activeTextCount = 0;
+    for (let i = 0; i < this.maxParticles; i++) {
+      this.pool[i].reset();
+    }
+    for (let i = 0; i < this.maxTexts; i++) {
+      this.textPool[i].reset();
+    }
   }
 }

@@ -361,9 +361,11 @@ export class SoundController {
 
   playEnemyShoot() {
     if (!this.sfxEnabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - (this.lastEnemyShootTime || 0) < 0.035) return;
+    this.lastEnemyShootTime = t;
     this.resume();
 
-    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     const filter = this.ctx.createBiquadFilter();
@@ -390,10 +392,12 @@ export class SoundController {
 
   playEnemyHit() {
     if (!this.sfxEnabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (t - (this.lastEnemyHitTime || 0) < 0.038) return;
+    this.lastEnemyHitTime = t;
     this.resume();
 
     // Tactile plasticine "squish-thud" with gentle highpass impact transient
-    const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
@@ -599,8 +603,16 @@ export class SoundController {
     }
   }
 
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.72, this.ctx.currentTime);
+    }
+    return this.isMuted;
+  }
+
   playUiHover() {
-    if (!this.sfxEnabled || !this.ctx) return;
+    if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
     this.resume();
 
     const t = this.ctx.currentTime;
@@ -608,11 +620,11 @@ export class SoundController {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(540, t);
-    osc.frequency.exponentialRampToValueAtTime(780, t + 0.035);
+    osc.frequency.setValueAtTime(560, t);
+    osc.frequency.exponentialRampToValueAtTime(840, t + 0.035);
 
     gain.gain.setValueAtTime(0.001, t);
-    gain.gain.linearRampToValueAtTime(0.08, t + 0.004);
+    gain.gain.linearRampToValueAtTime(0.09, t + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
 
     osc.connect(gain);
@@ -623,7 +635,59 @@ export class SoundController {
   }
 
   playUiClick() {
-    if (!this.sfxEnabled || !this.ctx) return;
+    if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
+    this.resume();
+
+    const t = this.ctx.currentTime;
+    // Layer 1: Tactile clay pop (frequency sweep down)
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(420, t);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.045);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.22, t + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.05);
+
+    // Layer 2: Subtle soft acoustic click transient
+    this.playPinkNoise(t, 0.02, 0.08, 1200);
+  }
+
+  playUiToggle(isOn = true) {
+    if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
+    this.resume();
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    const startF = isOn ? 340 : 620;
+    const endF = isOn ? 680 : 280;
+    osc.frequency.setValueAtTime(startF, t);
+    osc.frequency.exponentialRampToValueAtTime(endF, t + 0.045);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.14, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  playUiTab() {
+    if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
     this.resume();
 
     const t = this.ctx.currentTime;
@@ -631,18 +695,18 @@ export class SoundController {
     const gain = this.ctx.createGain();
 
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(340, t);
-    osc.frequency.exponentialRampToValueAtTime(150, t + 0.05);
+    osc.frequency.setValueAtTime(480, t);
+    osc.frequency.exponentialRampToValueAtTime(620, t + 0.03);
 
     gain.gain.setValueAtTime(0.001, t);
-    gain.gain.linearRampToValueAtTime(0.18, t + 0.004);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
 
     osc.connect(gain);
     gain.connect(this.sfxGain);
 
     osc.start(t);
-    osc.stop(t + 0.055);
+    osc.stop(t + 0.04);
   }
 
   // --- HELPER NOISE PLAYERS ---

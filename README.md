@@ -71,22 +71,33 @@ Permainan dibagi menjadi 4 Dunia tematik dengan perubahan palet dan latar visual
 ---
 
 ## 🕹️ Panduan Kontrol & Gameplay
-
+ 
 | Kontrol | Aksi |
 | :--- | :--- |
 | **Mouse / Kursor** | Gerakkan pesawat mengikuti kursor dengan halus |
 | **W, A, S, D** atau **Tombol Panah** | Gerakan pesawat 8 arah (Keyboard Mode) |
+| **Panah ◀ / ▶ atau A / D** | Mengganti tingkat kesulitan di Menu Utama (Beginner ➔ Extreme) |
 | **Spasi** atau **Klik Kiri** | Menembak peluru (atau tekan saat menu untuk mulai/lanjut) |
-| **Enter** | Mulai game / Lanjutkan game / Ulangi setelah Game Over |
-| **Tombol ⚡ di HUD Atas** | Mengaktifkan **Auto-Fire** (tembakan otomatis) |
-| **Tombol Mode di HUD Atas** | Mengganti mode kontrol Mouse / Keyboard |
+| **Tombol M** / **Klik Kanan** | Toggle **Auto-Fire** (tembakan otomatis berkelanjutan) |
+| **Tombol U** | Toggle **Mode UHD Super Tajam** (Hi-DPI / Retina / 4K) |
+| **Tombol F** | Toggle **Layar Penuh (Fullscreen)** |
+| **Tombol O** | Buka Modal **Pengaturan (Settings)** saat bermain |
 | **ESC** atau **P** | Menjeda game (Pause) / Melanjutkan game |
-| **Tombol Suara & Musik** | Mengatur suara efek (SFX) & musik latar |
-| **Tombol Layar Penuh** | Mengaktifkan / keluar mode Fullscreen |
+| **Quick HUD Bar (Atas)** | Akses cepat Auto-Fire, Kemudi Mouse/WASD, UHD, Audio Mute, Settings, Fullscreen, Pause |
 
 ---
 
-## 🔄 Sistem Power-Up & Bonus Skor
+## 💎 Fitur Visual UHD & Engine Claymorphism Modern
 
-- **Bonus Nyawa Ekstra**: Setiap mencapai kelipatan skor tertentu atau berhasil mengalahkan Boss dunia, pesawat Anda secara otomatis mendapatkan **+1 Nyawa** ekstra (kapasitas maksimum hingga **12 Nyawa**) lengkap dengan nada kemenangan arcade yang merdu!
-- **Visual Bebas Guncangan**: Background pemandangan dan lingkungan tanah liat (pegunungan, perbukitan, pulau terapung, awan, dan motes) dibuat kokoh dan stabil tanpa efek guncangan berlebih, memberikan kenyamanan visual maksimal.
+- **True UHD Hi-DPI Resolution Scaling**: Canvas secara dinamis meraster pada rasio resolusi fisik layar monitor Anda (hingga DPR 3.0x untuk layar Retina, 1440p, dan 4K), mempertahankan ketajaman vektor tanah liat yang sempurna tanpa mengorbankan performa 60 FPS.
+- **Rendering Tanah Liat Organik (Plastisin)**: Pencahayaan plastisin prosedural 5-stop radial gradient, bayangan alas jatuh realistis, dan kilau ganda (*dual specular glint* - soft diffuse highlight + crisp specular bead) di setiap lekukan model pesawat dan musuh.
+- **Plume Pendorong & Efek Aura Senjata**: Pesawat memiliki lidah api kembar bereaksi dinamis dengan inti putih-panas, pylon sayap bersinar aura energi sesuai senjata aktif (Merah untuk Spread, Sian untuk Laser, Hijau untuk Homing, Oranye untuk Flak, Ungu untuk Plasma), serta cakram baling-baling transparan berputar.
+- **Micro-Interaction & Tactile Sound FX**: Setiap tombol UI dan pill card dilengkapi interaksi claymorphism responsif (squish tekan, melambung halus saat hover) dan umpan balik suara synthesizer Web Audio API dua-nada yang lembut dan memuaskan.
+- **Visual Bebas Pusing (Rock-Solid Camera)**: Latar belakang perbukitan, pegunungan, pulau terapung, dan awan tetap kokoh tanpa guncangan layar berlebih, memberikan kenyamanan bermain maraton tingkat tinggi.
+
+---
+
+## 🔄 Sistem Power-Up & Balancing Bonus Skor
+
+- **Bonus Nyawa Ekstra**: Setiap mencapai kelipatan skor tertentu (sesuai difficulty: **100.000** di Beginner, **500.000** di Easy, **2.000.000** di Normal, **10.000.000** di Hard, dan **50.000.000** di Extreme) atau berhasil mengalahkan Boss dunia (di mode Beginner, Easy, & Normal), pesawat Anda secara otomatis mendapatkan **+1 Nyawa** ekstra lengkap dengan nada kemenangan arcade yang merdu!
+- **Balancing Bonus Skor Stage**: Bonus skor penyelesaian stage dinaikkan secara proporsional dan dihitung menggunakan sistem logika: Base Stage Bonus dikalikan **Multiplier Skor World (1.0x – 4.0x)** terlebih dahulu, lalu dikalikan dengan **Multiplier Skor Difficulty (0.25x – 5.0x)**.

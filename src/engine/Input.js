@@ -53,14 +53,17 @@ export class InputManager {
       this.keys.delete(e.code);
     });
 
-    // Mouse movement inside canvas coordinates
+    // Mouse movement inside canvas coordinates (canonical 1280x720 UHD logical space)
     this.canvas.addEventListener('mousemove', (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const scaleX = 1280 / rect.width;
+      const scaleY = 720 / rect.height;
 
-      this.mouse.x = (e.clientX - rect.left) * scaleX;
-      this.mouse.y = (e.clientY - rect.top) * scaleY;
+      const rawX = (e.clientX - rect.left) * scaleX;
+      const rawY = (e.clientY - rect.top) * scaleY;
+      this.mouse.x = Math.max(0, Math.min(1280, rawX));
+      this.mouse.y = Math.max(0, Math.min(720, rawY));
       this.mouse.active = true;
     });
 
@@ -82,16 +85,19 @@ export class InputManager {
       }
     });
 
-    // Touch events for mobile/tablets
+    // Touch events for mobile/tablets (canonical 1280x720 UHD logical space)
     const handleTouch = (e) => {
       if (e.touches.length > 0) {
         const touch = e.touches[0];
         const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
+        if (rect.width <= 0 || rect.height <= 0) return;
+        const scaleX = 1280 / rect.width;
+        const scaleY = 720 / rect.height;
 
-        this.mouse.x = (touch.clientX - rect.left) * scaleX;
-        this.mouse.y = (touch.clientY - rect.top) * scaleY;
+        const rawX = (touch.clientX - rect.left) * scaleX;
+        const rawY = (touch.clientY - rect.top) * scaleY;
+        this.mouse.x = Math.max(0, Math.min(1280, rawX));
+        this.mouse.y = Math.max(0, Math.min(720, rawY));
         this.mouse.isDown = true;
         this.controlMode = 'MOUSE';
       }

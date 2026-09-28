@@ -4,6 +4,7 @@ import { Bullet } from './Bullet.js';
 
 export class Enemy {
   static currentStage = 1;
+  static difficultyConfig = null;
 
   constructor(options) {
     this.x = options.x !== undefined ? options.x : 1320;
@@ -12,6 +13,7 @@ export class Enemy {
     this.formationId = options.formationId || null;
     this.isLastInFormation = options.isLastInFormation || false;
 
+    this.difficultyConfig = options.difficultyConfig || Enemy.difficultyConfig || null;
     this.stage = options.stage || Enemy.currentStage || 1;
     this.world = Math.min(4, Math.max(1, Math.floor((this.stage - 1) / 5) + 1));
     this.bulletSpeedMult = 1.0;
@@ -171,6 +173,50 @@ export class Enemy {
         this.shadowColor = '#ff6f00';
         break;
 
+      case 'INTERCEPTOR':
+        this.maxHp = 14;
+        this.hp = 14;
+        this.radius = 22;
+        this.vx = -300;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.scoreValue = 750;
+        this.phaseState = 'APPROACH';
+        this.stateTimer = 0.9;
+        this.hasShot = false;
+        this.color = '#ab47bc';
+        this.shadowColor = '#4a148c';
+        break;
+
+      case 'JUGGERNAUT':
+        this.maxHp = 42;
+        this.hp = 42;
+        this.maxShieldHp = 24;
+        this.shieldHp = 24;
+        this.radius = 48;
+        this.vx = -60;
+        this.vy = 0;
+        this.scoreValue = 1800;
+        this.mortarTimer = 1.8;
+        this.burstTimer = 1.4;
+        this.color = '#37474f';
+        this.shadowColor = '#212121';
+        break;
+
+      case 'VORTEX_DRONE':
+        this.maxHp = 18;
+        this.hp = 18;
+        this.radius = 26;
+        this.vx = -110;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.orbitPhase = Math.random() * Math.PI * 2;
+        this.scoreValue = 850;
+        this.vortexTimer = 2.2;
+        this.color = '#00e5ff';
+        this.shadowColor = '#006064';
+        break;
+
       case 'SCOUT':
       default:
         this.maxHp = 1.5;
@@ -188,47 +234,55 @@ export class Enemy {
         break;
     }
 
-    // World Difficulty Multipliers (Steeper challenge on higher worlds)
+    // World Difficulty Multipliers: Enemy movement speed locked to 1.0x across all worlds
+    // Shoot cooldown delay is made shorter (jeda sedikit & lebih sulit seiring meningkatnya world)
     let hpMult = 1.0;
-    let spdMult = 1.0;
+    let spdMult = 1.0; // Strictly 1.0x across ALL worlds as requested
     let bSpdMult = 1.0;
-    let cdMult = 1.0;
+    let cdMult = 0.88; // World 1: tighter firing interval
 
     if (this.world === 2) {
-      hpMult = 1.55;
-      spdMult = 1.15;
-      bSpdMult = 1.18;
-      cdMult = 0.85;
+      hpMult = 1.40;
+      spdMult = 1.0; // 1x in World 2
+      bSpdMult = 1.25;
+      cdMult = 0.70; // Shorter pause between shots (harder than before)
     } else if (this.world === 3) {
-      hpMult = 2.35;
-      spdMult = 1.30;
-      bSpdMult = 1.35;
-      cdMult = 0.72;
-    } else if (this.world === 4) {
-      hpMult = 3.40;
-      spdMult = 1.45;
+      hpMult = 1.80;
+      spdMult = 1.0; // 1x in World 3
       bSpdMult = 1.50;
-      cdMult = 0.60;
+      cdMult = 0.52; // Even shorter pause between shots
+    } else if (this.world === 4) {
+      hpMult = 2.50;
+      spdMult = 1.0; // 1x in World 4
+      bSpdMult = 1.80;
+      cdMult = 0.36; // Highly aggressive firing rhythm
     }
 
-    this.bulletSpeedMult = bSpdMult;
-    this.shootCooldownMult = cdMult;
+    // Difficulty Multipliers:
+    // HP Mult: Beginner 0.75x, Extreme 1.5x, others 1.0x
+    // Bullet Speed & Shoot Delay from Difficulty
+    const diff = this.difficultyConfig || Enemy.difficultyConfig || {};
+    const diffHp = diff.hpMult !== undefined ? diff.hpMult : 1.0;
+    const diffBulletSpeed = diff.bulletSpeedMult !== undefined ? diff.bulletSpeedMult : 1.0;
+    const diffShootCd = diff.shootCooldownMult !== undefined ? diff.shootCooldownMult : 1.0;
+
+    this.bulletSpeedMult = bSpdMult * diffBulletSpeed;
+    this.shootCooldownMult = cdMult * diffShootCd;
     this.speedMult = spdMult;
 
-    this.maxHp = Math.round(this.maxHp * hpMult * 10) / 10;
+    this.maxHp = Math.round(this.maxHp * hpMult * diffHp * 10) / 10;
     this.hp = this.maxHp;
     if (this.maxShieldHp) {
-      this.maxShieldHp = Math.round(this.maxShieldHp * hpMult * 10) / 10;
+      this.maxShieldHp = Math.round(this.maxShieldHp * hpMult * diffHp * 10) / 10;
       this.shieldHp = this.maxShieldHp;
     }
     this.vx *= spdMult;
     if (this.vy) this.vy *= spdMult;
-    let scoreWorldMult = 1.0;
-    if (this.world === 2) scoreWorldMult = 2.2;
-    else if (this.world === 3) scoreWorldMult = 4.0;
-    else if (this.world === 4) scoreWorldMult = 7.0;
+
+    // World score multiplier: 1x, 2x, 3x, 4x
+    let scoreWorldMult = this.world;
     this.scoreValue = Math.round(this.scoreValue * scoreWorldMult);
-    if (this.shootTimer) this.shootTimer *= cdMult;
+    if (this.shootTimer) this.shootTimer *= this.shootCooldownMult;
   }
 
   update(dt, player, bullets, sound, extraEnemies = []) {
@@ -484,14 +538,125 @@ export class Enemy {
           sound.playEnemyShoot();
         }
         break;
+
+      case 'INTERCEPTOR':
+        if (this.phaseState === 'APPROACH') {
+          this.x += this.vx * dt;
+          this.stateTimer -= dt;
+          if (this.stateTimer <= 0 || this.x < 920) {
+            this.phaseState = 'BRAKE_SHOOT';
+            this.stateTimer = 0.55;
+            this.hasShot = false;
+          }
+        } else if (this.phaseState === 'BRAKE_SHOOT') {
+          this.x += (this.vx * 0.18) * dt;
+          this.y += Math.sin(this.tick * 0.1) * 35 * dt;
+          this.stateTimer -= dt;
+          if (!this.hasShot && this.stateTimer <= 0.3) {
+            this.hasShot = true;
+            const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
+            const offs = [-0.22, 0, 0.22];
+            for (let k = 0; k < 3; k++) {
+              const ang = targetAngle + offs[k];
+              bullets.push(new Bullet({
+                x: this.x - 25,
+                y: this.y,
+                vx: Math.cos(ang) * 600 * this.bulletSpeedMult,
+                vy: Math.sin(ang) * 600 * this.bulletSpeedMult,
+                radius: 7,
+                type: 'ENEMY_SNIPER',
+                isEnemy: true
+              }));
+            }
+            sound.playEnemyShoot();
+          }
+          if (this.stateTimer <= 0) {
+            this.phaseState = 'DASH_OUT';
+            this.vx = -560 * this.speedMult;
+          }
+        } else {
+          // DASH_OUT
+          this.x += this.vx * dt;
+        }
+        break;
+
+      case 'JUGGERNAUT':
+        this.x += this.vx * dt;
+        this.y += Math.sin(this.tick * 0.02) * 20 * dt;
+
+        // Twin heavy mortar shells
+        this.mortarTimer -= dt;
+        if (this.mortarTimer <= 0 && this.x < 1250 && this.x > player.x + 80) {
+          this.mortarTimer = 2.4 * this.shootCooldownMult;
+          for (let k = 0; k < 2; k++) {
+            const yOff = k === 0 ? -22 : 22;
+            bullets.push(new Bullet({
+              x: this.x - 45,
+              y: this.y + yOff,
+              vx: -280 * this.bulletSpeedMult,
+              vy: -110,
+              radius: 9,
+              gravity: 190,
+              type: 'ENEMY_MORTAR',
+              isEnemy: true
+            }));
+          }
+          sound.playEnemyShoot();
+        }
+
+        // Radial 5-way clay burst
+        this.burstTimer -= dt;
+        if (this.burstTimer <= 0 && this.x < 1180 && this.x > player.x + 50) {
+          this.burstTimer = 1.6 * this.shootCooldownMult;
+          const baseAng = Math.atan2(player.y - this.y, player.x - this.x);
+          const bAngles = [-0.35, -0.18, 0, 0.18, 0.35];
+          for (let k = 0; k < 5; k++) {
+            const ang = baseAng + bAngles[k];
+            bullets.push(new Bullet({
+              x: this.x - 35,
+              y: this.y,
+              vx: Math.cos(ang) * 380 * this.bulletSpeedMult,
+              vy: Math.sin(ang) * 380 * this.bulletSpeedMult,
+              radius: 7,
+              isEnemy: true
+            }));
+          }
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'VORTEX_DRONE':
+        this.x += this.vx * dt;
+        this.orbitPhase += dt * 2.2 * this.speedMult;
+        this.y = this.baseY + Math.sin(this.orbitPhase) * 85;
+
+        this.vortexTimer -= dt;
+        if (this.vortexTimer <= 0 && this.x < 1200 && this.x > player.x + 70) {
+          this.vortexTimer = 2.4 * this.shootCooldownMult;
+          for (let k = 0; k < 2; k++) {
+            const yOff = k === 0 ? -20 : 20;
+            bullets.push(new Bullet({
+              x: this.x - 20,
+              y: this.y + yOff,
+              vx: -220,
+              vy: yOff * 3.0,
+              radius: 8,
+              type: 'ENEMY_HOMING',
+              life: 4.5,
+              isEnemy: true
+            }));
+          }
+          sound.playShoot('HOMING');
+        }
+        break;
     }
 
     return this.x > -140 && this.y > -100 && this.y < 820;
   }
 
   takeDamage(amount, bulletX = 0, piercing = false) {
-    // Shield Cruiser energy barrier mechanic
-    if (this.type === 'SHIELD_CRUISER' && this.shieldHp > 0 && !piercing && bulletX > this.x - 20) {
+    // Shield Cruiser & Juggernaut energy barrier mechanic
+    if ((this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT') && this.shieldHp > 0 && !piercing && bulletX > this.x - 20) {
       this.shieldHp -= amount;
       if (this.shieldHp < 0) {
         this.hp += this.shieldHp;
@@ -549,19 +714,32 @@ export class Enemy {
       case 'SPINNER':
         ClayRenderer.drawSpinner(ctx, this.x, this.y, this.tick);
         break;
-      case 'SHIELD_CRUISER':
+      case 'SHIELD_CRUISER': {
         const shieldRatio = Math.max(0, this.shieldHp / this.maxShieldHp);
         ClayRenderer.drawShieldCruiser(ctx, this.x, this.y, shieldRatio, hpRatio, this.tick);
         break;
+      }
       case 'MINE_LAYER':
         ClayRenderer.drawMineLayer(ctx, this.x, this.y, hpRatio, this.tick);
         break;
       case 'MINE':
         ClayRenderer.drawMine(ctx, this.x, this.y, this.tick);
         break;
-      case 'ACE':
+      case 'ACE': {
         const tilt = Math.cos(this.loopPhase);
         ClayRenderer.drawAce(ctx, this.x, this.y, tilt, hpRatio, this.tick);
+        break;
+      }
+      case 'INTERCEPTOR':
+        ClayRenderer.drawInterceptor(ctx, this.x, this.y, hpRatio, this.tick);
+        break;
+      case 'JUGGERNAUT': {
+        const jShield = Math.max(0, this.shieldHp / this.maxShieldHp);
+        ClayRenderer.drawJuggernaut(ctx, this.x, this.y, jShield, hpRatio, this.tick);
+        break;
+      }
+      case 'VORTEX_DRONE':
+        ClayRenderer.drawVortexDrone(ctx, this.x, this.y, hpRatio, this.tick);
         break;
     }
   }

@@ -20,6 +20,19 @@ export class HUD {
     this.bossHudAlpha = 0;
     this.hudTick = 0;
     this.isCheatActive = false;
+    this.highScoreDirty = false;
+    this.highScoreSaveTimer = 0;
+  }
+
+  flushHighScore() {
+    if (!this.highScoreDirty) return;
+    this.highScoreDirty = false;
+    this.highScoreSaveTimer = 0;
+    try {
+      const key = this.difficulty ? `platypus_highscore_${this.difficulty}` : 'platypus_highscore';
+      localStorage.setItem(key, this.highScore.toString());
+      localStorage.setItem('platypus_highscore', this.highScore.toString());
+    } catch (e) {}
   }
 
   setCheatActive(active) {
@@ -27,6 +40,7 @@ export class HUD {
   }
 
   setDifficulty(diffId, config) {
+    this.flushHighScore();
     this.difficulty = diffId || 'NORMAL';
     this.difficultyConfig = config || null;
     this.reloadHighScore();
@@ -56,11 +70,14 @@ export class HUD {
 
     if (player && player.score > this.highScore && !this.isCheatActive) {
       this.highScore = Math.floor(player.score);
-      try {
-        const key = this.difficulty ? `platypus_highscore_${this.difficulty}` : 'platypus_highscore';
-        localStorage.setItem(key, this.highScore.toString());
-        localStorage.setItem('platypus_highscore', this.highScore.toString());
-      } catch (e) {}
+      this.highScoreDirty = true;
+    }
+
+    if (this.highScoreDirty) {
+      this.highScoreSaveTimer += dt;
+      if (this.highScoreSaveTimer >= 3.0) {
+        this.flushHighScore();
+      }
     }
 
     if (this.bannerLife > 0) {
@@ -88,11 +105,11 @@ export class HUD {
     }
   }
 
-  draw(ctx, player, boss) {
+  draw(ctx, player, boss, stageInfo = null) {
     ctx.save();
 
-    // 1. Score, Highscore & Combo Display (Top Left)
-    this.drawScorePanel(ctx, player);
+    // 1. Score, Highscore & Universal Multiplier Display (Top Left)
+    this.drawScorePanel(ctx, player, stageInfo);
 
     // 2. Lives Remaining Fleet (Bottom Left)
     this.drawLivesPanel(ctx, player);
@@ -113,7 +130,7 @@ export class HUD {
     ctx.restore();
   }
 
-  drawScorePanel(ctx, player) {
+  drawScorePanel(ctx, player, stageInfo = null) {
     ctx.save();
     // Glassmorphic Clay Plate for Score
     const sx = 20;
@@ -138,7 +155,14 @@ export class HUD {
 
     // Difficulty Pill Badge below score panel
     const diffLabel = (this.difficultyConfig && this.difficultyConfig.name) || this.difficulty || 'NORMAL';
-    const diffColor = (this.difficultyConfig && this.difficultyConfig.badgeColor) || '#f57c00';
+    const fallbackColors = {
+      BEGINNER: '#00acc1',
+      EASY: '#43a047',
+      NORMAL: '#f57c00',
+      HARD: '#e53935',
+      EXTREME: '#ab47bc',
+    };
+    const diffColor = (this.difficultyConfig && this.difficultyConfig.badgeColor) || fallbackColors[this.difficulty] || '#f57c00';
     ClayRenderer.drawClayCapsule(ctx, sx + 52, sy + 76, 96, 20, diffColor, '#1b120c');
     ctx.font = 'bold 11px Luckiest Guy, cursive';
     ctx.fillStyle = '#ffffff';
@@ -147,28 +171,40 @@ export class HUD {
     ctx.shadowBlur = 3;
     ctx.fillText(`MODE: ${diffLabel}`, sx + 52, sy + 77);
 
+    // World Multiplier Pill Badge: World 1 (1.00x), World 2 (2x), World 3 (3x), World 4 (4x)
+    const curStage = (stageInfo && stageInfo.currentStage) || 1;
+    const world = Math.min(4, Math.max(1, Math.floor((curStage - 1) / 5) + 1));
+    const worldMult = world === 1 ? '1.00x' : `${world}x`;
+    const worldBadgeX = sx + 154;
+    ClayRenderer.drawClayCapsule(ctx, worldBadgeX, sy + 76, 98, 20, '#00838f', '#004d40');
+    ctx.font = 'bold 10px Luckiest Guy, cursive';
+    ctx.fillStyle = '#e0f7fa';
+    ctx.fillText(`WORLD ${world} (${worldMult})`, worldBadgeX, sy + 77);
+
     // Cheat Mode Active Pill
     if (this.isCheatActive) {
-      ClayRenderer.drawClayCapsule(ctx, sx + 148, sy + 76, 88, 20, '#d84315', '#bf360c');
+      ClayRenderer.drawClayCapsule(ctx, sx + 252, sy + 76, 88, 20, '#d84315', '#bf360c');
       ctx.font = 'bold 10px Luckiest Guy, cursive';
       ctx.fillStyle = '#ffe082';
-      ctx.fillText('⚡ CURANG', sx + 148, sy + 77);
+      ctx.fillText('⚡ CURANG', sx + 252, sy + 77);
     }
 
-    // Dynamic Multiplier / Combo Badge
-    if (player.combo > 1) {
-      const pulse = 1 + Math.sin(this.hudTick * 8) * 0.08;
-      ctx.save();
-      ctx.translate(sx + 215, sy + 38);
-      ctx.scale(pulse, pulse);
-      ClayRenderer.drawClayCapsule(ctx, 0, 0, 80, 24, '#f57c00', '#b23c17');
-      ctx.font = 'bold 12px Luckiest Guy, cursive';
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`x${player.combo.toFixed(1)} COMBO`, 0, 1);
-      ctx.restore();
-    }
+    // Universal Score Multiplier Badge
+    const diffMult = (this.difficultyConfig && this.difficultyConfig.scoreMultiplier !== undefined)
+      ? this.difficultyConfig.scoreMultiplier
+      : 1.0;
+    const totalMultiplier = world * diffMult;
+    const multStr = (totalMultiplier % 1 === 0) ? `${totalMultiplier.toFixed(0)}x` : `${totalMultiplier.toFixed(2)}x`;
+
+    ctx.save();
+    ctx.translate(sx + 215, sy + 38);
+    ClayRenderer.drawClayCapsule(ctx, 0, 0, 80, 24, '#f57c00', '#b23c17');
+    ctx.font = 'bold 11px Luckiest Guy, cursive';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${multStr} SKOR`, 0, 1);
+    ctx.restore();
 
     ctx.restore();
   }
@@ -385,7 +421,11 @@ export class HUD {
 
     // Status / Mode Chip
     ctx.textAlign = 'right';
-    if (isRage) {
+    if (boss.isInvulnerable) {
+      ctx.font = 'bold 13px Fredoka, sans-serif';
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillText(`[ 🛡️ PERISAI KEBAL AKTIF ] ${hpPercent}%`, cx + hpTrackW / 2, titleY);
+    } else if (isRage) {
       ctx.font = 'bold 13px Fredoka, sans-serif';
       ctx.fillStyle = '#ff1744';
       ctx.fillText(`[ OVERLOAD - BERSERK ] ${hpPercent}%`, cx + hpTrackW / 2, titleY);
@@ -460,7 +500,13 @@ export class HUD {
     ctx.save();
     let components = [];
 
-    if (boss.bossType === 'OMEGA_COLOSSUS') {
+    if (boss.bossType === 'OMEGA_CORE_SPAWN') {
+      components = [
+        { name: 'MUTANT EYE', alive: boss.coreHp > 360 },
+        { name: 'PERISAI KEBAL', alive: boss.isInvulnerable },
+        { name: 'HYPER RUSH', alive: true }
+      ];
+    } else if (boss.bossType === 'OMEGA_COLOSSUS') {
       components = [
         { name: 'TOP RAILGUN', alive: boss.railTopAlive },
         { name: 'BOT RAILGUN', alive: boss.railBottomAlive },
