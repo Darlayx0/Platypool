@@ -774,8 +774,13 @@ export class Boss {
     }
   }
 
-  takeDamage(amount, hitY, particles, sound) {
+  takeDamage(amount, hitY, particles, sound, bulletType = 'NORMAL') {
     if (this.isDying) return false;
+
+    // Heavy Boss Armor Faraday resistance: Plasma energy deals 25% reduced damage to Bosses
+    if (bulletType === 'PLASMA' || bulletType === 'PLASMA_ZAP') {
+      amount *= 0.75;
+    }
 
     if (this.bossType === 'OMEGA_CORE_SPAWN') {
       if (this.isInvulnerable) {

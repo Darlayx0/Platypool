@@ -287,7 +287,7 @@ function initGameApp() {
       modal.classList.add('active');
     }
     if (hudTopBar) {
-      if (modal === modalStart) {
+      if (modal === modalStart || !modal) {
         hudTopBar.classList.add('hidden');
       } else {
         hudTopBar.classList.remove('hidden');
@@ -792,6 +792,9 @@ function initGameApp() {
         game.togglePause();
       } else if (e.code === 'KeyR') {
         e.preventDefault();
+        if (game.sound) {
+          game.sound.setPauseDucking(false);
+        }
         hideAllModals();
         game.restart();
       } else if (e.code === 'KeyO') {
@@ -886,6 +889,7 @@ function initGameApp() {
     btnRestartPause.addEventListener('click', () => {
       if (game.sound) {
         game.sound.init();
+        game.sound.setPauseDucking(false);
         game.sound.playUiClick();
       }
       ensureFullscreen();

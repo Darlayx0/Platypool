@@ -178,26 +178,28 @@ export class Player {
 
     switch (this.activeWeapon) {
       case 'SPREAD':
-        // Balanced 5-way spread blast: wide crowd control, 1.1 damage per pellet
+        // Tier A+ CQB Shotgun & Defensive Eraser: 7-way spread, 1.0 dmg per pellet (~38.9 DPS point blank), range falloff, bullet-eraser
         this.shootTimer = 0.18;
         sound.playShoot('SPREAD');
-        const angles = [-0.28, -0.14, 0, 0.14, 0.28];
+        const angles = [-0.30, -0.20, -0.10, 0, 0.10, 0.20, 0.30];
         for (const ang of angles) {
-          const spd = 880;
+          const spd = 900;
           bullets.push(new Bullet({
             x: noseX,
             y: this.y,
             vx: Math.cos(ang) * spd,
             vy: Math.sin(ang) * spd,
-            damage: 1.1,
+            damage: 1.0,
             type: 'SPREAD',
-            radius: 7
+            radius: 7,
+            startX: noseX,
+            life: 1.5
           }));
         }
         break;
 
       case 'LASER':
-        // Piercing sonic beam: 1.8 damage each, 4 pierces, high velocity
+        // Tier A+ Thermal Sniper: 2.0 damage each (~30.8 DPS pure melt), 4 pierces, hitscan velocity, 2x shield melting
         this.shootTimer = 0.13;
         sound.playShoot('LASER');
         bullets.push(new Bullet({
@@ -205,7 +207,7 @@ export class Player {
           y: wingTopY,
           vx: 1300,
           vy: 0,
-          damage: 1.8,
+          damage: 2.0,
           type: 'LASER',
           piercing: true,
           hitsLeft: 4,
@@ -216,7 +218,7 @@ export class Player {
           y: wingBottomY,
           vx: 1300,
           vy: 0,
-          damage: 1.8,
+          damage: 2.0,
           type: 'LASER',
           piercing: true,
           hitsLeft: 4,
@@ -225,7 +227,7 @@ export class Player {
         break;
 
       case 'HOMING':
-        // Swarm rockets: agile smart tracking, 2.3 damage each
+        // Tier A+ Agile Harasser: 2.0 damage each (~20.0 DPS), 100% smart lock & turn speed for dodging in bullet hell
         this.shootTimer = 0.20;
         sound.playShoot('HOMING');
         bullets.push(new Bullet({
@@ -233,7 +235,7 @@ export class Player {
           y: wingTopY - 6,
           vx: 650,
           vy: -180,
-          damage: 2.3,
+          damage: 2.0,
           type: 'HOMING',
           radius: 8
         }));
@@ -242,14 +244,14 @@ export class Player {
           y: wingBottomY + 6,
           vx: 650,
           vy: 180,
-          damage: 2.3,
+          damage: 2.0,
           type: 'HOMING',
           radius: 8
         }));
         break;
 
       case 'FLAK':
-        // Heavy clay flak bomb: 3.8 direct damage, 8 shrapnel burst of 1.3 damage
+        // Tier A+ Siege Demolition: 3.8 direct damage, instant shield shatter, expanded 8 shrapnel burst (0.65s life)
         this.shootTimer = 0.28;
         sound.playShoot('FLAK');
         bullets.push(new Bullet({
@@ -264,7 +266,7 @@ export class Player {
         break;
 
       case 'PLASMA':
-        // Unique Plasma Arc Orb: travels forward, piercing 3x, emitting Tesla arcs to nearby enemies
+        // Tier A+ Crowd Disrupter: 2.4 direct damage, pierce decay, Tesla arc micro-slow/stun on swarms, 50% vs Boss armor
         this.shootTimer = 0.22;
         sound.playShoot('PLASMA');
         bullets.push(new Bullet({
@@ -272,7 +274,7 @@ export class Player {
           y: this.y,
           vx: 640,
           vy: 0,
-          damage: 2.6,
+          damage: 2.4,
           type: 'PLASMA',
           piercing: true,
           hitsLeft: 3,

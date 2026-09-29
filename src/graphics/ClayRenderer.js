@@ -123,6 +123,95 @@ export class ClayRenderer {
   }
 
   /**
+   * Ultra-HD 4K Claymorphic Plate / Card
+   * Features:
+   * - Volumetric tactile plasticine bevel with dual inner highlight & shadow
+   * - Diffused soft elevation drop shadow
+   * - Smooth rounded vector bounds
+   */
+  static drawClaymorphicPlate(ctx, x, y, width, height, radius = 20, baseColor = '#2a1e18', shadowColor = '#140c08', borderColor = 'rgba(255, 255, 255, 0.12)') {
+    ctx.save();
+
+    // 1. Soft diffused elevation drop shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.42)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 6;
+
+    // Rounded rectangle path
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(x, y, width, height, radius);
+    } else {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    // 2. Base clay body gradient
+    const grad = ctx.createLinearGradient(x, y, x + width * 0.25, y + height);
+    grad.addColorStop(0, baseColor);
+    grad.addColorStop(1, shadowColor);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Disable outer shadow for crisp inner details
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // 3. Subtle outer border rim
+    if (borderColor) {
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = borderColor;
+      ctx.stroke();
+    }
+
+    // 4. Volumetric Clay Highlight (Top & Left Inner Bevel)
+    ctx.save();
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+    ctx.lineCap = 'round';
+    const inset = 3;
+    const innerR = Math.max(2, radius - inset);
+
+    ctx.beginPath();
+    ctx.moveTo(x + innerR + 4, y + inset);
+    ctx.lineTo(x + width - innerR - 4, y + inset);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + inset, y + innerR + 4);
+    ctx.lineTo(x + inset, y + height - innerR - 4);
+    ctx.stroke();
+    ctx.restore();
+
+    // 5. Ambient Clay Occlusion (Bottom & Right Inner Shadow)
+    ctx.save();
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.32)';
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(x + innerR + 4, y + height - inset);
+    ctx.lineTo(x + width - innerR - 4, y + height - inset);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + width - inset, y + innerR + 4);
+    ctx.lineTo(x + width - inset, y + height - innerR - 4);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  /**
    * Draw the iconic Player Fighter Plane (Novocastrian style)
    */
   static drawPlayerShip(ctx, x, y, tilt = 0, invulnerable = false, engineTick = 0, weaponType = 'NORMAL') {

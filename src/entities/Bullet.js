@@ -21,6 +21,7 @@ export class Bullet {
     this.gravity = options.gravity || 0;
     this.arcTimer = options.arcTimer || 0;
     this.activeArcs = [];
+    this.startX = options.startX !== undefined ? options.startX : this.x;
     this.dead = false;
   }
 
@@ -31,6 +32,14 @@ export class Bullet {
     // Apply gravity for bombs & mortars
     if (this.gravity !== 0) {
       this.vy += this.gravity * dt;
+    }
+
+    // Player SPREAD shotgun range falloff: Full punch close-range, gentle decay past 360px
+    if (this.type === 'SPREAD' && !this.isEnemy) {
+      const distTraveled = this.x - this.startX;
+      if (distTraveled > 360) {
+        this.damage = Math.max(0.38, 1.0 - (distTraveled - 360) * 0.0018);
+      }
     }
 
     // Player Homing rocket logic: find and track nearest living enemy or boss
@@ -137,9 +146,10 @@ export class Bullet {
 
         if (target1) {
           if (target1.isBoss) {
-            target1.target.takeDamage(0.5, target1.y, particles, null);
+            target1.target.takeDamage(0.25, target1.y, particles, null, 'PLASMA_ZAP');
           } else {
-            const killed = target1.target.takeDamage(0.5, this.x, false);
+            const killed = target1.target.takeDamage(0.5, this.x, false, 'PLASMA_ZAP');
+            target1.target.slowTimer = 0.5; // Electro-disruption micro-slow (35% speed reduction)
             if (killed && game) game.handleEnemyDeath(target1.target);
           }
           if (particles) particles.createElectricSpark(target1.x, target1.y, 2, '#ea80fc', '#aa00ff');
@@ -147,9 +157,10 @@ export class Bullet {
 
         if (target2) {
           if (target2.isBoss) {
-            target2.target.takeDamage(0.5, target2.y, particles, null);
+            target2.target.takeDamage(0.25, target2.y, particles, null, 'PLASMA_ZAP');
           } else {
-            const killed = target2.target.takeDamage(0.5, this.x, false);
+            const killed = target2.target.takeDamage(0.5, this.x, false, 'PLASMA_ZAP');
+            target2.target.slowTimer = 0.5; // Electro-disruption micro-slow (35% speed reduction)
             if (killed && game) game.handleEnemyDeath(target2.target);
           }
           if (particles) particles.createElectricSpark(target2.x, target2.y, 2, '#ea80fc', '#aa00ff');

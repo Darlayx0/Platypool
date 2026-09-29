@@ -16,18 +16,24 @@ export class SoundController {
     this.warmthFilter = null;
     this.sfxGain = null;
     this.musicGain = null;
+    this.musicFilter = null; // Dynamic lowpass for pause / lo-fi ducking sweep
+    this.musicDuckingGain = null; // Smooth crossfades, stage transitions, and pause ducking
     this.delayNode = null;
     this.delayFeedback = null;
     this.delayFilter = null;
 
-    // Music Sequencing & State
+    // Music Sequencing & State Machine
     this.currentBiome = 'VALLEY';
     this.isBossMusic = false;
     this.currentBossType = null;
+    this.musicMode = 'GAMEPLAY'; // 'GAMEPLAY' | 'MENU' | 'GAMEOVER' | 'VICTORY'
     this.musicStep = 0;
     this.nextNoteTime = 0;
     this.schedulerTimer = null;
     this.initialized = false;
+    this.isMusicPlaying = false;
+    this.isPausedDucked = false;
+    this.listenersAttached = false;
 
     // Pre-allocated noise buffers for zero latency and garbage collection
     this.whiteNoiseBuffer = null;
@@ -35,7 +41,10 @@ export class SoundController {
   }
 
   init() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      this.resume();
+      return;
+    }
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContextClass();
@@ -56,7 +65,7 @@ export class SoundController {
 
       // 3. Master Gain Node
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.72, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.72, this.ctx.currentTime);
 
       // Chain: Sub-buses -> Warmth Filter -> Compressor -> Master Gain -> Destination
       this.warmthFilter.connect(this.masterCompressor);
@@ -68,10 +77,22 @@ export class SoundController {
       this.sfxGain.gain.setValueAtTime(this.sfxEnabled ? this.sfxVolume : 0, this.ctx.currentTime);
       this.sfxGain.connect(this.warmthFilter);
 
-      // 5. Music Bus
+      // 5. Music Bus Architecture:
+      // Music Voices -> musicGain -> musicFilter (pause sweep) -> musicDuckingGain (fade/duck) -> warmthFilter
       this.musicGain = this.ctx.createGain();
       this.musicGain.gain.setValueAtTime(this.musicEnabled ? (this.musicVolume * 0.45) : 0, this.ctx.currentTime);
-      this.musicGain.connect(this.warmthFilter);
+
+      this.musicFilter = this.ctx.createBiquadFilter();
+      this.musicFilter.type = 'lowpass';
+      this.musicFilter.frequency.setValueAtTime(18000, this.ctx.currentTime);
+      this.musicFilter.Q.setValueAtTime(0.7, this.ctx.currentTime);
+
+      this.musicDuckingGain = this.ctx.createGain();
+      this.musicDuckingGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+
+      this.musicGain.connect(this.musicFilter);
+      this.musicFilter.connect(this.musicDuckingGain);
+      this.musicDuckingGain.connect(this.warmthFilter);
 
       // 6. Stereo Spatial Delay / Reverb Line (Adds lush acoustic depth to synth plucks & leads)
       this.delayNode = this.ctx.createDelay();
@@ -92,13 +113,11 @@ export class SoundController {
       // 7. Initialize Noise Buffers
       this.initNoiseBuffers();
 
+      // 8. Event handlers for browser visibility, tab focus & audio unlock
+      this.setupVisibilityAndFocusHandlers();
+
       this.initialized = true;
-      if (this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
-      }
-      if (this.musicEnabled) {
-        this.startMusic();
-      }
+      this.resume();
     } catch (e) {
       console.warn('Web Audio not supported or failed to initialize:', e);
     }
@@ -133,17 +152,58 @@ export class SoundController {
     }
   }
 
+  setupVisibilityAndFocusHandlers() {
+    if (this.listenersAttached || typeof document === 'undefined' || typeof window === 'undefined') return;
+    this.listenersAttached = true;
+
+    const handleResumeAndResync = () => {
+      this.resume();
+      if (this.ctx && this.isMusicPlaying && this.schedulerTimer) {
+        // If system was suspended or backgrounded, resync note timer to avoid bursting past missed steps
+        if (this.nextNoteTime < this.ctx.currentTime - 0.15) {
+          this.nextNoteTime = this.ctx.currentTime + 0.04;
+          this.musicStep = Math.floor(this.musicStep / 16) * 16;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        handleResumeAndResync();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      handleResumeAndResync();
+    });
+
+    // Unconditional user gesture listeners to unlock AudioContext autoplay policies across all browsers
+    const unlockAudio = () => {
+      this.resume();
+    };
+    window.addEventListener('click', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
+  }
+
   resume() {
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
+      return this.ctx.resume().catch(() => {});
     }
+    return Promise.resolve();
   }
 
   setSFXVolume(volume) {
     this.sfxVolume = Math.max(0, Math.min(1, Number(volume) || 0));
     if (this.sfxGain && this.ctx) {
       const target = this.sfxEnabled ? this.sfxVolume : 0;
-      this.sfxGain.gain.setValueAtTime(target, this.ctx.currentTime);
+      const t = this.ctx.currentTime;
+      try {
+        this.sfxGain.gain.cancelScheduledValues(t);
+        this.sfxGain.gain.setTargetAtTime(target, t, 0.05);
+      } catch (e) {
+        this.sfxGain.gain.setValueAtTime(target, t);
+      }
     }
   }
 
@@ -151,7 +211,13 @@ export class SoundController {
     this.musicVolume = Math.max(0, Math.min(1, Number(volume) || 0));
     if (this.musicGain && this.ctx) {
       const target = this.musicEnabled ? (this.musicVolume * 0.45) : 0;
-      this.musicGain.gain.setValueAtTime(target, this.ctx.currentTime);
+      const t = this.ctx.currentTime;
+      try {
+        this.musicGain.gain.cancelScheduledValues(t);
+        this.musicGain.gain.setTargetAtTime(target, t, 0.05);
+      } catch (e) {
+        this.musicGain.gain.setValueAtTime(target, t);
+      }
     }
   }
 
@@ -159,7 +225,13 @@ export class SoundController {
     this.sfxEnabled = Boolean(enabled);
     if (this.sfxGain && this.ctx) {
       const target = this.sfxEnabled ? this.sfxVolume : 0;
-      this.sfxGain.gain.setValueAtTime(target, this.ctx.currentTime);
+      const t = this.ctx.currentTime;
+      try {
+        this.sfxGain.gain.cancelScheduledValues(t);
+        this.sfxGain.gain.setTargetAtTime(target, t, 0.05);
+      } catch (e) {
+        this.sfxGain.gain.setValueAtTime(target, t);
+      }
     }
     return this.sfxEnabled;
   }
@@ -168,10 +240,16 @@ export class SoundController {
     this.musicEnabled = Boolean(enabled);
     if (this.musicGain && this.ctx) {
       const target = this.musicEnabled ? (this.musicVolume * 0.45) : 0;
-      this.musicGain.gain.setValueAtTime(target, this.ctx.currentTime);
+      const t = this.ctx.currentTime;
+      try {
+        this.musicGain.gain.cancelScheduledValues(t);
+        this.musicGain.gain.setTargetAtTime(target, t, 0.05);
+      } catch (e) {
+        this.musicGain.gain.setValueAtTime(target, t);
+      }
     }
     if (this.musicEnabled) {
-      this.startMusic();
+      this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: false });
     } else {
       this.stopMusic();
     }
@@ -606,7 +684,14 @@ export class SoundController {
   toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.72, this.ctx.currentTime);
+      const target = this.isMuted ? 0 : 0.72;
+      const t = this.ctx.currentTime;
+      try {
+        this.masterGain.gain.cancelScheduledValues(t);
+        this.masterGain.gain.setTargetAtTime(target, t, 0.04);
+      } catch (e) {
+        this.masterGain.gain.setValueAtTime(target, t);
+      }
     }
     return this.isMuted;
   }
@@ -757,24 +842,309 @@ export class SoundController {
   }
 
   // =========================================================================
-  // --- PROCEDURAL DYNAMIC SOUNDTRACK ENGINE (WEB AUDIO LOOKAHEAD SCHEDULER) ---
+  // =========================================================================
+  // --- PROFESSIONAL DYNAMIC SOUNDTRACK ENGINE (WEB AUDIO LOOKAHEAD SCHEDULER) ---
   // =========================================================================
 
   setBiome(biomeKey, isBoss = false) {
     const validBiomes = ['VALLEY', 'CANYON', 'CYBER_NIGHT', 'COSMIC_VOID'];
     if (validBiomes.includes(biomeKey)) {
       this.currentBiome = biomeKey;
-      this.isBossMusic = isBoss;
+      this.isBossMusic = Boolean(isBoss);
+      this.musicMode = 'GAMEPLAY';
+
+      // If music is enabled and currently stopped/interrupted, guarantee it starts playing!
+      if (this.musicEnabled && (!this.isMusicPlaying || !this.schedulerTimer)) {
+        this.playMusic({ biome: biomeKey, isBoss: this.isBossMusic, forceRestart: false, fadeIn: true });
+      }
     }
   }
 
   setBossMode(isBoss, biomeKey = null, bossType = null) {
-    this.isBossMusic = isBoss;
+    this.isBossMusic = Boolean(isBoss);
     if (biomeKey) this.currentBiome = biomeKey;
     if (bossType) this.currentBossType = bossType;
+    this.musicMode = 'GAMEPLAY';
+
+    // If music is enabled and currently stopped, immediately start boss soundtrack!
+    if (this.musicEnabled && (!this.isMusicPlaying || !this.schedulerTimer)) {
+      this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: false, fadeIn: true });
+    }
+  }
+
+  transitionToBiome(biomeKey, isBoss = false) {
+    const changed = this.currentBiome !== biomeKey || this.isBossMusic !== isBoss;
+    this.setBiome(biomeKey, isBoss);
+    if (this.isMusicPlaying && changed) {
+      // Quantize to clean 16-step bar boundary for musical transition
+      this.musicStep = (this.musicStep % 16 === 0) ? this.musicStep : Math.ceil(this.musicStep / 16) * 16;
+    }
+  }
+
+  transitionToBoss(biomeKey = null, bossType = null) {
+    this.setBossMode(true, biomeKey, bossType);
+    if (this.isMusicPlaying) {
+      this.musicStep = (this.musicStep % 16 === 0) ? this.musicStep : Math.ceil(this.musicStep / 16) * 16;
+    }
+  }
+
+  restartMusic({ biome = null, isBoss = false } = {}) {
+    if (biome) this.currentBiome = biome;
+    this.isBossMusic = Boolean(isBoss);
+    this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: true, fadeIn: true });
+  }
+
+  playMusic({ biome = null, isBoss = null, forceRestart = false, fadeIn = true } = {}) {
+    this.init();
+    this.resume();
+
+    if (biome) this.currentBiome = biome;
+    if (isBoss !== null && isBoss !== undefined) this.isBossMusic = Boolean(isBoss);
+    this.musicMode = 'GAMEPLAY';
+
+    if (!this.musicEnabled) return;
+
+    // Reset ducking filter to open state in case previous game was paused
+    if (this.isPausedDucked) {
+      this.setPauseDucking(false);
+    }
+
+    // If music is already playing smoothly and not forced to restart from step 0:
+    if (this.isMusicPlaying && this.schedulerTimer && !forceRestart) {
+      return;
+    }
+
+    if (this.schedulerTimer) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+
+    if (this.ctx) {
+      const t = this.ctx.currentTime;
+      this.musicStep = 0;
+      this.nextNoteTime = t + 0.05;
+      this.isMusicPlaying = true;
+
+      if (this.musicDuckingGain) {
+        try {
+          this.musicDuckingGain.gain.cancelScheduledValues(t);
+          if (fadeIn) {
+            this.musicDuckingGain.gain.setValueAtTime(0.001, t);
+            this.musicDuckingGain.gain.linearRampToValueAtTime(1.0, t + 0.25);
+          } else {
+            this.musicDuckingGain.gain.setValueAtTime(1.0, t);
+          }
+        } catch (e) {
+          this.musicDuckingGain.gain.setValueAtTime(1.0, t);
+        }
+      }
+
+      this.schedulerTimer = setInterval(() => {
+        this.scheduleMusicLookahead();
+      }, 25);
+    }
+  }
+
+  startMusic(forceRestart = false) {
+    this.playMusic({ forceRestart });
+  }
+
+  stopMusic({ fadeDuration = 0.2 } = {}) {
+    if (this.schedulerTimer) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+    this.isMusicPlaying = false;
+
+    if (this.ctx && this.musicDuckingGain && fadeDuration > 0) {
+      const t = this.ctx.currentTime;
+      try {
+        this.musicDuckingGain.gain.cancelScheduledValues(t);
+        this.musicDuckingGain.gain.setValueAtTime(this.musicDuckingGain.gain.value, t);
+        this.musicDuckingGain.gain.linearRampToValueAtTime(0.001, t + fadeDuration);
+        setTimeout(() => {
+          if (!this.isMusicPlaying && this.musicDuckingGain && this.ctx) {
+            this.musicDuckingGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+          }
+        }, fadeDuration * 1000 + 40);
+      } catch (e) {
+        this.musicDuckingGain.gain.setValueAtTime(0.001, t);
+      }
+    }
+  }
+
+  setPauseDucking(isPaused) {
+    this.isPausedDucked = Boolean(isPaused);
+    if (!this.ctx || !this.musicFilter || !this.musicDuckingGain) return;
+    const t = this.ctx.currentTime;
+    try {
+      this.musicFilter.frequency.cancelScheduledValues(t);
+      this.musicDuckingGain.gain.cancelScheduledValues(t);
+      if (this.isPausedDucked) {
+        // Muffle music: sweep lowpass to 480 Hz and dip gain to 65% for delicious lo-fi pause vibe
+        this.musicFilter.frequency.setTargetAtTime(480, t, 0.08);
+        this.musicDuckingGain.gain.setTargetAtTime(0.65, t, 0.08);
+      } else {
+        // Unmuffle music: sweep lowpass back up to 18000 Hz and restore gain to 100%
+        this.musicFilter.frequency.setTargetAtTime(18000, t, 0.08);
+        this.musicDuckingGain.gain.setTargetAtTime(1.0, t, 0.08);
+      }
+    } catch (e) {
+      if (this.isPausedDucked) {
+        this.musicFilter.frequency.setValueAtTime(480, t);
+        this.musicDuckingGain.gain.setValueAtTime(0.65, t);
+      } else {
+        this.musicFilter.frequency.setValueAtTime(18000, t);
+        this.musicDuckingGain.gain.setValueAtTime(1.0, t);
+      }
+    }
+  }
+
+  onGameOver() {
+    this.musicMode = 'GAMEOVER';
+    this.stopMusic({ fadeDuration: 0.35 });
+    this.playGameOverJingle();
+  }
+
+  playGameOverJingle() {
+    if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
+    this.resume();
+    const t = this.ctx.currentTime + 0.05;
+    // Nostalgic retro arcade defeat descending minor motif
+    const notes = [
+      { freq: 440.00, dur: 0.16 }, // A4
+      { freq: 392.00, dur: 0.16 }, // G4
+      { freq: 349.23, dur: 0.16 }, // F4
+      { freq: 329.63, dur: 0.22 }, // E4
+      { freq: 293.66, dur: 0.24 }, // D4
+      { freq: 220.00, dur: 0.55 }  // A3 tonic
+    ];
+
+    let offset = 0;
+    notes.forEach((note) => {
+      const noteTime = t + offset;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(note.freq, noteTime);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1400, noteTime);
+      filter.frequency.exponentialRampToValueAtTime(350, noteTime + note.dur);
+
+      gain.gain.setValueAtTime(0.001, noteTime);
+      gain.gain.linearRampToValueAtTime(0.24, noteTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + note.dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+
+      if (this.delayNode) {
+        gain.connect(this.delayNode);
+      }
+
+      osc.start(noteTime);
+      osc.stop(noteTime + note.dur + 0.05);
+
+      offset += note.dur * 0.85;
+    });
+  }
+
+  onVictory() {
+    this.musicMode = 'VICTORY';
+    this.stopMusic({ fadeDuration: 0.25 });
+    this.playVictoryFanfare();
+  }
+
+  playVictoryFanfare() {
+    if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
+    this.resume();
+    const t = this.ctx.currentTime + 0.05;
+    const fanfareNotes = [
+      { freq: 523.25, dur: 0.12, offset: 0.00 }, // C5
+      { freq: 523.25, dur: 0.12, offset: 0.14 }, // C5
+      { freq: 523.25, dur: 0.12, offset: 0.28 }, // C5
+      { freq: 659.25, dur: 0.28, offset: 0.42 }, // E5
+      { freq: 783.99, dur: 0.22, offset: 0.72 }, // G5
+      { freq: 1046.50, dur: 0.65, offset: 0.96 } // C6
+    ];
+
+    fanfareNotes.forEach((n) => {
+      const noteTime = t + n.offset;
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc1.type = 'sawtooth';
+      osc2.type = 'triangle';
+      osc1.frequency.setValueAtTime(n.freq, noteTime);
+      osc2.frequency.setValueAtTime(n.freq * 1.002, noteTime);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2600, noteTime);
+
+      gain.gain.setValueAtTime(0.001, noteTime);
+      gain.gain.linearRampToValueAtTime(0.28, noteTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + n.dur);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+
+      if (this.delayNode) {
+        gain.connect(this.delayNode);
+      }
+
+      osc1.start(noteTime);
+      osc2.start(noteTime);
+      osc1.stop(noteTime + n.dur + 0.05);
+      osc2.stop(noteTime + n.dur + 0.05);
+    });
+
+    // Start looped celebratory victory synth track after fanfare concludes
+    setTimeout(() => {
+      if (this.musicMode === 'VICTORY') {
+        this.playVictoryLoop();
+      }
+    }, 1750);
+  }
+
+  playVictoryLoop() {
+    if (!this.musicEnabled || !this.ctx) return;
+    this.musicMode = 'VICTORY';
+    this.musicStep = 0;
+    this.nextNoteTime = this.ctx.currentTime + 0.05;
+    this.isMusicPlaying = true;
+    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+    this.schedulerTimer = setInterval(() => {
+      this.scheduleMusicLookahead();
+    }, 25);
+  }
+
+  goToMainMenu() {
+    this.musicMode = 'MENU';
+    this.isBossMusic = false;
+    this.stopMusic({ fadeDuration: 0.3 });
   }
 
   getMusicTrack() {
+    if (this.musicMode === 'VICTORY') {
+      return {
+        bpm: 140,
+        bassWave: 'sawtooth',
+        leadWave: 'triangle',
+        bassSeq: [130.81, 0, 130.81, 130.81, 164.81, 0, 164.81, 164.81, 174.61, 0, 174.61, 174.61, 196.0, 0, 196.0, 196.0],
+        leadSeq: [523.25, 0, 659.25, 783.99, 0, 1046.5, 0, 783.99, 880.0, 0, 1046.5, 1174.66, 0, 1318.51, 1046.5, 0],
+        arpSeq:  [1046.5, 0, 1318.51, 0, 1567.98, 0, 2093.0, 0, 1760.0, 0, 2093.0, 0, 1567.98, 0, 1318.51, 0],
+        hasSubKick: true
+      };
+    }
+
     // 8 distinct tracks: 4 World exploration tracks + 4 intense Boss battle tracks!
     if (this.isBossMusic) {
       switch (this.currentBiome) {
@@ -876,31 +1246,25 @@ export class SoundController {
     }
   }
 
-  startMusic() {
-    this.stopMusic();
-    if (!this.musicEnabled || !this.ctx) return;
-    this.resume();
-
-    this.musicStep = 0;
-    this.nextNoteTime = this.ctx.currentTime + 0.05;
-
-    // Run high-frequency lookahead scheduler (25ms loop for sample-accurate scheduling)
-    this.schedulerTimer = setInterval(() => {
-      this.scheduleMusicLookahead();
-    }, 25);
-  }
-
   scheduleMusicLookahead() {
     if (!this.musicEnabled || !this.ctx || this.ctx.state !== 'running') return;
+
+    // Resync protection: prevent burst of missed steps after background tab switch or sleep
+    if (this.nextNoteTime < this.ctx.currentTime - 0.20) {
+      this.nextNoteTime = this.ctx.currentTime + 0.04;
+      this.musicStep = Math.floor(this.musicStep / 16) * 16;
+    }
 
     const track = this.getMusicTrack();
     const stepDuration = 60 / track.bpm / 4; // 16th notes
     const lookaheadTime = 0.12; // 120ms lookahead window
 
-    while (this.nextNoteTime < this.ctx.currentTime + lookaheadTime) {
+    let iterations = 0;
+    while (this.nextNoteTime < this.ctx.currentTime + lookaheadTime && iterations < 32) {
       this.scheduleMusicStep(track, this.musicStep, this.nextNoteTime, stepDuration);
       this.nextNoteTime += stepDuration;
       this.musicStep++;
+      iterations++;
     }
   }
 
@@ -1087,12 +1451,5 @@ export class SoundController {
 
     noise.start(time);
     noise.stop(time + 0.04);
-  }
-
-  stopMusic() {
-    if (this.schedulerTimer) {
-      clearInterval(this.schedulerTimer);
-      this.schedulerTimer = null;
-    }
   }
 }

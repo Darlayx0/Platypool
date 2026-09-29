@@ -1161,7 +1161,7 @@ export class Game {
 
   goToMainMenu() {
     this.state = GAME_STATES.MENU;
-    this.sound.stopMusic();
+    this.sound.goToMainMenu();
     this.sound.setBossMode(false);
     this.bullets = [];
     this.enemies = [];
@@ -1243,7 +1243,9 @@ export class Game {
 
     const cfg = this.currentStageConfig;
     this.bg.setBiome(cfg.biome);
-    this.sound.setBiome(cfg.biome, false);
+    // Professional Soundtrack Restart Logic:
+    // Guarantees soundtrack is initialized, un-ducked, and playing cleanly from beat 1 for this stage
+    this.sound.restartMusic({ biome: cfg.biome, isBoss: false });
 
     this.state = GAME_STATES.PLAYING;
     this.lastTime = performance.now();
@@ -1280,10 +1282,12 @@ export class Game {
   togglePause() {
     if (this.state === GAME_STATES.PLAYING) {
       this.state = GAME_STATES.PAUSED;
+      this.sound.setPauseDucking(true);
       if (this.uiHooks.onPause) this.uiHooks.onPause(true);
     } else if (this.state === GAME_STATES.PAUSED) {
       this.state = GAME_STATES.PLAYING;
       this.lastTime = performance.now();
+      this.sound.setPauseDucking(false);
       if (this.uiHooks.onPause) this.uiHooks.onPause(false);
     }
   }
@@ -1501,7 +1505,7 @@ export class Game {
   spawnBoss(bossType) {
     const cfg = this.currentStageConfig;
     this.sound.playBossAlarm();
-    this.sound.setBossMode(true, cfg.biome, bossType);
+    this.sound.transitionToBoss(cfg.biome, bossType);
     this.camera.addTrauma(0.6);
     const effDiff = this.getEffectiveEnemyDifficultyConfig();
     const rageThreshold = effDiff.bossRageThreshold || 0.30;
@@ -1578,11 +1582,11 @@ export class Game {
       this.boss.x = bossX;
       this.boss.y = bossY;
       this.boss.entering = false;
-      this.sound.setBossMode(true, cfg.biome, 'OMEGA_CORE_SPAWN');
+      this.sound.transitionToBoss(cfg.biome, 'OMEGA_CORE_SPAWN');
       return;
     }
 
-    this.sound.setBossMode(false, cfg.biome);
+    this.sound.transitionToBiome(cfg.biome, false);
 
     // Penambahan nyawa setiap berhasil mengalahkan boss (hanya jika diizinkan di mode ini)
     if (this.difficultyConfig && this.difficultyConfig.bossGrantsLife) {
@@ -1668,7 +1672,7 @@ export class Game {
 
     const cfg = this.currentStageConfig;
     this.bg.setBiome(cfg.biome);
-    this.sound.setBiome(cfg.biome, false);
+    this.sound.transitionToBiome(cfg.biome, false);
 
     this.hud.showBanner(`STAGE ${this.currentStage}: ${cfg.title}`, cfg.subtitle, 3.5);
 
@@ -1697,18 +1701,19 @@ export class Game {
   detonateFlak(b) {
     this.sound.playExplosion('small');
     this.camera.addTrauma(0.2);
-    this.particles.createClaySplat(b.x, b.y, 8, '#fbc02d', '#f57f17');
+    this.particles.createClaySplat(b.x, b.y, 14, '#fbc02d', '#ff3d00');
 
+    // Tier A+ Demolition: 8 high-velocity shrapnel pellets with extended life (0.65s)
     for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
       this.bullets.push(new Bullet({
         x: b.x,
         y: b.y,
-        vx: Math.cos(a) * 460,
-        vy: Math.sin(a) * 460,
+        vx: Math.cos(a) * 480,
+        vy: Math.sin(a) * 480,
         damage: 1.3,
         type: 'FLAK_SHRAPNEL',
         radius: 5,
-        life: 0.4
+        life: 0.65
       }));
     }
   }
@@ -1771,6 +1776,30 @@ export class Game {
       const by = b.y;
       const br = b.radius;
 
+      // Tier A+ SPREAD: Defensive Bullet-Eraser (Cancels standard enemy projectiles)
+      if (b.type === 'SPREAD') {
+        for (let ebi = 0; ebi < bulletCount; ebi++) {
+          const eb = bullets[ebi];
+          if (eb.dead || !eb.isEnemy) continue;
+          // Erase standard enemy bullets and sniper needles (except heavy bombs and mortars)
+          if (eb.type !== 'ENEMY_BOMB' && eb.type !== 'ENEMY_MORTAR') {
+            const edx = eb.x - bx;
+            const edy = eb.y - by;
+            const rCancel = br + eb.radius + 3;
+            if (edx >= -rCancel && edx <= rCancel && edy >= -rCancel && edy <= rCancel) {
+              if (edx * edx + edy * edy < rCancel * rCancel) {
+                eb.dead = true;
+                b.dead = true;
+                this.particles.createClaySplat(eb.x, eb.y, 5, '#ef5350', '#ffffff');
+                this.sound.playEnemyHit();
+                break;
+              }
+            }
+          }
+        }
+        if (b.dead) continue;
+      }
+
       // 1. Bullets vs Enemies (AABB fast rejection + squared distance)
       for (let ei = 0; ei < enemyCount; ei++) {
         const e = enemies[ei];
@@ -1790,7 +1819,7 @@ export class Game {
             this.particles.createClaySplat(bx, by, 4, e.color, e.shadowColor);
           }
 
-          const killed = e.takeDamage(b.damage, bx, b.piercing);
+          const killed = e.takeDamage(b.damage, bx, b.piercing, b.type);
           if (killed) {
             this.handleEnemyDeath(e);
           }
@@ -1801,6 +1830,9 @@ export class Game {
             break;
           } else {
             b.hitsLeft--;
+            if (b.type === 'PLASMA') {
+              b.damage *= 0.65; // Plasma pierce damage decay
+            }
             if (b.hitsLeft <= 0) {
               b.dead = true;
               break;
@@ -1828,13 +1860,16 @@ export class Game {
                 this.particles.createClaySplat(bx, by, 5, '#90a4ae', '#37474f');
               }
 
-              boss.takeDamage(b.damage, by, this.particles, this.sound);
+              boss.takeDamage(b.damage, by, this.particles, this.sound, b.type);
 
               if (!b.piercing) {
                 if (b.type === 'FLAK') this.detonateFlak(b);
                 b.dead = true;
               } else {
                 b.hitsLeft--;
+                if (b.type === 'PLASMA') {
+                  b.damage *= 0.65;
+                }
                 if (b.hitsLeft <= 0) {
                   b.dead = true;
                 }
@@ -2036,7 +2071,7 @@ export class Game {
 
   triggerGameOver() {
     this.state = GAME_STATES.GAMEOVER;
-    this.sound.stopMusic();
+    this.sound.onGameOver();
     if (this.hud) this.hud.flushHighScore();
     if (this.uiHooks.onGameOver) {
       this.uiHooks.onGameOver(
@@ -2053,7 +2088,7 @@ export class Game {
 
   triggerVictory() {
     this.state = GAME_STATES.VICTORY;
-    this.sound.stopMusic();
+    this.sound.onVictory();
     if (this.hud) this.hud.flushHighScore();
     this.hud.showBanner('MISI SELESAI!', `SELAMAT, SELURUH ${this.totalStages} STAGE TELAH DITAKLUKKAN!`, 5.0, '#66bb6a');
     if (this.uiHooks.onVictory) {

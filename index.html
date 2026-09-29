@@ -16,67 +16,7 @@
   <div id="game-wrapper">
     <canvas id="game-canvas" width="1280" height="720"></canvas>
 
-    <!-- Floating UHD In-Game Quick Action Pill Bar (Modern Minimalist Claymorphism) -->
-    <header id="hud-top-bar" class="hud-top-bar hidden" aria-label="Game Quick Controls">
-      <!-- Left: Stage & World & Difficulty Micro-Badges -->
-      <div class="hud-bar-left">
-        <div class="hud-quick-pill stage-pill" id="hud-stage-badge" title="Tahapan Misi Permainan">
-          <span class="hud-pill-icon">🗺️</span>
-          <span id="hud-stage-text" class="hud-pill-text">STAGE 1 / 20</span>
-        </div>
-        <div class="hud-quick-pill diff-pill" id="hud-diff-badge" title="Tingkat Kesulitan Aktif">
-          <span id="hud-diff-text" class="hud-pill-text">NORMAL</span>
-        </div>
-      </div>
 
-      <!-- Right: Tactical Quick Action Buttons -->
-      <div class="hud-bar-right">
-        <!-- Auto-Fire Toggle Button -->
-        <button type="button" id="btn-hud-autofire" class="hud-action-btn" title="Toggle Auto-Fire Otomatis (Tombol M / Klik Kanan)" aria-label="Toggle Auto-Fire">
-          <span class="btn-glyph">⚡</span>
-          <span class="btn-label">AUTO-FIRE</span>
-          <span class="btn-status-pip" id="hud-autofire-pip">OFF</span>
-          <kbd class="hud-kbd-mini">M</kbd>
-        </button>
-
-        <!-- Control Mode Toggle Button -->
-        <button type="button" id="btn-hud-mode" class="hud-action-btn" title="Ganti Mode Kemudi (Mouse / WASD)" aria-label="Ganti Mode Kemudi">
-          <span class="btn-glyph" id="hud-mode-icon">🖱️</span>
-          <span class="btn-label" id="hud-mode-label">MOUSE</span>
-          <kbd class="hud-kbd-mini">WASD</kbd>
-        </button>
-
-        <!-- UHD Sharpness Mode Toggle -->
-        <button type="button" id="btn-hud-uhd" class="hud-action-btn active" title="Toggle Mode Resolusi UHD Super Tajam (Hi-DPI / 4K)" aria-label="Toggle UHD">
-          <span class="btn-glyph">💎</span>
-          <span class="btn-label">UHD</span>
-          <span class="btn-status-pip on" id="hud-uhd-pip">ON</span>
-        </button>
-
-        <!-- Audio Mute Toggle Button -->
-        <button type="button" id="btn-hud-audio" class="hud-action-btn" title="Mute / Nyalakan Suara Permainan" aria-label="Audio Mute">
-          <span class="btn-glyph" id="hud-audio-icon">🔊</span>
-          <span class="btn-label" id="hud-audio-label">SUARA</span>
-        </button>
-
-        <!-- Settings Quick Button -->
-        <button type="button" id="btn-hud-settings" class="hud-action-btn" title="Buka Pengaturan Permainan (Tombol O)" aria-label="Pengaturan">
-          <span class="btn-glyph">⚙️</span>
-          <kbd class="hud-kbd-mini">O</kbd>
-        </button>
-
-        <!-- Fullscreen Toggle Button -->
-        <button type="button" id="btn-hud-fullscreen" class="hud-action-btn" title="Mode Layar Penuh (Fullscreen)" aria-label="Layar Penuh">
-          <span class="btn-glyph" id="hud-fs-icon">⛶</span>
-        </button>
-
-        <!-- Pause Quick Button -->
-        <button type="button" id="btn-hud-pause" class="hud-action-btn pause-btn" title="Jeda Permainan (ESC / P)" aria-label="Jeda Permainan">
-          <span class="btn-glyph">⏸️</span>
-          <kbd class="hud-kbd-mini">ESC</kbd>
-        </button>
-      </div>
-    </header>
 
     <!-- Dynamic In-Game Micro-Interaction Toast Notification (Auto-Fire, Controls) -->
     <div id="hud-toast" class="hud-toast"></div>

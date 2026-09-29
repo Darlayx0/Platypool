@@ -108,16 +108,16 @@ export class HUD {
   draw(ctx, player, boss, stageInfo = null) {
     ctx.save();
 
-    // 1. Score, Highscore & Universal Multiplier Display (Top Left)
+    // 1. Score, High Score & Difficulty Display (Top Left - Frameless Floating)
     this.drawScorePanel(ctx, player, stageInfo);
 
-    // 2. Lives Remaining Fleet (Bottom Left)
+    // 2. Lives Remaining & Horizontal Fleet of Ships (Bottom Left - Frameless Floating)
     this.drawLivesPanel(ctx, player);
 
-    // 3. Dynamic UHD Weapon Dock (Bottom Center)
+    // 3. Minimal Circular Weapon Countdown (Bottom Right - Only for Special Weapons)
     this.drawWeaponGauge(ctx, player);
 
-    // 4. UHD Boss Battle Bar (Top Center - ONLY shown during Boss Battles, Clean Screen otherwise!)
+    // 4. UHD Boss Battle Bar (Top Center - Compact & Solid Dynamic Color)
     if (this.bossHudAlpha > 0.01 && boss) {
       this.drawBossBar(ctx, boss);
     }
@@ -132,28 +132,32 @@ export class HUD {
 
   drawScorePanel(ctx, player, stageInfo = null) {
     ctx.save();
-    // Glassmorphic Clay Plate for Score
-    const sx = 20;
+
+    // Top-Left Coordinates (Frameless / Floating directly on canvas without card/container)
+    const sx = 24;
     const sy = 24;
 
-    ClayRenderer.drawClayCapsule(ctx, sx + 95, sy + 38, 205, 54, 'rgba(46, 32, 28, 0.88)', '#1b120c');
-
     ctx.textAlign = 'left';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 5;
+    ctx.textBaseline = 'alphabetic';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
 
-    // Current Score
+    // 1. Current Score (Bold & Crisp Arcade Typography)
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px Luckiest Guy, cursive';
-    ctx.fillText(`SKOR: ${Math.floor(player.score).toLocaleString()}`, sx + 14, sy + 32);
+    ctx.font = 'bold 24px "Luckiest Guy", cursive';
+    ctx.fillText(`SKOR: ${Math.floor(player.score).toLocaleString()}`, sx, sy + 24);
 
-    // High Score
-    ctx.font = '700 13px Fredoka, sans-serif';
-    ctx.fillStyle = '#ffecb3';
-    const hsText = this.isCheatActive ? `TERTINGGI: ${this.highScore.toLocaleString()} (NON-AKTIF)` : `TERTINGGI: ${this.highScore.toLocaleString()}`;
-    ctx.fillText(hsText, sx + 14, sy + 52);
+    // 2. High Score (Warm Gold Hue)
+    ctx.font = '700 13px "Fredoka", sans-serif';
+    ctx.fillStyle = '#ffe082';
+    const hsText = this.isCheatActive 
+      ? `TERTINGGI: ${this.highScore.toLocaleString()} (NON-AKTIF)` 
+      : `TERTINGGI: ${this.highScore.toLocaleString()}`;
+    ctx.fillText(hsText, sx, sy + 44);
 
-    // Difficulty Pill Badge below score panel
+    // 3. Integrated Clay Difficulty Pill Badge (Standalone floating pill)
     const diffLabel = (this.difficultyConfig && this.difficultyConfig.name) || this.difficulty || 'NORMAL';
     const fallbackColors = {
       BEGINNER: '#00acc1',
@@ -163,48 +167,22 @@ export class HUD {
       EXTREME: '#ab47bc',
     };
     const diffColor = (this.difficultyConfig && this.difficultyConfig.badgeColor) || fallbackColors[this.difficulty] || '#f57c00';
-    ClayRenderer.drawClayCapsule(ctx, sx + 52, sy + 76, 96, 20, diffColor, '#1b120c');
-    ctx.font = 'bold 11px Luckiest Guy, cursive';
+    
+    const pillW = 104;
+    const pillH = 18;
+    const pillX = sx + pillW / 2;
+    const pillY = sy + 62;
+
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ClayRenderer.drawClayCapsule(ctx, pillX, pillY, pillW, pillH, diffColor, '#1b120c');
+
+    ctx.font = 'bold 10px "Luckiest Guy", cursive';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowBlur = 3;
-    ctx.fillText(`MODE: ${diffLabel}`, sx + 52, sy + 77);
-
-    // World Multiplier Pill Badge: World 1 (1.00x), World 2 (2x), World 3 (3x), World 4 (4x)
-    const curStage = (stageInfo && stageInfo.currentStage) || 1;
-    const world = Math.min(4, Math.max(1, Math.floor((curStage - 1) / 5) + 1));
-    const worldMult = world === 1 ? '1.00x' : `${world}x`;
-    const worldBadgeX = sx + 154;
-    ClayRenderer.drawClayCapsule(ctx, worldBadgeX, sy + 76, 98, 20, '#00838f', '#004d40');
-    ctx.font = 'bold 10px Luckiest Guy, cursive';
-    ctx.fillStyle = '#e0f7fa';
-    ctx.fillText(`WORLD ${world} (${worldMult})`, worldBadgeX, sy + 77);
-
-    // Cheat Mode Active Pill
-    if (this.isCheatActive) {
-      ClayRenderer.drawClayCapsule(ctx, sx + 252, sy + 76, 88, 20, '#d84315', '#bf360c');
-      ctx.font = 'bold 10px Luckiest Guy, cursive';
-      ctx.fillStyle = '#ffe082';
-      ctx.fillText('⚡ CURANG', sx + 252, sy + 77);
-    }
-
-    // Universal Score Multiplier Badge
-    const diffMult = (this.difficultyConfig && this.difficultyConfig.scoreMultiplier !== undefined)
-      ? this.difficultyConfig.scoreMultiplier
-      : 1.0;
-    const totalMultiplier = world * diffMult;
-    const multStr = (totalMultiplier % 1 === 0) ? `${totalMultiplier.toFixed(0)}x` : `${totalMultiplier.toFixed(2)}x`;
-
-    ctx.save();
-    ctx.translate(sx + 215, sy + 38);
-    ClayRenderer.drawClayCapsule(ctx, 0, 0, 80, 24, '#f57c00', '#b23c17');
-    ctx.font = 'bold 11px Luckiest Guy, cursive';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${multStr} SKOR`, 0, 1);
-    ctx.restore();
+    ctx.fillText(`MODE: ${diffLabel}`, pillX, pillY);
 
     ctx.restore();
   }
@@ -216,33 +194,40 @@ export class HUD {
 
     ctx.save();
 
-    // 1. Subtle Clay Life Indicator Badge
-    const badgeX = 24;
-    const badgeY = 652;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.font = 'bold 12px Fredoka, sans-serif';
-    ctx.fillStyle = '#ff5252';
-    ctx.fillText('❤️', badgeX, badgeY);
-
-    ctx.font = 'bold 13px Luckiest Guy, cursive';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 4;
-    ctx.fillText(`LIVES: ${lives} / ${maxLives}`, badgeX + 22, badgeY + 1);
-
-    // 2. Ships Tray with Adaptive Spacing & Scale (supporting up to 20 lives smoothly or infinite)
+    // Bottom-Left Anchors (Frameless / Floating directly on canvas without card/container)
     const startX = 26;
     const startY = 688;
+    const badgeY = 654;
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+
+    // 1. Floating Lives Indicator (No Container)
+    ctx.font = 'bold 13px "Fredoka", sans-serif';
+    ctx.fillStyle = '#ff5252';
+    ctx.fillText('❤️', startX, badgeY);
+
+    ctx.font = 'bold 13px "Luckiest Guy", cursive';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`LIVES: ${lives} / ${maxLives}`, startX + 22, badgeY + 1);
+
+    // 2. Ships Tray with Adaptive Spacing & Scale (Lined up from left to right)
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
     if (isInfinite) {
       for (let i = 0; i < 5; i++) {
         ctx.save();
         ctx.translate(startX + i * 30, startY);
         ctx.scale(0.72, 0.72);
-        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, 0, 'NORMAL');
+        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, this.hudTick * 3, 'NORMAL');
         ctx.restore();
       }
-      ctx.font = 'bold 24px Fredoka, sans-serif';
+      ctx.font = 'bold 24px "Fredoka", sans-serif';
       ctx.fillStyle = '#ffd54f';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -256,7 +241,7 @@ export class HUD {
         ctx.save();
         ctx.translate(startX + i * spacing, startY);
         ctx.scale(scale, scale);
-        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, 0, 'NORMAL');
+        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, this.hudTick * 3, 'NORMAL');
         ctx.restore();
       }
     }
@@ -265,156 +250,105 @@ export class HUD {
   }
 
   drawWeaponGauge(ctx, player) {
-    const cx = 640;
-    const cy = 682;
-    const cardW = 380;
-    const cardH = 54;
-
-    const weapons = {
-      NORMAL: { name: 'PEA-SHOOTER', tag: 'STD', color: '#ffb300', dot: '#ffd54f', desc: 'STANDARD ISSUE - UNLIMITED' },
-      SPREAD: { name: 'SPREAD SHOT', tag: 'SPR', color: '#ef5350', dot: '#ff1744', desc: 'TRIPLE CONE SPREAD' },
-      LASER: { name: 'SONIC LASER', tag: 'LSR', color: '#00e5ff', dot: '#29b6f6', desc: 'CONTINUOUS PIERCING BEAM' },
-      HOMING: { name: 'HOMING MISSILES', tag: 'HOM', color: '#00e676', dot: '#69f0ae', desc: 'SEEKING SMART CLAY MISSILES' },
-      FLAK: { name: 'CLAY FLAK BOMB', tag: 'FLK', color: '#ffd600', dot: '#ffb300', desc: 'HIGH EXPLOSIVE AREA BURST' },
-      PLASMA: { name: 'PLASMA ARC', tag: 'PLS', color: '#e040fb', dot: '#ba68c8', desc: 'CHAIN LIGHTNING ELECTRICITY' }
-    };
-
-    const cur = weapons[player.activeWeapon] || weapons.NORMAL;
-    const isSpecial = player.activeWeapon !== 'NORMAL';
-    const isExpiring = isSpecial && !player.infiniteWeapon && player.weaponTimeLeft <= 4.0;
-
-    ctx.save();
-
-    // 1. Sleek Clay Dock Container
-    let dockBorder = '#1c130e';
-    let dockBg = 'rgba(38, 25, 21, 0.92)';
-
-    // Pulse red/amber when weapon is expiring (< 4s)
-    if (isExpiring) {
-      const alertPulse = Math.sin(this.hudTick * 12) * 0.5 + 0.5;
-      dockBorder = alertPulse > 0.5 ? '#ff1744' : '#d84315';
+    // If no player or active weapon is normal Pea-Shooter -> DO NOT DISPLAY!
+    if (!player || player.activeWeapon === 'NORMAL') {
+      return;
     }
 
-    ClayRenderer.drawClayCapsule(ctx, cx, cy, cardW, cardH, dockBg, dockBorder);
+    const weapons = {
+      SPREAD: { tag: 'SPR', color: '#ff1744', dot: '#ff5252' },
+      LASER: { tag: 'LSR', color: '#00e5ff', dot: '#29b6f6' },
+      HOMING: { tag: 'HOM', color: '#00e676', dot: '#69f0ae' },
+      FLAK: { tag: 'FLK', color: '#ffd600', dot: '#ffb300' },
+      PLASMA: { tag: 'PLS', color: '#e040fb', dot: '#ba68c8' }
+    };
 
-    // 2. High-Tech Stylized Weapon Emblem (Left)
-    const badgeX = cx - cardW / 2 + 36;
-    const badgeY = cy;
+    const cur = weapons[player.activeWeapon] || { tag: 'WPN', color: '#00e5ff', dot: '#29b6f6' };
+    const isExpiring = !player.infiniteWeapon && player.weaponTimeLeft <= 3.5;
+    const ratio = player.infiniteWeapon ? 1.0 : Math.max(0, Math.min(1, player.weaponTimeLeft / (player.maxWeaponTime || 15.0)));
 
-    // Glowing aura behind badge
+    // Position: Sisi Kanan Bawah (Bottom-Right corner)
+    const cx = 1234;
+    const cy = 674;
+    const gaugeR = 24;
+
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(badgeX, badgeY, 18, 0, Math.PI * 2);
-    ctx.fillStyle = cur.color;
-    ctx.globalAlpha = isExpiring ? 0.4 + Math.sin(this.hudTick * 14) * 0.3 : 0.25;
-    ctx.fill();
-    ctx.restore();
 
-    // Clay Emblem Blob
-    ClayRenderer.drawClayBlob(ctx, badgeX, badgeY, 14, 14, cur.dot, '#1a100a');
-    ctx.font = 'bold 11px Fredoka, sans-serif';
+    // Subtle ambient shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+
+    // 1. Circular Background Ring Track
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = 'rgba(20, 15, 12, 0.65)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, gaugeR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. Active Circular Countdown Arc (No numbers!)
+    if (ratio > 0.005) {
+      const pulseAlpha = isExpiring ? 0.6 + Math.sin(this.hudTick * 14) * 0.4 : 1.0;
+      ctx.globalAlpha = pulseAlpha;
+      ctx.strokeStyle = cur.color;
+      ctx.lineWidth = 4.5;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = cur.color;
+      ctx.shadowBlur = isExpiring ? 10 : 5;
+
+      ctx.beginPath();
+      const startAngle = -Math.PI / 2; // 12 o'clock
+      const endAngle = startAngle + Math.PI * 2 * ratio;
+      ctx.arc(cx, cy, gaugeR, startAngle, endAngle);
+      ctx.stroke();
+    }
+
+    // Reset shadow and alpha for emblem
+    ctx.globalAlpha = 1.0;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+
+    // 3. Center Clay Emblem with Weapon Symbol Tag
+    ClayRenderer.drawClayBlob(ctx, cx, cy, 15, 15, cur.dot, '#1a100a');
+
+    ctx.font = 'bold 10px "Luckiest Guy", cursive';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(cur.tag, badgeX, badgeY);
-
-    // 3. Weapon Name & Subtitle
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-
-    if (isSpecial) {
-      // Special Weapon Active: Name + Timer Bar + Digital Countdown
-      ctx.font = 'bold 15px Luckiest Guy, cursive';
-      ctx.fillStyle = cur.color;
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(cur.name, badgeX + 22, cy - 6);
-
-      // Remaining Seconds Countdown
-      const timeLeft = Math.max(0, player.weaponTimeLeft);
-      ctx.font = '700 12px Fredoka, sans-serif';
-      ctx.fillStyle = isExpiring ? '#ff5252' : '#ffffff';
-      ctx.textAlign = 'right';
-      if (player.infiniteWeapon) {
-        ctx.fillText('⏱️ ∞ (TAK TERBATAS)', cx + cardW / 2 - 20, cy - 6);
-      } else {
-        const totalDur = (player.maxWeaponTime || 15.0).toFixed(0);
-        ctx.fillText(`⏱️ ${timeLeft.toFixed(1)}s / ${totalDur}s`, cx + cardW / 2 - 20, cy - 6);
-      }
-
-      // Dual-Layer Progress Gauge
-      const ratio = player.infiniteWeapon ? 1.0 : Math.max(0, Math.min(1, player.weaponTimeLeft / player.maxWeaponTime));
-      const barX = badgeX + 22;
-      const barY = cy + 4;
-      const barW = cardW - 84;
-      const barH = 8;
-
-      // Track
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.beginPath();
-      ctx.roundRect(barX, barY, barW, barH, 4);
-      ctx.fill();
-
-      // Active Fill with Gradient
-      const fillW = barW * ratio;
-      if (fillW > 0) {
-        const fillGrad = ctx.createLinearGradient(barX, 0, barX + fillW, 0);
-        fillGrad.addColorStop(0, cur.color);
-        fillGrad.addColorStop(1, isExpiring ? '#ff1744' : '#ffffff');
-        ctx.fillStyle = fillGrad;
-        ctx.beginPath();
-        ctx.roundRect(barX, barY, fillW, barH, 4);
-        ctx.fill();
-
-        // Tip Glow
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(barX + fillW, barY + barH / 2, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else {
-      // Normal Pea-Shooter: Clean Standard Issue Display
-      ctx.font = 'bold 16px Luckiest Guy, cursive';
-      ctx.fillStyle = cur.color;
-      ctx.fillText(cur.name, badgeX + 22, cy + 1);
-
-      ctx.font = '600 12px Fredoka, sans-serif';
-      ctx.fillStyle = '#bcaaa4';
-      ctx.textAlign = 'right';
-      ctx.fillText(cur.desc, cx + cardW / 2 - 20, cy + 1);
-    }
+    ctx.shadowBlur = 2;
+    ctx.fillText(cur.tag, cx, cy);
 
     ctx.restore();
   }
 
   drawBossBar(ctx, boss) {
     const cx = 640;
-    const cy = 48;
-    const barW = 560;
-    const barH = 54;
-    const hpTrackW = 460;
-    const hpTrackH = 14;
+    const cy = 36;
+    const barW = 440;
+    const barH = 38;
+    const hpTrackW = 360;
+    const hpTrackH = 10;
 
     ctx.save();
     ctx.globalAlpha = this.bossHudAlpha;
 
-    // 1. Card Container (Sleek Glass-Clay Armor Frame)
-    const isRage = boss.rageMode;
-    const chassisColor = isRage
-      ? (Math.floor(this.hudTick * 8) % 2 === 0 ? '#4a1515' : '#2b0d0d')
-      : 'rgba(28, 38, 46, 0.95)';
-    const chassisBorder = isRage ? '#ff1744' : '#455a64';
+    // 1. Card Container (Sleek Glass-Clay Armor Frame - Compact & Stable, not altered by rage)
+    const chassisColor = 'rgba(28, 38, 46, 0.95)';
+    const chassisBorder = '#455a64';
 
     ClayRenderer.drawClayCapsule(ctx, cx, cy, barW, barH, chassisColor, chassisBorder);
 
-    // 2. Boss Emblem & Identity Header
+    // 2. Boss Emblem & Identity Header (Slightly Smaller)
     const hpPercent = Math.max(0, Math.ceil(boss.hpRatio * 100));
-    const titleY = cy - 8;
+    const titleY = cy - 6;
 
     // Boss Name
     ctx.textAlign = 'left';
-    ctx.font = 'bold 16px Luckiest Guy, cursive';
-    ctx.fillStyle = isRage ? '#ff5252' : '#ffd54f';
+    ctx.font = 'bold 13px "Luckiest Guy", cursive';
+    ctx.fillStyle = '#ffd54f';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 4;
     ctx.fillText(`⚡ ${boss.title}`, cx - hpTrackW / 2, titleY);
@@ -422,27 +356,23 @@ export class HUD {
     // Status / Mode Chip
     ctx.textAlign = 'right';
     if (boss.isInvulnerable) {
-      ctx.font = 'bold 13px Fredoka, sans-serif';
+      ctx.font = 'bold 11px "Fredoka", sans-serif';
       ctx.fillStyle = '#00e5ff';
-      ctx.fillText(`[ 🛡️ PERISAI KEBAL AKTIF ] ${hpPercent}%`, cx + hpTrackW / 2, titleY);
-    } else if (isRage) {
-      ctx.font = 'bold 13px Fredoka, sans-serif';
-      ctx.fillStyle = '#ff1744';
-      ctx.fillText(`[ OVERLOAD - BERSERK ] ${hpPercent}%`, cx + hpTrackW / 2, titleY);
+      ctx.fillText(`[ 🛡️ PERISAI ] ${hpPercent}%`, cx + hpTrackW / 2, titleY);
     } else {
-      ctx.font = '700 13px Fredoka, sans-serif';
+      ctx.font = '700 11px "Fredoka", sans-serif';
       ctx.fillStyle = '#90caf9';
       ctx.fillText(`[ TARGET LOCK ] ${hpPercent}%`, cx + hpTrackW / 2, titleY);
     }
 
     // 3. Health Bar with Ghost Damage Interpolation
     const bx = cx - hpTrackW / 2;
-    const by = cy + 6;
+    const by = cy + 4;
 
     // Track Background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.beginPath();
-    ctx.roundRect(bx, by, hpTrackW, hpTrackH, 7);
+    ctx.roundRect(bx, by, hpTrackW, hpTrackH, 5);
     ctx.fill();
 
     // Ghost Damage Bar (Lags behind real hits for juicy combat feedback)
@@ -450,38 +380,31 @@ export class HUD {
       const ghostW = Math.max(0, hpTrackW * this.bossGhostHp);
       ctx.fillStyle = '#ffb300';
       ctx.beginPath();
-      ctx.roundRect(bx, by, ghostW, hpTrackH, 7);
+      ctx.roundRect(bx, by, ghostW, hpTrackH, 5);
       ctx.fill();
     }
 
-    // Active Current HP Bar
+    // Active Current HP Bar - Solid Dynamic Color from Green to Red (Pure HP percentage, not overridden by rage!)
     const curW = Math.max(0, hpTrackW * this.bossDisplayHp);
     if (curW > 0) {
-      const hpGrad = ctx.createLinearGradient(bx, 0, bx + hpTrackW, 0);
-      if (isRage) {
-        hpGrad.addColorStop(0, '#ff1744');
-        hpGrad.addColorStop(0.5, '#ff5252');
-        hpGrad.addColorStop(1, '#ff8a80');
-      } else {
-        hpGrad.addColorStop(0, '#43a047');
-        hpGrad.addColorStop(0.5, '#fbc02d');
-        hpGrad.addColorStop(1, '#e53935');
-      }
-      ctx.fillStyle = hpGrad;
+      // Smooth dynamic HSL transition: 125 (green) at 100% down to 0 (red) at 0%
+      const hue = Math.max(0, Math.min(125, boss.hpRatio * 125));
+      const hpColor = `hsl(${hue}, 88%, 46%)`;
+      ctx.fillStyle = hpColor;
       ctx.beginPath();
-      ctx.roundRect(bx, by, curW, hpTrackH, 7);
+      ctx.roundRect(bx, by, curW, hpTrackH, 5);
       ctx.fill();
 
       // Bevel highlight sheen
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.30)';
       ctx.beginPath();
-      ctx.roundRect(bx, by, curW, hpTrackH * 0.4, 4);
+      ctx.roundRect(bx, by, curW, hpTrackH * 0.35, 3);
       ctx.fill();
     }
 
     // Tactical 25% Quadrant Segment Lines
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     for (let q = 1; q <= 3; q++) {
       const qx = bx + (hpTrackW * q) / 4;
       ctx.beginPath();
@@ -490,8 +413,33 @@ export class HUD {
       ctx.stroke();
     }
 
-    // 4. Subsystems Breakdown Row underneath
-    this.drawBossSubsystems(ctx, boss, cx, cy + barH / 2 + 10);
+    // 4. Dedicated Small Rage Warning (Under Boss Health Bar, persists while boss.rageMode is true)
+    let subsysOffsetY = cy + barH / 2 + 8;
+
+    if (boss.rageMode) {
+      const warnW = 168;
+      const warnH = 18;
+      const warnY = cy + barH / 2 + 7;
+
+      ctx.save();
+      const alertPulse = Math.sin(this.hudTick * 10) * 0.5 + 0.5;
+      ctx.shadowColor = 'rgba(255, 23, 68, 0.8)';
+      ctx.shadowBlur = 6 + alertPulse * 4;
+
+      ClayRenderer.drawClayCapsule(ctx, cx, warnY, warnW, warnH, '#b71c1c', '#ff1744');
+
+      ctx.font = 'bold 10px "Luckiest Guy", cursive';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⚠️ BOSS MENGAMUK!', cx, warnY);
+      ctx.restore();
+
+      subsysOffsetY = warnY + warnH / 2 + 10;
+    }
+
+    // 5. Subsystems Breakdown Row underneath
+    this.drawBossSubsystems(ctx, boss, cx, subsysOffsetY);
 
     ctx.restore();
   }

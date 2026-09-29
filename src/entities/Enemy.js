@@ -21,6 +21,7 @@ export class Enemy {
 
     this.tick = Math.random() * 50;
     this.dead = false;
+    this.slowTimer = 0;
 
     // Type-specific setup
     this.initType();
@@ -287,6 +288,11 @@ export class Enemy {
 
   update(dt, player, bullets, sound, extraEnemies = []) {
     this.tick++;
+
+    if (this.slowTimer > 0) {
+      this.slowTimer -= dt;
+      dt *= 0.65; // Electro-disruption: 35% speed penalty to movement and fire
+    }
 
     switch (this.type) {
       case 'SCOUT':
@@ -654,13 +660,29 @@ export class Enemy {
     return this.x > -140 && this.y > -100 && this.y < 820;
   }
 
-  takeDamage(amount, bulletX = 0, piercing = false) {
+  takeDamage(amount, bulletX = 0, piercing = false, bulletType = 'NORMAL') {
     // Shield Cruiser & Juggernaut energy barrier mechanic
-    if ((this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT') && this.shieldHp > 0 && !piercing && bulletX > this.x - 20) {
-      this.shieldHp -= amount;
-      if (this.shieldHp < 0) {
-        this.hp += this.shieldHp;
+    if ((this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT') && this.shieldHp > 0 && bulletX > this.x - 20) {
+      if (bulletType === 'FLAK') {
+        // Tier A+ Flak Demolition: instantly shatters heavy energy shield in 1 blast!
         this.shieldHp = 0;
+        this.hp -= amount;
+      } else if (bulletType === 'LASER') {
+        // Tier A+ Thermal Laser: 2.0x bonus shield melting damage!
+        this.shieldHp -= amount * 2.0;
+        if (this.shieldHp < 0) {
+          this.hp += this.shieldHp * 0.5;
+          this.shieldHp = 0;
+        }
+      } else if (!piercing) {
+        this.shieldHp -= amount;
+        if (this.shieldHp < 0) {
+          this.hp += this.shieldHp;
+          this.shieldHp = 0;
+        }
+      } else {
+        // Piercing Plasma bypasses shield
+        this.hp -= amount;
       }
     } else {
       this.hp -= amount;

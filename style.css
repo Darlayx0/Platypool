@@ -81,30 +81,9 @@ body {
   pointer-events: none;
 }
 
-/* Floating UHD In-Game Quick Action Pill Bar (Modern Minimalist Claymorphism) */
+/* Floating UHD In-Game Quick Action Pill Bar - Removed */
 .hud-top-bar {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(96%, 1240px);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-  z-index: 90;
-  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  opacity: 0.88;
-}
-
-.hud-top-bar:hover {
-  opacity: 1;
-}
-
-.hud-top-bar.hidden {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: translateX(-50%) translateY(-18px);
+  display: none !important;
 }
 
 .hud-bar-left,
