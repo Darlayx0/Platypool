@@ -25,10 +25,10 @@ export class Enemy {
     this.spawnGraceTimer = 0.6; // Anti-blind fire grace period
 
     // Type-specific setup
-    this.initType();
+    this.initType(options);
   }
 
-  initType() {
+  initType(options = {}) {
     switch (this.type) {
       case 'DRONE':
         this.maxHp = 2.5;
@@ -71,12 +71,12 @@ export class Enemy {
         this.maxHp = 3;
         this.hp = 3;
         this.radius = 16;
-        this.vx = -270;
+        this.vx = options.vx !== undefined ? options.vx : -270;
         this.vy = 0;
-        this.baseVy = (Math.random() - 0.5) * 60;
+        this.baseVy = options.baseVy !== undefined ? options.baseVy : (Math.random() - 0.5) * 60;
         this.scoreValue = 200;
-        this.charging = false;
-        this.hasCharged = false;
+        this.charging = options.charging || false;
+        this.hasCharged = options.charging || false;
         this.color = '#ffb300';
         this.shadowColor = '#e65100';
         break;
@@ -272,8 +272,13 @@ export class Enemy {
     this.shootCooldownMult = cdMult * diffShootCd;
     this.speedMult = spdMult;
 
-    this.maxHp = Math.round(this.maxHp * hpMult * diffHp * 10) / 10;
-    this.hp = this.maxHp;
+    if (options && options.hp !== undefined) {
+      this.maxHp = Math.round(options.hp * diffHp * 10) / 10;
+      this.hp = this.maxHp;
+    } else {
+      this.maxHp = Math.round(this.maxHp * hpMult * diffHp * 10) / 10;
+      this.hp = this.maxHp;
+    }
     if (this.maxShieldHp) {
       this.maxShieldHp = Math.round(this.maxShieldHp * hpMult * diffHp * 10) / 10;
       this.shieldHp = this.maxShieldHp;
@@ -556,34 +561,36 @@ export class Enemy {
           this.stateTimer -= dt;
           if (this.stateTimer <= 0 || this.x < 920) {
             this.phaseState = 'BRAKE_SHOOT';
-            this.stateTimer = 0.55;
+            this.stateTimer = 0.60;
             this.hasShot = false;
           }
         } else if (this.phaseState === 'BRAKE_SHOOT') {
-          this.x += (this.vx * 0.18) * dt;
+          this.x += (this.vx * 0.16) * dt;
           this.y += Math.sin(this.tick * 0.1) * 35 * dt;
+          this.aimAngle = Math.atan2(player.y - this.y, player.x - this.x);
           this.stateTimer -= dt;
-          if (!this.hasShot && this.stateTimer <= 0.3 && this.spawnGraceTimer <= 0) {
+          if (!this.hasShot && this.stateTimer <= 0.28 && this.spawnGraceTimer <= 0) {
             this.hasShot = true;
-            const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
-            const offs = [-0.22, 0, 0.22];
+            const targetAngle = this.aimAngle;
+            const offs = [-0.20, 0, 0.20]; // 3 Laser menyebar rapi
+            const lSpeed = 540 * this.bulletSpeedMult;
             for (let k = 0; k < 3; k++) {
               const ang = targetAngle + offs[k];
               bullets.push(new Bullet({
                 x: this.x - 25,
                 y: this.y,
-                vx: Math.cos(ang) * 600 * this.bulletSpeedMult,
-                vy: Math.sin(ang) * 600 * this.bulletSpeedMult,
+                vx: Math.cos(ang) * lSpeed,
+                vy: Math.sin(ang) * lSpeed,
                 radius: 7,
                 type: 'ENEMY_SNIPER',
                 isEnemy: true
               }));
             }
-            sound.playEnemyShoot();
+            sound.playShoot('LASER');
           }
           if (this.stateTimer <= 0) {
             this.phaseState = 'DASH_OUT';
-            this.vx = -560 * this.speedMult;
+            this.vx = -550 * this.speedMult;
           }
         } else {
           // DASH_OUT
@@ -781,9 +788,11 @@ export class Enemy {
         ClayRenderer.drawAce(ctx, this.x, this.y, tilt, hpRatio, this.tick);
         break;
       }
-      case 'INTERCEPTOR':
-        ClayRenderer.drawInterceptor(ctx, this.x, this.y, hpRatio, this.tick);
+      case 'INTERCEPTOR': {
+        const isAiming = this.phaseState === 'BRAKE_SHOOT' && !this.hasShot;
+        ClayRenderer.drawInterceptor(ctx, this.x, this.y, hpRatio, this.tick, isAiming, this.aimAngle || Math.PI);
         break;
+      }
       case 'JUGGERNAUT': {
         const jShield = Math.max(0, this.shieldHp / this.maxShieldHp);
         ClayRenderer.drawJuggernaut(ctx, this.x, this.y, jShield, hpRatio, this.tick);

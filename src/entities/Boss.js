@@ -37,8 +37,8 @@ export class Boss {
       case 'OMEGA_CORE_SPAWN':
         this.title = 'THE OMEGA APEX CORE';
         this.radius = 75;
-        this.coreHp = Math.round(1200 * hpM);
-        this.maxTotalHp = this.coreHp;
+        this.maxTotalHp = Math.round(1200 * hpM);
+        this.currentHp = this.maxTotalHp;
 
         // Dash mechanics: forward rush and backward retreat
         this.dashState = 'IDLE'; // 'IDLE', 'TELEGRAPH', 'RUSH', 'HOLD', 'RETREAT'
@@ -64,14 +64,19 @@ export class Boss {
       case 'OMEGA_COLOSSUS':
         this.title = 'THE OMEGA CLAY COLOSSUS';
         this.radius = 135;
-        this.railTopHp = Math.round(400 * hpM);
-        this.railTopAlive = true;
-        this.railBottomHp = Math.round(400 * hpM);
-        this.railBottomAlive = true;
-        this.droneCoreHp = Math.round(500 * hpM);
-        this.droneCoreAlive = true;
-        this.coreHp = Math.round(1100 * hpM);
         this.maxTotalHp = Math.round(2400 * hpM); // Colossal World 4 climax Phase 1
+        this.currentHp = this.maxTotalHp;
+
+        // Sub-modules with break thresholds
+        this.railTopMaxHp = Math.round(400 * hpM);
+        this.railTopHp = this.railTopMaxHp;
+        this.railTopAlive = true;
+        this.railBottomMaxHp = Math.round(400 * hpM);
+        this.railBottomHp = this.railBottomMaxHp;
+        this.railBottomAlive = true;
+        this.droneCoreMaxHp = Math.round(500 * hpM);
+        this.droneCoreHp = this.droneCoreMaxHp;
+        this.droneCoreAlive = true;
 
         this.railgunTimer = 2.2;
         this.droneDeployTimer = 3.8;
@@ -82,34 +87,41 @@ export class Boss {
       case 'GOLIATH_ZEPPELIN':
         this.title = 'THE CLAY GOLIATH ZEPPELIN';
         this.radius = 110;
-        this.mortarHp = Math.round(260 * hpM);
-        this.mortarAlive = true;
-        this.hangarHp = Math.round(240 * hpM);
-        this.hangarAlive = true;
-        this.coreHp = Math.round(700 * hpM);
-        this.maxTotalHp = Math.round(1200 * hpM); // World 2 airship fortress (HP persis sama)
+        this.maxTotalHp = Math.round(1200 * hpM); // World 2 airship fortress
+        this.currentHp = this.maxTotalHp;
 
-        this.mortarTimer = 2.2;
-        this.broadsideTimer = 1.5;
-        this.swarmLaunchTimer = 1.8;
-        this.topCatapultTimer = 3.2;
-        this.airMineTimer = 4.5;
+        // Sub-modules with break thresholds
+        this.mortarMaxHp = Math.round(260 * hpM);
+        this.mortarHp = this.mortarMaxHp;
+        this.mortarAlive = true;
+        this.hangarMaxHp = Math.round(240 * hpM);
+        this.hangarHp = this.hangarMaxHp;
+        this.hangarAlive = true;
+
+        this.mortarTimer = 3.0;
+        this.broadsideTimer = 2.4;
+        this.minionSpawnTimer = 2.2; // Sedikit lebih cepat: spawn aktif & konsisten (2.2s)
+        this.minionTypeToggle = 0;   // Bergantian HANYA 2 tipe: 3-laser Interceptor & Forward Rusher
         this.mortarAngle = Math.PI * 0.85;
-        this.sortieCount = 0;
         this.initialSortieDone = false;
         break;
 
       case 'LEVIATHAN_TITAN':
         this.title = 'THE ULTIMATE CLAY LEVIATHAN';
         this.radius = 120;
-        this.wingTopHp = Math.round(300 * hpM);
-        this.wingTopAlive = true;
-        this.wingBottomHp = Math.round(300 * hpM);
-        this.wingBottomAlive = true;
-        this.missilePodHp = Math.round(350 * hpM);
-        this.missilePodAlive = true;
-        this.coreHp = Math.round(850 * hpM);
         this.maxTotalHp = Math.round(1800 * hpM); // World 3 heavyweight bio-mech (1800 HP)
+        this.currentHp = this.maxTotalHp;
+
+        // Sub-modules with break thresholds
+        this.wingTopMaxHp = Math.round(300 * hpM);
+        this.wingTopHp = this.wingTopMaxHp;
+        this.wingTopAlive = true;
+        this.wingBottomMaxHp = Math.round(300 * hpM);
+        this.wingBottomHp = this.wingBottomMaxHp;
+        this.wingBottomAlive = true;
+        this.missilePodMaxHp = Math.round(350 * hpM);
+        this.missilePodHp = this.missilePodMaxHp;
+        this.missilePodAlive = true;
 
         this.isChargingLaser = false;
         this.laserChargeTime = 0;
@@ -123,55 +135,47 @@ export class Boss {
       default:
         this.title = 'THE IRON CLAY DREADNOUGHT';
         this.radius = 95;
-        this.turretTopHp = Math.round(110 * hpM);
-        this.turretBottomHp = Math.round(110 * hpM);
+        this.maxTotalHp = Math.round(600 * hpM); // World 1 armored dreadnought
+        this.currentHp = this.maxTotalHp;
+
+        // Sub-modules with break thresholds
+        this.turretTopMaxHp = Math.round(110 * hpM);
+        this.turretTopHp = this.turretTopMaxHp;
         this.turretTopAlive = true;
+        this.turretBottomMaxHp = Math.round(110 * hpM);
+        this.turretBottomHp = this.turretBottomMaxHp;
         this.turretBottomAlive = true;
-        this.coreHp = Math.round(380 * hpM);
-        this.maxTotalHp = Math.round(600 * hpM); // World 1 armored dreadnought (HP persis sama)
 
         this.topTurretAngle = Math.PI;
         this.bottomTurretAngle = Math.PI;
-        this.turretShootTimer = 0.75;
+        this.turretShootTimer = 0.90;
         this.turretSalvoStep = 0;
-        this.spreadPatternTimer = 1.8;
+        this.spreadPatternTimer = 2.7;
         this.spreadWaveIndex = 0;
         this.sineStreamDuration = 0;
-        this.sineStreamCooldown = 4.2;
+        this.sineStreamCooldown = 5.0;
         this.sineAngle = 0;
         this.sineStreamTimer = 0;
-        this.scoutSpawnTimer = 3.8;
+        this.scoutSpawnTimer = 11.5;
         this.scoutSquadCount = 0;
         break;
     }
   }
 
+  get coreHp() {
+    return this.currentHp;
+  }
+
+  set coreHp(val) {
+    this.currentHp = val;
+  }
+
   get totalHp() {
-    if (this.bossType === 'OMEGA_CORE_SPAWN') {
-      return Math.max(0, this.coreHp);
-    } else if (this.bossType === 'OMEGA_COLOSSUS') {
-      return Math.max(0, (this.railTopAlive ? this.railTopHp : 0) +
-                         (this.railBottomAlive ? this.railBottomHp : 0) +
-                         (this.droneCoreAlive ? this.droneCoreHp : 0) +
-                         this.coreHp);
-    } else if (this.bossType === 'GOLIATH_ZEPPELIN') {
-      return Math.max(0, (this.mortarAlive ? this.mortarHp : 0) +
-                         (this.hangarAlive ? this.hangarHp : 0) +
-                         this.coreHp);
-    } else if (this.bossType === 'LEVIATHAN_TITAN') {
-      return Math.max(0, (this.wingTopAlive ? this.wingTopHp : 0) +
-                         (this.wingBottomAlive ? this.wingBottomHp : 0) +
-                         (this.missilePodAlive ? this.missilePodHp : 0) +
-                         this.coreHp);
-    } else {
-      return Math.max(0, (this.turretTopAlive ? this.turretTopHp : 0) +
-                         (this.turretBottomAlive ? this.turretBottomHp : 0) +
-                         this.coreHp);
-    }
+    return Math.max(0, this.currentHp);
   }
 
   get hpRatio() {
-    return Math.max(0, this.totalHp / this.maxTotalHp);
+    return Math.max(0, Math.min(1, this.currentHp / this.maxTotalHp));
   }
 
   update(dt, player, bullets, sound, camera, particles, extraEnemies = [], allEnemies = []) {
@@ -245,14 +249,11 @@ export class Boss {
   }
 
   updateDreadnought(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies = []) {
-    const hoverSpeed = this.rageMode ? 0.07 : 0.038;
-    const hoverRange = this.rageMode ? 140 : 95;
+    // Boss World 1: Jalan tengah (menantang, aktif, berpola indah & rapi, tidak brutal / acak)
+    const hoverSpeed = this.rageMode ? 0.035 : 0.025;
+    const hoverRange = this.rageMode ? 85 : 65;
     this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
-    if (this.rageMode) {
-      this.x = this.targetX + Math.sin(this.tick * 0.05) * 25;
-    } else {
-      this.x = this.targetX;
-    }
+    this.x = this.targetX;
 
     const topX = this.x - 30;
     const topY = this.y - 50;
@@ -262,109 +263,127 @@ export class Boss {
     const botY = this.y + 50;
     this.bottomTurretAngle = Math.atan2(player.y - botY, player.x - botX);
 
-    // 1. POLA 1: Twin Turret Alternating Cross-Fire Waves (Cukup Sering & Berpola)
-    this.turretShootTimer -= dt;
-    if (this.turretShootTimer <= 0) {
-      this.turretShootTimer = this.rageMode ? 0.42 : 0.72;
-      this.turretSalvoStep++;
+    // Kunci Anti-Chaos: Saat semburan gelombang aktif, turret berhenti menembak agar tidak tabrakan
+    if (this.sineStreamDuration <= 0) {
+      // 1. POLA 1: Twin Turret Alternating Aimed Shots (Aktif, ritme 0.90s, kecepatan 285 px/s)
+      this.turretShootTimer -= dt;
+      if (this.turretShootTimer <= 0) {
+        this.turretShootTimer = this.rageMode ? 0.65 : 0.90;
+        this.turretSalvoStep++;
 
-      const bSpeed = this.rageMode ? 490 : 410;
-      const bothAlive = this.turretTopAlive && this.turretBottomAlive;
-      const fireTop = this.turretTopAlive && (bothAlive ? (this.turretSalvoStep % 2 === 0 || this.turretSalvoStep % 4 === 0) : true);
-      const fireBot = this.turretBottomAlive && (bothAlive ? (this.turretSalvoStep % 2 === 1 || this.turretSalvoStep % 4 === 0) : true);
+        const bSpeed = this.rageMode ? 310 : 285;
+        const bothAlive = this.turretTopAlive && this.turretBottomAlive;
+        const fireTop = this.turretTopAlive && (bothAlive ? (this.turretSalvoStep % 2 === 0) : true);
+        const fireBot = this.turretBottomAlive && (bothAlive ? (this.turretSalvoStep % 2 === 1) : true);
 
-      if (fireTop) {
-        const topOffsets = this.rageMode
-          ? [-0.34, -0.17, 0, 0.17, 0.34]
-          : [-0.22, 0, 0.22];
-        for (const off of topOffsets) {
-          const ang = this.topTurretAngle + off;
-          bullets.push(new Bullet({
-            x: topX + Math.cos(ang) * 35,
-            y: topY + Math.sin(ang) * 35,
-            vx: Math.cos(ang) * bSpeed,
-            vy: Math.sin(ang) * bSpeed,
-            radius: 7,
-            isEnemy: true
-          }));
+        if (fireTop) {
+          if (this.rageMode) {
+            // Saat ngamuk: tembakan 2 peluru sudut teratur
+            for (const off of [-0.10, 0.10]) {
+              const ang = this.topTurretAngle + off;
+              bullets.push(new Bullet({
+                x: topX + Math.cos(ang) * 35,
+                y: topY + Math.sin(ang) * 35,
+                vx: Math.cos(ang) * bSpeed,
+                vy: Math.sin(ang) * bSpeed,
+                radius: 7,
+                isEnemy: true
+              }));
+            }
+          } else {
+            // Tembakan 1 peluru terarah yang terukur
+            bullets.push(new Bullet({
+              x: topX + Math.cos(this.topTurretAngle) * 35,
+              y: topY + Math.sin(this.topTurretAngle) * 35,
+              vx: Math.cos(this.topTurretAngle) * bSpeed,
+              vy: Math.sin(this.topTurretAngle) * bSpeed,
+              radius: 7,
+              isEnemy: true
+            }));
+          }
+          if (particles) particles.createSmokePuff(topX - 15, topY, 1, 8);
         }
-      }
 
-      if (fireBot) {
-        const botOffsets = this.rageMode
-          ? [-0.34, -0.17, 0, 0.17, 0.34]
-          : [-0.22, 0, 0.22];
-        for (const off of botOffsets) {
-          const ang = this.bottomTurretAngle + off;
-          bullets.push(new Bullet({
-            x: botX + Math.cos(ang) * 35,
-            y: botY + Math.sin(ang) * 35,
-            vx: Math.cos(ang) * bSpeed,
-            vy: Math.sin(ang) * bSpeed,
-            radius: 7,
-            isEnemy: true
-          }));
+        if (fireBot) {
+          if (this.rageMode) {
+            for (const off of [-0.10, 0.10]) {
+              const ang = this.bottomTurretAngle + off;
+              bullets.push(new Bullet({
+                x: botX + Math.cos(ang) * 35,
+                y: botY + Math.sin(ang) * 35,
+                vx: Math.cos(ang) * bSpeed,
+                vy: Math.sin(ang) * bSpeed,
+                radius: 7,
+                isEnemy: true
+              }));
+            }
+          } else {
+            bullets.push(new Bullet({
+              x: botX + Math.cos(this.bottomTurretAngle) * 35,
+              y: botY + Math.sin(this.bottomTurretAngle) * 35,
+              vx: Math.cos(this.bottomTurretAngle) * bSpeed,
+              vy: Math.sin(this.bottomTurretAngle) * bSpeed,
+              radius: 7,
+              isEnemy: true
+            }));
+          }
+          if (particles) particles.createSmokePuff(botX - 15, botY, 1, 8);
         }
-      }
 
-      // Jika kedua turret hancur, baterai lambung darurat aktif menembak
-      if (!this.turretTopAlive && !this.turretBottomAlive) {
-        const ang = Math.atan2(player.y - this.y, player.x - this.x);
-        for (const off of [-0.25, 0, 0.25]) {
+        if (!this.turretTopAlive && !this.turretBottomAlive) {
+          const ang = Math.atan2(player.y - this.y, player.x - this.x);
           bullets.push(new Bullet({
             x: this.x - 50,
             y: this.y,
-            vx: Math.cos(ang + off) * bSpeed,
-            vy: Math.sin(ang + off) * bSpeed,
+            vx: Math.cos(ang) * bSpeed,
+            vy: Math.sin(ang) * bSpeed,
             radius: 7,
             isEnemy: true
           }));
         }
+
+        if (sound) sound.playEnemyShoot();
       }
 
-      if (sound) sound.playEnemyShoot();
+      // 2. POLA 2: Core Multi-Way Arc Spread ("cukup menyebar, berpola, dan cukup sering")
+      this.spreadPatternTimer -= dt;
+      if (this.spreadPatternTimer <= 0) {
+        this.spreadPatternTimer = this.rageMode ? 1.9 : 2.7;
+        this.spreadWaveIndex++;
+
+        const arcSpeed = this.rageMode ? 310 : 290;
+        const coreX = this.x - 75;
+        const coreY = this.y;
+
+        // Celah sudut lapang yang terprediksi dan konsisten:
+        // Normal: 5-way spread
+        // Rage: 7-way spread
+        const fanAngles = this.rageMode
+          ? [-0.36, -0.24, -0.12, 0, 0.12, 0.24, 0.36]
+          : [-0.32, -0.16, 0, 0.16, 0.32];
+
+        for (const ang of fanAngles) {
+          bullets.push(new Bullet({
+            x: coreX,
+            y: coreY,
+            vx: Math.cos(Math.PI + ang) * arcSpeed,
+            vy: Math.sin(Math.PI + ang) * arcSpeed,
+            radius: 7.5,
+            isEnemy: true
+          }));
+        }
+
+        if (sound) sound.playShoot('SPREAD');
+        if (camera) camera.addTrauma(0.08);
+        if (particles) particles.createClaySplat(coreX, coreY, 6, '#ffeb3b', '#ff6f00');
+      }
     }
 
-    // 2. POLA 2: Core Multi-Way Geometric Arc Waves (Cukup Menyebar & Berpola)
-    this.spreadPatternTimer -= dt;
-    if (this.spreadPatternTimer <= 0) {
-      this.spreadPatternTimer = this.rageMode ? 1.3 : 2.0;
-      this.spreadWaveIndex++;
-
-      const arcSpeed = this.rageMode ? 460 : 380;
-      const coreX = this.x - 75;
-      const coreY = this.y;
-
-      let fanAngles;
-      if (this.rageMode) {
-        fanAngles = [-0.60, -0.45, -0.30, -0.15, 0, 0.15, 0.30, 0.45, 0.60];
-      } else {
-        fanAngles = (this.spreadWaveIndex % 2 === 0)
-          ? [-0.50, -0.33, -0.17, 0, 0.17, 0.33, 0.50]
-          : [-0.42, -0.25, -0.08, 0.08, 0.25, 0.42];
-      }
-
-      for (const ang of fanAngles) {
-        bullets.push(new Bullet({
-          x: coreX,
-          y: coreY,
-          vx: Math.cos(Math.PI + ang) * arcSpeed,
-          vy: Math.sin(Math.PI + ang) * arcSpeed,
-          radius: 8,
-          isEnemy: true
-        }));
-      }
-
-      if (sound) sound.playShoot('SPREAD');
-      if (camera) camera.addTrauma(0.12);
-      if (particles) particles.createClaySplat(coreX, coreY, 8, '#ffeb3b', '#ff6f00');
-    }
-
-    // 3. POLA 3: Sinusoidal Danmaku Curtain Stream (Ciri Khas Boss World 1)
+    // 3. POLA 3: Sinusoidal Danmaku Curtain Stream (Ciri khas semburan meliuk teratur, 7 peluru)
     this.sineStreamCooldown -= dt;
     if (this.sineStreamCooldown <= 0 && this.sineStreamDuration <= 0) {
-      this.sineStreamDuration = this.rageMode ? 1.6 : 1.2;
-      this.sineStreamCooldown = this.rageMode ? 3.5 : 4.8;
+      this.sineStreamDuration = this.rageMode ? 1.0 : 0.85;
+      this.sineStreamCooldown = this.rageMode ? 3.8 : 5.0;
       this.sineAngle = 0;
       this.sineStreamTimer = 0;
       if (particles) {
@@ -376,58 +395,45 @@ export class Boss {
       this.sineStreamDuration -= dt;
       this.sineStreamTimer -= dt;
       if (this.sineStreamTimer <= 0) {
-        this.sineStreamTimer = 0.13;
-        const waveAng = Math.sin(this.sineAngle) * 0.58;
-        this.sineAngle += 0.50;
+        this.sineStreamTimer = 0.12;
+        const waveAng = Math.sin(this.sineAngle) * 0.35;
+        this.sineAngle += 0.65;
+        const sSpeed = this.rageMode ? 310 : 285;
 
         bullets.push(new Bullet({
           x: this.x - 70,
           y: this.y,
-          vx: Math.cos(Math.PI + waveAng) * 440,
-          vy: Math.sin(Math.PI + waveAng) * 440,
-          radius: 7,
+          vx: Math.cos(Math.PI + waveAng) * sSpeed,
+          vy: Math.sin(Math.PI + waveAng) * sSpeed,
+          radius: 6.5,
           isEnemy: true
         }));
-
-        if (this.rageMode) {
-          // Double counter-phase braided stream
-          bullets.push(new Bullet({
-            x: this.x - 70,
-            y: this.y,
-            vx: Math.cos(Math.PI - waveAng) * 440,
-            vy: Math.sin(Math.PI - waveAng) * 440,
-            radius: 7,
-            isEnemy: true
-          }));
-        }
 
         if (sound) sound.playEnemyShoot();
       }
     }
 
-    // 4. POLA 4: Spawn Gerombolan Pesawat Pink Stage 1 (Scout Swarm)
+    // 4. POLA 4: Spawn Gerombolan Pesawat Pink Stage 1 (4 Pesawat klasik, setiap 11.5 detik)
     this.scoutSpawnTimer -= dt;
     if (this.scoutSpawnTimer <= 0) {
-      this.scoutSpawnTimer = this.rageMode ? 6.5 : 9.0;
+      this.scoutSpawnTimer = this.rageMode ? 9.0 : 11.5;
       const livingScouts = allEnemies.filter(e => !e.dead && e.type === 'SCOUT').length;
-      if (livingScouts < 6) {
+      if (livingScouts === 0) {
         this.scoutSquadCount++;
         if (sound) sound.playBossAlarm();
-        if (camera) camera.addTrauma(0.2);
+        if (camera) camera.addTrauma(0.12);
         if (particles) {
-          particles.createFloatingText(640, 220, '🚨 KAWANAN PESAWAT PINK MUNCUL!', '#e91e63');
+          particles.createFloatingText(640, 220, '🚨 KAWANAN SCOUT PINK (4 PESAWAT)!', '#e91e63');
         }
 
-        const startY = (this.scoutSquadCount % 2 === 0)
-          ? 180 + Math.random() * 60
-          : 460 + Math.random() * 60;
+        const startY = (this.scoutSquadCount % 2 === 0) ? 220 : 440;
         const fid = `boss_scout_wave_${this.scoutSquadCount}_${Math.floor(this.tick)}`;
-        const count = 5;
+        const count = 4;
 
         for (let i = 0; i < count; i++) {
           extraEnemies.push(new Enemy({
             type: 'SCOUT',
-            x: 1320 + i * 50,
+            x: 1320 + i * 55,
             y: startY,
             formationId: fid,
             stage: 1, // Pesawat pink stage 1
@@ -439,86 +445,93 @@ export class Boss {
   }
 
   updateGoliath(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies = []) {
-    const hoverSpeed = this.rageMode ? 0.055 : 0.028;
-    const hoverRange = this.rageMode ? 140 : 90;
+    const hoverSpeed = this.rageMode ? 0.038 : 0.024;
+    const hoverRange = this.rageMode ? 105 : 75;
     this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
 
-    const smallTypes = ['DRONE', 'STINGER', 'SCOUT', 'SPINNER', 'INTERCEPTOR'];
-    const activeSmallEnemies = allEnemies.filter(e => !e.dead && smallTypes.includes(e.type)).length;
-    const maxSmallEnemies = this.rageMode ? 10 : 7;
+    // Musuh HANYA 2 jenis sesuai instruksi:
+    // 1. Penembak 3 laser (INTERCEPTOR)
+    // 2. Yang maju ke depan saja (STINGER forward rusher)
+    const activeMinions = allEnemies.filter(e => !e.dead && (e.type === 'INTERCEPTOR' || e.type === 'STINGER')).length;
+    // Cepat & aktif: 4 minion aktif (5 saat rage) agar terasa mengganggu ("percepat spawn pesawat musuh")
+    const maxMinions = this.rageMode ? 5 : 4;
 
-    // Sortie Awal saat Goliath baru saja masuk arena
+    // Sortie Awal saat Goliath baru saja masuk arena (1 penembak 3-laser + 1 perayap maju)
     if (!this.initialSortieDone) {
       this.initialSortieDone = true;
       if (sound) sound.playBossAlarm();
       if (particles) {
-        particles.createFloatingText(640, 250, '✈️ GOLIATH AIR WING: FORMATION SORTIE!', '#00e5ff');
+        particles.createFloatingText(640, 250, '✈️ GOLIATH AIR WING: SIAP TEMPUR!', '#00e5ff');
       }
-      extraEnemies.push(new Enemy({ type: 'STINGER', x: this.x + 20, y: this.y + 65, stage: 10 }));
-      extraEnemies.push(new Enemy({ type: 'DRONE', x: this.x + 20, y: this.y + 90, stage: 10 }));
-      extraEnemies.push(new Enemy({ type: 'SCOUT', x: this.x - 20, y: this.y - 70, stage: 10 }));
+      // 1 Musuh menembak 3 laser
+      extraEnemies.push(new Enemy({
+        type: 'INTERCEPTOR',
+        x: this.x - 20,
+        y: this.y - 65,
+        stage: 10,
+        hp: 3.5
+      }));
+      // 1 Musuh yang maju ke depan saja
+      extraEnemies.push(new Enemy({
+        type: 'STINGER',
+        x: this.x + 20,
+        y: this.y + 65,
+        stage: 10,
+        hp: 2.0,
+        charging: true,
+        baseVy: 0,
+        vx: -350
+      }));
     }
 
-    // 1. VENTRAL BAY LAUNCHES: Hangar bawah meluncurkan pesawat tempur kecil pengganggu
-    this.swarmLaunchTimer -= dt;
-    if (this.swarmLaunchTimer <= 0) {
-      this.swarmLaunchTimer = this.rageMode ? 1.3 : 2.0;
-      if (activeSmallEnemies < maxSmallEnemies) {
-        this.sortieCount++;
-        const spawnY = this.y + 65;
-        const spawnX = this.x + 20;
+    // 1. MINION LAUNCH: Lebih Cepat & Mengganggu (2.2s saat Hangar aktif)
+    this.minionSpawnTimer -= dt;
+    if (this.minionSpawnTimer <= 0) {
+      // Hangar hancur memberi keuntungan taktis: jeda bertambah menjadi 3.8s
+      const baseCd = this.rageMode ? 1.7 : 2.2;
+      this.minionSpawnTimer = this.hangarAlive ? baseCd : (baseCd + 1.6);
 
-        if (this.hangarAlive) {
-          // Hangar utama aktif: meluncurkan Stinger (menabrak cepat) dan Drone (menembak)
-          extraEnemies.push(new Enemy({ type: 'STINGER', x: spawnX, y: spawnY - 15, stage: 10 }));
-          extraEnemies.push(new Enemy({ type: 'DRONE', x: spawnX + 30, y: spawnY + 20, stage: 10 }));
+      if (activeMinions < maxMinions) {
+        this.minionTypeToggle++;
+        const spawn3Laser = (this.minionTypeToggle % 2 === 0);
 
-          if (this.rageMode) {
-            extraEnemies.push(new Enemy({ type: 'STINGER', x: spawnX + 60, y: spawnY, stage: 10 }));
+        if (spawn3Laser) {
+          // Musuh menembak 3 laser (INTERCEPTOR)
+          extraEnemies.push(new Enemy({
+            type: 'INTERCEPTOR',
+            x: this.x - 20,
+            y: this.y - 65,
+            stage: 10,
+            hp: 3.5
+          }));
+          if (particles) {
+            particles.createSmokePuff(this.x - 20, this.y - 65, 2, 12);
+            particles.createFloatingText(this.x - 30, this.y - 80, '⚡ INTERCEPTOR 3-LASER!', '#ab47bc');
           }
-
-          if (particles) particles.createClaySplat(spawnX, spawnY, 10, '#00e5ff', '#0097a7');
-          if (sound) sound.playShoot('SPREAD');
+          if (sound) sound.playShoot('LASER');
         } else {
-          // Jika hangar bawah rusak: Catapult darurat lambung tetap meluncurkan pesawat kecil
-          extraEnemies.push(new Enemy({ type: 'STINGER', x: spawnX, y: spawnY, stage: 10 }));
-          if (particles) particles.createSmokePuff(spawnX, spawnY, 2, 12);
+          // Musuh yang maju ke depan saja (STINGER lurus ke depan secara horizontal)
+          const spawnY = this.y + (Math.random() > 0.5 ? 45 : -45);
+          extraEnemies.push(new Enemy({
+            type: 'STINGER',
+            x: this.x + 20,
+            y: spawnY,
+            stage: 10,
+            hp: 2.0,
+            charging: true,
+            baseVy: 0,
+            vx: -350
+          }));
+          if (particles) {
+            particles.createClaySplat(this.x + 20, spawnY, 8, '#ffb300', '#e65100');
+            particles.createFloatingText(this.x - 20, spawnY - 15, '✈️ RAIDER MAJU!', '#ffb300');
+          }
           if (sound) sound.playShoot('SPREAD');
         }
       }
     }
 
-    // 2. FLIGHT DECK CATAPULT: Dek atas meluncurkan pesawat kecil pendukung
-    this.topCatapultTimer -= dt;
-    if (this.topCatapultTimer <= 0) {
-      this.topCatapultTimer = this.rageMode ? 2.0 : 3.2;
-      if (activeSmallEnemies < maxSmallEnemies) {
-        const topX = this.x - 20;
-        const topY = this.y - 70;
-
-        extraEnemies.push(new Enemy({
-          type: Math.random() > 0.4 ? 'STINGER' : 'INTERCEPTOR',
-          x: topX,
-          y: topY,
-          stage: 10
-        }));
-
-        extraEnemies.push(new Enemy({
-          type: 'SCOUT',
-          x: topX + 40,
-          y: topY - 30,
-          stage: 10
-        }));
-
-        if (particles) {
-          particles.createSmokePuff(topX, topY, 2, 14);
-          particles.createFloatingText(topX - 30, topY - 20, '✈️ SORTIE!', '#ffd54f');
-        }
-        if (sound) sound.playShoot('HOMING');
-      }
-    }
-
-    // 3. HEAVY ARCING CLUSTER MORTAR: Tembakan meriam lengkung penyekat arena
+    // 2. HEAVY ARCING CLUSTER MORTAR: Tembakan meriam lengkung penyekat arena yang terukur
     const mortarX = this.x - 40;
     const mortarY = this.y - 78;
     this.mortarAngle = Math.atan2(player.y - mortarY, player.x - mortarX);
@@ -526,74 +539,49 @@ export class Boss {
     if (this.mortarAlive) {
       this.mortarTimer -= dt;
       if (this.mortarTimer <= 0) {
-        this.mortarTimer = this.rageMode ? 1.6 : 2.5;
+        this.mortarTimer = this.rageMode ? 2.2 : 3.0;
         const mortarOffsets = this.rageMode
-          ? [-80, -40, 0, 40, 80]
-          : [-55, 0, 55];
+          ? [-40, 0, 40]
+          : [-30, 30];
 
         for (let m = 0; m < mortarOffsets.length; m++) {
           const vxOff = mortarOffsets[m];
           bullets.push(new Bullet({
             x: mortarX,
             y: mortarY,
-            vx: -390 + vxOff,
-            vy: -260,
-            gravity: 280,
-            radius: 12,
+            vx: -350 + vxOff,
+            vy: -230,
+            gravity: 250,
+            radius: 11,
             type: 'ENEMY_MORTAR',
             life: 3.5,
             isEnemy: true
           }));
         }
         if (sound) sound.playShoot('FLAK');
-        if (camera) camera.addTrauma(0.22);
+        if (camera) camera.addTrauma(0.12);
       }
     }
 
-    // 4. BROADSIDE FLAK CANNON: Tembakan samping meriam kapal
+    // 3. BROADSIDE FLAK CANNON: Tembakan samping meriam kapal
     this.broadsideTimer -= dt;
     if (this.broadsideTimer <= 0) {
-      this.broadsideTimer = this.rageMode ? 0.9 : 1.5;
+      this.broadsideTimer = this.rageMode ? 1.8 : 2.4;
       const broadsideOffsets = this.rageMode
-        ? [-60, -36, -12, 12, 36, 60]
-        : [-45, -15, 15, 45];
+        ? [-35, -12, 12, 35]
+        : [-25, 0, 25];
 
       for (const offset of broadsideOffsets) {
         bullets.push(new Bullet({
           x: this.x - 70,
           y: this.y + 35 + offset * 0.4,
-          vx: this.rageMode ? -470 : -410,
-          vy: offset * 1.5,
-          radius: 8,
+          vx: this.rageMode ? -390 : -350,
+          vy: offset * 1.2,
+          radius: 7.5,
           isEnemy: true
         }));
       }
       if (sound) sound.playEnemyShoot();
-    }
-
-    // 5. AERIAL DRIFT MINES: Ranjau terapung pembatas manuver pemain
-    this.airMineTimer -= dt;
-    if (this.airMineTimer <= 0) {
-      this.airMineTimer = this.rageMode ? 3.8 : 5.5;
-      const livingMines = allEnemies.filter(e => !e.dead && e.type === 'MINE').length;
-      if (livingMines < 4) {
-        extraEnemies.push(new Enemy({
-          type: 'MINE',
-          x: this.x - 50,
-          y: this.y - 35,
-          stage: 10
-        }));
-        extraEnemies.push(new Enemy({
-          type: 'MINE',
-          x: this.x - 50,
-          y: this.y + 45,
-          stage: 10
-        }));
-        if (particles) {
-          particles.createFloatingText(this.x - 60, this.y + 55, '💣 RANJAU UDARA!', '#ff7043');
-        }
-        if (sound) sound.playShoot('FLAK');
-      }
     }
   }
 
@@ -1015,48 +1003,62 @@ export class Boss {
         return false;
       }
 
-      this.coreHp -= amount;
-      if (!this.rageMode && (this.coreHp <= 360 * (this.hpMult || 1.0) || this.hpRatio <= this.rageThreshold)) {
+      this.currentHp -= amount;
+      if (!this.rageMode && (this.hpRatio <= (this.rageThreshold || 0.30))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 40, '#ff1744', '#7b1fa2');
       }
 
-      if (this.coreHp <= 0) {
-        this.coreHp = 0;
+      if (this.currentHp <= 0) {
+        this.currentHp = 0;
         this.isDying = true;
         return true;
       }
       return false;
     }
 
+    // Unified HP Pool: Every hit damages the main boss HP pool!
+    this.currentHp -= amount;
+
+    // Sub-Module Targeting: If hit aligns with a specific module, damage that module's threshold
     if (this.bossType === 'OMEGA_COLOSSUS') {
       if (this.railTopAlive && hitY < this.y - 55) {
         this.railTopHp -= amount;
         if (this.railTopHp <= 0) {
+          this.railTopHp = 0;
           this.railTopAlive = false;
-          if (particles) particles.createClaySplat(this.x - 60, this.y - 85, 28, '#00e5ff', '#0097a7');
+          if (particles) {
+            particles.createClaySplat(this.x - 60, this.y - 85, 28, '#00e5ff', '#0097a7');
+            particles.createFloatingText(this.x - 60, this.y - 105, '💥 TOP RAILGUN HANCUR!', '#00e5ff');
+          }
           if (sound) sound.playExplosion('large');
         }
       } else if (this.railBottomAlive && hitY > this.y + 55) {
         this.railBottomHp -= amount;
         if (this.railBottomHp <= 0) {
+          this.railBottomHp = 0;
           this.railBottomAlive = false;
-          if (particles) particles.createClaySplat(this.x - 60, this.y + 85, 28, '#00e5ff', '#0097a7');
+          if (particles) {
+            particles.createClaySplat(this.x - 60, this.y + 85, 28, '#00e5ff', '#0097a7');
+            particles.createFloatingText(this.x - 60, this.y + 105, '💥 BOT RAILGUN HANCUR!', '#00e5ff');
+          }
           if (sound) sound.playExplosion('large');
         }
       } else if (this.droneCoreAlive && Math.abs(hitY - this.y) > 22 && Math.abs(hitY - this.y) < 55) {
         this.droneCoreHp -= amount;
         if (this.droneCoreHp <= 0) {
+          this.droneCoreHp = 0;
           this.droneCoreAlive = false;
-          if (particles) particles.createClaySplat(this.x - 30, this.y, 28, '#d500f9', '#7b1fa2');
+          if (particles) {
+            particles.createClaySplat(this.x - 30, this.y, 28, '#d500f9', '#7b1fa2');
+            particles.createFloatingText(this.x - 30, this.y - 20, '💥 DRONE HIVE HANCUR!', '#e040fb');
+          }
           if (sound) sound.playExplosion('large');
         }
-      } else {
-        this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.railTopAlive && !this.railBottomAlive) || this.coreHp < 350 * (this.hpMult || 1.0))) {
+      if (!this.rageMode && (this.hpRatio <= (this.rageThreshold || 0.30) || (!this.railTopAlive && !this.railBottomAlive))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 35, '#ff1744', '#b71c1c');
@@ -1065,22 +1067,28 @@ export class Boss {
       if (this.mortarAlive && hitY < this.y - 40) {
         this.mortarHp -= amount;
         if (this.mortarHp <= 0) {
+          this.mortarHp = 0;
           this.mortarAlive = false;
-          if (particles) particles.createClaySplat(this.x - 40, this.y - 78, 22, '#d84315', '#bf360c');
+          if (particles) {
+            particles.createClaySplat(this.x - 40, this.y - 78, 24, '#d84315', '#bf360c');
+            particles.createFloatingText(this.x - 40, this.y - 95, '💥 MORTAR HANCUR!', '#ff7043');
+          }
           if (sound) sound.playExplosion('small');
         }
       } else if (this.hangarAlive && hitY > this.y + 35) {
         this.hangarHp -= amount;
         if (this.hangarHp <= 0) {
+          this.hangarHp = 0;
           this.hangarAlive = false;
-          if (particles) particles.createClaySplat(this.x + 20, this.y + 65, 22, '#00838f', '#004d40');
+          if (particles) {
+            particles.createClaySplat(this.x + 20, this.y + 65, 24, '#00838f', '#004d40');
+            particles.createFloatingText(this.x + 20, this.y + 85, '💥 HANGAR HANCUR!', '#00e5ff');
+          }
           if (sound) sound.playExplosion('small');
         }
-      } else {
-        this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.mortarAlive && !this.hangarAlive) || this.coreHp < 250 * (this.hpMult || 1.0))) {
+      if (!this.rageMode && (this.hpRatio <= (this.rageThreshold || 0.30) || (!this.mortarAlive && !this.hangarAlive))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 30, '#ff1744', '#b71c1c');
@@ -1089,32 +1097,39 @@ export class Boss {
       if (this.wingTopAlive && hitY < this.y - 55) {
         this.wingTopHp -= amount;
         if (this.wingTopHp <= 0) {
+          this.wingTopHp = 0;
           this.wingTopAlive = false;
-          if (particles) particles.createClaySplat(this.x + 20, this.y - 85, 25, '#7b1fa2', '#311b92');
+          if (particles) {
+            particles.createClaySplat(this.x + 20, this.y - 85, 26, '#7b1fa2', '#311b92');
+            particles.createFloatingText(this.x + 20, this.y - 105, '💥 SAYAP ATAS HANCUR!', '#e040fb');
+          }
           if (sound) sound.playExplosion('small');
         }
       } else if (this.wingBottomAlive && hitY > this.y + 55) {
         this.wingBottomHp -= amount;
         if (this.wingBottomHp <= 0) {
+          this.wingBottomHp = 0;
           this.wingBottomAlive = false;
-          if (particles) particles.createClaySplat(this.x + 20, this.y + 85, 25, '#7b1fa2', '#311b92');
+          if (particles) {
+            particles.createClaySplat(this.x + 20, this.y + 85, 26, '#7b1fa2', '#311b92');
+            particles.createFloatingText(this.x + 20, this.y + 105, '💥 SAYAP BAWAH HANCUR!', '#e040fb');
+          }
           if (sound) sound.playExplosion('small');
         }
       } else if (this.missilePodAlive && hitY > this.y - 50 && hitY < this.y + 50 && Math.abs(hitY - this.y) > 25) {
         this.missilePodHp -= amount;
         if (this.missilePodHp <= 0) {
+          this.missilePodHp = 0;
           this.missilePodAlive = false;
           if (particles) {
-            particles.createClaySplat(this.x - 20, this.y - 42, 22, '#c2185b', '#880e4f');
-            particles.createClaySplat(this.x - 20, this.y + 42, 22, '#c2185b', '#880e4f');
+            particles.createClaySplat(this.x - 20, this.y, 26, '#c2185b', '#880e4f');
+            particles.createFloatingText(this.x - 20, this.y - 20, '💥 MISSILE POD HANCUR!', '#ff4081');
           }
           if (sound) sound.playExplosion('small');
         }
-      } else {
-        this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.wingTopAlive && !this.wingBottomAlive) || this.coreHp < 280 * (this.hpMult || 1.0))) {
+      if (!this.rageMode && (this.hpRatio <= (this.rageThreshold || 0.30) || (!this.wingTopAlive && !this.wingBottomAlive))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 30, '#ff1744', '#b71c1c');
@@ -1124,31 +1139,48 @@ export class Boss {
       if (this.turretTopAlive && hitY < this.y - 25) {
         this.turretTopHp -= amount;
         if (this.turretTopHp <= 0) {
+          this.turretTopHp = 0;
           this.turretTopAlive = false;
-          if (particles) particles.createClaySplat(this.x - 30, this.y - 50, 20, '#e53935', '#b71c1c');
+          if (particles) {
+            particles.createClaySplat(this.x - 30, this.y - 50, 22, '#e53935', '#b71c1c');
+            particles.createFloatingText(this.x - 30, this.y - 70, '💥 TURET ATAS HANCUR!', '#ff5252');
+          }
           if (sound) sound.playExplosion('small');
         }
       } else if (this.turretBottomAlive && hitY > this.y + 25) {
         this.turretBottomHp -= amount;
         if (this.turretBottomHp <= 0) {
+          this.turretBottomHp = 0;
           this.turretBottomAlive = false;
-          if (particles) particles.createClaySplat(this.x - 30, this.y + 50, 20, '#e53935', '#b71c1c');
+          if (particles) {
+            particles.createClaySplat(this.x - 30, this.y + 50, 22, '#e53935', '#b71c1c');
+            particles.createFloatingText(this.x - 30, this.y + 70, '💥 TURET BAWAH HANCUR!', '#ff5252');
+          }
           if (sound) sound.playExplosion('small');
         }
-      } else {
-        this.coreHp -= amount;
       }
 
-      if (!this.rageMode && (this.hpRatio <= this.rageThreshold || (!this.turretTopAlive && !this.turretBottomAlive) || this.coreHp < 130 * (this.hpMult || 1.0))) {
+      if (!this.rageMode && (this.hpRatio <= (this.rageThreshold || 0.30) || (!this.turretTopAlive && !this.turretBottomAlive))) {
         this.rageMode = true;
         if (sound) sound.playBossAlarm();
         if (particles) particles.createClaySplat(this.x, this.y, 25, '#ff1744', '#b71c1c');
       }
     }
 
-    if (this.coreHp <= 0) {
-      this.coreHp = 0;
+    // Death check: Boss dies strictly when unified HP hits 0!
+    if (this.currentHp <= 0) {
+      this.currentHp = 0;
       this.isDying = true;
+      if (this.turretTopAlive) this.turretTopAlive = false;
+      if (this.turretBottomAlive) this.turretBottomAlive = false;
+      if (this.mortarAlive) this.mortarAlive = false;
+      if (this.hangarAlive) this.hangarAlive = false;
+      if (this.wingTopAlive) this.wingTopAlive = false;
+      if (this.wingBottomAlive) this.wingBottomAlive = false;
+      if (this.missilePodAlive) this.missilePodAlive = false;
+      if (this.railTopAlive) this.railTopAlive = false;
+      if (this.railBottomAlive) this.railBottomAlive = false;
+      if (this.droneCoreAlive) this.droneCoreAlive = false;
       return true;
     }
 

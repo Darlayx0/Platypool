@@ -588,39 +588,69 @@ export class HUD {
     let components = [];
 
     if (boss.bossType === 'OMEGA_CORE_SPAWN') {
+      const coreR = Math.max(0, boss.currentHp / (boss.maxTotalHp || 1));
       components = [
-        { name: 'MUTANT EYE', alive: boss.coreHp > 360 },
-        { name: 'PERISAI KEBAL', alive: boss.isInvulnerable },
-        { name: 'HYPER RUSH', alive: true }
+        {
+          name: 'PERISAI KEBAL',
+          alive: boss.isInvulnerable,
+          ratio: boss.isInvulnerable ? 1.0 : 0.0,
+          statusText: boss.isInvulnerable ? 'AKTIF' : 'OFF',
+          icon: '🛡️'
+        },
+        {
+          name: 'HYPER DASH',
+          alive: boss.dashState === 'RUSH' || boss.dashState === 'TELEGRAPH',
+          ratio: (boss.dashState === 'RUSH' || boss.dashState === 'TELEGRAPH') ? 1.0 : 0.0,
+          statusText: boss.dashState === 'RUSH' ? 'RUSH!' : (boss.dashState === 'TELEGRAPH' ? 'CHARGE' : 'SIAP'),
+          icon: '⚡'
+        },
+        {
+          name: 'APEX CORE',
+          alive: boss.currentHp > 0,
+          ratio: coreR,
+          statusText: `${Math.ceil(coreR * 100)}%`,
+          icon: '🔥'
+        }
       ];
     } else if (boss.bossType === 'OMEGA_COLOSSUS') {
+      const topR = boss.railTopMaxHp ? Math.max(0, boss.railTopHp / boss.railTopMaxHp) : (boss.railTopAlive ? 1 : 0);
+      const botR = boss.railBottomMaxHp ? Math.max(0, boss.railBottomHp / boss.railBottomMaxHp) : (boss.railBottomAlive ? 1 : 0);
+      const droneR = boss.droneCoreMaxHp ? Math.max(0, boss.droneCoreHp / boss.droneCoreMaxHp) : (boss.droneCoreAlive ? 1 : 0);
       components = [
-        { name: 'TOP RAILGUN', alive: boss.railTopAlive },
-        { name: 'BOT RAILGUN', alive: boss.railBottomAlive },
-        { name: 'DRONE HIVE', alive: boss.droneCoreAlive }
+        { name: 'TOP RAILGUN', alive: boss.railTopAlive, ratio: topR, icon: '⚡' },
+        { name: 'BOT RAILGUN', alive: boss.railBottomAlive, ratio: botR, icon: '⚡' },
+        { name: 'DRONE HIVE', alive: boss.droneCoreAlive, ratio: droneR, icon: '🛸' }
       ];
     } else if (boss.bossType === 'GOLIATH_ZEPPELIN') {
+      const mortarR = boss.mortarMaxHp ? Math.max(0, boss.mortarHp / boss.mortarMaxHp) : (boss.mortarAlive ? 1 : 0);
+      const hangarR = boss.hangarMaxHp ? Math.max(0, boss.hangarHp / boss.hangarMaxHp) : (boss.hangarAlive ? 1 : 0);
       components = [
-        { name: 'HEAVY MORTAR', alive: boss.mortarAlive },
-        { name: 'HANGAR BAY', alive: boss.hangarAlive }
+        { name: 'HEAVY MORTAR', alive: boss.mortarAlive, ratio: mortarR, icon: '💣' },
+        { name: 'HANGAR BAY', alive: boss.hangarAlive, ratio: hangarR, icon: '✈️' }
       ];
     } else if (boss.bossType === 'LEVIATHAN_TITAN') {
+      const topR = boss.wingTopMaxHp ? Math.max(0, boss.wingTopHp / boss.wingTopMaxHp) : (boss.wingTopAlive ? 1 : 0);
+      const botR = boss.wingBottomMaxHp ? Math.max(0, boss.wingBottomHp / boss.wingBottomMaxHp) : (boss.wingBottomAlive ? 1 : 0);
+      const podR = boss.missilePodMaxHp ? Math.max(0, boss.missilePodHp / boss.missilePodMaxHp) : (boss.missilePodAlive ? 1 : 0);
       components = [
-        { name: 'DORSAL WING', alive: boss.wingTopAlive },
-        { name: 'VENTRAL WING', alive: boss.wingBottomAlive },
-        { name: 'MISSILE POD', alive: boss.missilePodAlive }
+        { name: 'DORSAL WING', alive: boss.wingTopAlive, ratio: topR, icon: '🪶' },
+        { name: 'VENTRAL WING', alive: boss.wingBottomAlive, ratio: botR, icon: '🪶' },
+        { name: 'MISSILE POD', alive: boss.missilePodAlive, ratio: podR, icon: '🚀' }
       ];
     } else {
       // Dreadnought
+      const topR = boss.turretTopMaxHp ? Math.max(0, boss.turretTopHp / boss.turretTopMaxHp) : (boss.turretTopAlive ? 1 : 0);
+      const botR = boss.turretBottomMaxHp ? Math.max(0, boss.turretBottomHp / boss.turretBottomMaxHp) : (boss.turretBottomAlive ? 1 : 0);
       components = [
-        { name: 'TOP TURRET', alive: boss.turretTopAlive },
-        { name: 'BOTTOM TURRET', alive: boss.turretBottomAlive }
+        { name: 'TURET ATAS', alive: boss.turretTopAlive, ratio: topR, icon: '🎯' },
+        { name: 'TURET BAWAH', alive: boss.turretBottomAlive, ratio: botR, icon: '🎯' }
       ];
     }
 
     const total = components.length;
-    const compW = 120;
-    const gap = 12;
+    const compW = total === 2 ? 148 : 126;
+    const compH = 22;
+    const gap = total === 2 ? 14 : 10;
     const startX = cx - ((total * compW + (total - 1) * gap) / 2);
 
     for (let i = 0; i < total; i++) {
@@ -628,25 +658,75 @@ export class HUD {
       const compX = startX + i * (compW + gap) + compW / 2;
       const compY = sy;
 
-      const bgColor = c.alive ? 'rgba(33, 49, 60, 0.85)' : 'rgba(46, 20, 20, 0.85)';
-      const borderColor = c.alive ? '#00e5ff' : '#d32f2f';
-      const textColor = c.alive ? '#e0f7fa' : '#ef9a9a';
-      const statusDot = c.alive ? '#00e676' : '#d50000';
+      // 1. Sleek semi-transparent glass capsule container
+      const bgColor = c.alive ? 'rgba(20, 30, 40, 0.88)' : 'rgba(38, 18, 22, 0.82)';
+      const borderColor = c.alive ? '#37474f' : '#b71c1c';
+      ClayRenderer.drawClayCapsule(ctx, compX, compY, compW, compH, bgColor, borderColor);
 
-      ClayRenderer.drawClayCapsule(ctx, compX, compY, compW, 18, bgColor, borderColor);
+      // 2. Header text: Icon + Name (Left) and Percentage / Status (Right)
+      const textY = compY - 4;
+      const padX = 8;
+      const leftX = compX - compW / 2 + padX;
+      const rightX = compX + compW / 2 - padX;
 
-      // Status indicator dot
+      // Icon & Name
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 9px "Fredoka", sans-serif';
+      ctx.fillStyle = c.alive ? '#e0f7fa' : '#78909c';
+      ctx.fillText(`${c.icon || '⚙️'} ${c.name}`, leftX, textY);
+
+      // Status / Percent
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 9px "Fredoka", sans-serif';
+      if (c.alive) {
+        const pct = c.statusText || `${Math.ceil(c.ratio * 100)}%`;
+        ctx.fillStyle = c.ratio > 0.5 ? '#80deea' : (c.ratio > 0.25 ? '#ffe082' : '#ff8a80');
+        ctx.fillText(pct, rightX, textY);
+      } else {
+        ctx.fillStyle = '#ef5350';
+        ctx.fillText('💥 HANCUR', rightX, textY);
+      }
+
+      // 3. Bottom Row: Sleek Micro HP Gauge Track
+      const trackX = leftX;
+      const trackY = compY + 3;
+      const trackW = compW - padX * 2;
+      const trackH = 3.5;
+
+      // Track slot background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
       ctx.beginPath();
-      ctx.arc(compX - compW / 2 + 10, compY, 4, 0, Math.PI * 2);
-      ctx.fillStyle = statusDot;
+      ctx.roundRect(trackX, trackY, trackW, trackH, 1.5);
       ctx.fill();
 
-      // Text label
-      ctx.font = '700 10px Fredoka, sans-serif';
-      ctx.fillStyle = textColor;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(c.name, compX + 4, compY);
+      // Active fill
+      if (c.alive && c.ratio > 0) {
+        const fillW = Math.max(2, trackW * Math.min(1.0, c.ratio));
+        let barColor = '#00e5ff';
+        if (c.ratio <= 0.25) {
+          barColor = '#ff1744';
+        } else if (c.ratio <= 0.50) {
+          barColor = '#ffb300';
+        }
+
+        ctx.fillStyle = barColor;
+        ctx.beginPath();
+        ctx.roundRect(trackX, trackY, fillW, trackH, 1.5);
+        ctx.fill();
+
+        // Delicate glass highlight sheen
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.beginPath();
+        ctx.roundRect(trackX, trackY, fillW, trackH * 0.45, 1);
+        ctx.fill();
+      } else if (!c.alive) {
+        // Faded offline circuit line
+        ctx.fillStyle = 'rgba(255, 23, 68, 0.25)';
+        ctx.beginPath();
+        ctx.roundRect(trackX, trackY, trackW, trackH, 1.5);
+        ctx.fill();
+      }
     }
 
     ctx.restore();

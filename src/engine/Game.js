@@ -425,8 +425,34 @@ export const STAGE_CONFIGS = [
     bossType: 'GOLIATH_ZEPPELIN',
     waves: [
       (game) => {
-        game.enemies.push(new Enemy({ type: 'BOMBER', x: 1320, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 480 }));
+        // Skirmish pengantar dengan 2 jenis musuh pengawal eksklusif Goliath:
+        game.enemies.push(new Enemy({
+          type: 'INTERCEPTOR',
+          x: 1320,
+          y: 220,
+          hp: 3.5,
+          stage: 10
+        }));
+        game.enemies.push(new Enemy({
+          type: 'STINGER',
+          x: 1320,
+          y: 420,
+          hp: 2.0,
+          stage: 10,
+          charging: true,
+          baseVy: 0,
+          vx: -350
+        }));
+        game.enemies.push(new Enemy({
+          type: 'STINGER',
+          x: 1360,
+          y: 520,
+          hp: 2.0,
+          stage: 10,
+          charging: true,
+          baseVy: 0,
+          vx: -350
+        }));
       },
       (game) => {
         game.spawnBoss('GOLIATH_ZEPPELIN');
@@ -1633,6 +1659,15 @@ export class Game {
     const rageThreshold = effDiff.bossRageThreshold || 0.30;
     const hpMult = effDiff.hpMult !== undefined ? effDiff.hpMult : 1.0;
     this.boss = new Boss(this.width, this.height, bossType, { rageThreshold, hpMult });
+
+    // Pastikan arena bos bersih dari musuh yang tidak sesuai
+    if (bossType === 'GOLIATH_ZEPPELIN') {
+      // HANYA perbolehkan 2 jenis musuh: INTERCEPTOR dan STINGER (maksimal 4)
+      this.enemies = this.enemies.filter(e => !e.dead && (e.type === 'INTERCEPTOR' || e.type === 'STINGER')).slice(0, 4);
+    } else if (bossType === 'DREADNOUGHT') {
+      // Bersihkan musuh sisa pre-boss agar arena World 1 murni fokus pada Dreadnought & Pink Scouts
+      this.enemies = this.enemies.filter(e => !e.dead && e.type === 'SCOUT');
+    }
   }
 
   spawnBossFruitBurst(bossX, bossY, count = 35) {

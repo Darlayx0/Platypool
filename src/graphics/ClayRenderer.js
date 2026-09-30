@@ -770,7 +770,7 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Interceptor (high-speed cloaking dart jet)
    */
-  static drawInterceptor(ctx, x, y, hpRatio = 1, tick = 0) {
+  static drawInterceptor(ctx, x, y, hpRatio = 1, tick = 0, isAiming = false, aimAngle = Math.PI) {
     ctx.save();
     ctx.translate(x, y);
 
@@ -791,6 +791,23 @@ export class ClayRenderer {
     // Twin nose needle blasters
     this.drawClayCapsule(ctx, -25, -3, 12, 3, '#212121', '#000000');
     this.drawClayCapsule(ctx, -25, 3, 12, 3, '#212121', '#000000');
+
+    // 3-Laser telegraph aiming lines when preparing to shoot
+    if (isAiming) {
+      ctx.save();
+      const offs = [-0.20, 0, 0.20];
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      for (const off of offs) {
+        const ang = aimAngle + off;
+        ctx.strokeStyle = 'rgba(255, 23, 68, 0.65)';
+        ctx.beginPath();
+        ctx.moveTo(-25, 0);
+        ctx.lineTo(-25 + Math.cos(ang) * 220, Math.sin(ang) * 220);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     if (hpRatio < 1) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
