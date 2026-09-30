@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node build-standalone.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "node scripts/deploy-auto.js"
   },
   "devDependencies": {
     "vite": "^6.2.0"
