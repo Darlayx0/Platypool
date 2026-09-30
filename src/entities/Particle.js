@@ -48,7 +48,7 @@ class FloatingTextObject {
 
 export class ParticleSystem {
   constructor() {
-    this.maxParticles = 250;
+    this.maxParticles = 350;
     this.activeCount = 0;
     this.pool = new Array(this.maxParticles);
     for (let i = 0; i < this.maxParticles; i++) {
@@ -63,21 +63,26 @@ export class ParticleSystem {
     }
   }
 
+  _allocParticle() {
+    let p;
+    if (this.activeCount < this.maxParticles) {
+      p = this.pool[this.activeCount++];
+    } else {
+      // Recycle oldest particle at index 0 (swap to active end)
+      p = this.pool[0];
+      for (let k = 0; k < this.activeCount - 1; k++) {
+        this.pool[k] = this.pool[k + 1];
+      }
+      this.pool[this.activeCount - 1] = p;
+    }
+    p.reset();
+    return p;
+  }
+
   // Ultra-fast glowing electric spark particles for Plasma weapon
   createElectricSpark(x, y, count = 2, color = '#ea80fc', shadowColor = '#aa00ff') {
     for (let i = 0; i < count; i++) {
-      let p;
-      if (this.activeCount < this.maxParticles) {
-        p = this.pool[this.activeCount++];
-      } else {
-        // Recycle oldest particle at index 0 (swap to active end)
-        p = this.pool[0];
-        for (let k = 0; k < this.activeCount - 1; k++) {
-          this.pool[k] = this.pool[k + 1];
-        }
-        this.pool[this.activeCount - 1] = p;
-      }
-
+      const p = this._allocParticle();
       p.active = true;
       p.type = 'ELECTRIC_SPARK';
       p.x = x + (Math.random() - 0.5) * 6;
@@ -96,6 +101,74 @@ export class ParticleSystem {
       p.gravity = 0;
       p.growth = 0;
     }
+  }
+
+  // High-Quality Multi-Layered EMP Shockwave for Pulse weapon
+  createPulseShockwave(x, y) {
+    // 1. Radial Soft EMP Bloom
+    const bloom = this._allocParticle();
+    bloom.active = true;
+    bloom.type = 'PULSE_BLOOM';
+    bloom.x = x;
+    bloom.y = y;
+    bloom.vx = 0;
+    bloom.vy = 0;
+    bloom.size = 15;
+    bloom.growth = 1200;
+    bloom.color = '#00e5ff';
+    bloom.life = 0.40;
+    bloom.maxLife = 0.40;
+
+    // 2. Primary Shockwave (High-Energy Cyan + White Core + Filaments)
+    const p1 = this._allocParticle();
+    p1.active = true;
+    p1.type = 'PULSE_RING';
+    p1.x = x;
+    p1.y = y;
+    p1.vx = 0;
+    p1.vy = 0;
+    p1.size = 20;
+    p1.growth = 2100;
+    p1.color = '#00e5ff';
+    p1.shadowColor = '#0097a7';
+    p1.life = 0.62;
+    p1.maxLife = 0.62;
+
+    // 3. Secondary Resonance Wave (Trailing Deep Azure Ring)
+    const p2 = this._allocParticle();
+    p2.active = true;
+    p2.type = 'PULSE_RESONANCE';
+    p2.x = x;
+    p2.y = y;
+    p2.vx = 0;
+    p2.vy = 0;
+    p2.size = 6;
+    p2.growth = 1750;
+    p2.color = '#00b0ff';
+    p2.shadowColor = '#0288d1';
+    p2.life = 0.58;
+    p2.maxLife = 0.58;
+
+    // Center electric ionization burst
+    this.createElectricSpark(x, y, 22, '#00e5ff', '#ffffff');
+  }
+
+  // Vaporization flash when an enemy bullet is disintegrated by Pulse
+  createPulseBulletVaporization(x, y) {
+    const v = this._allocParticle();
+    v.active = true;
+    v.type = 'PULSE_VAPOR';
+    v.x = x;
+    v.y = y;
+    v.vx = (Math.random() - 0.5) * 20;
+    v.vy = (Math.random() - 0.5) * 20;
+    v.size = 5;
+    v.growth = 95;
+    v.color = '#00e5ff';
+    v.life = 0.24;
+    v.maxLife = 0.24;
+
+    this.createElectricSpark(x, y, 4, '#00e5ff', '#ffffff');
   }
 
   // Spawn bursting chunks of clay (Classic Platypus death splat)
@@ -274,6 +347,86 @@ export class ParticleSystem {
 
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+      } else if (p.type === 'PULSE_RING') {
+        const rad = Math.max(1, p.size);
+
+        // 1. Soft glowing outer shockwave aura
+        ctx.save();
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = Math.min(22, 14 * alpha);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = Math.max(2.2, 9.5 * alpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 2. High-contrast brilliant white energetic core
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1.2, 3.2 * alpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. Dynamic crackling electric filaments dancing along shockwave perimeter
+        if (alpha > 0.12 && rad > 25) {
+          ctx.save();
+          ctx.strokeStyle = '#e0f7fa';
+          ctx.lineWidth = Math.max(1, 2 * alpha);
+          ctx.beginPath();
+          const segments = 12;
+          const arcStep = (Math.PI * 2) / segments;
+          for (let s = 0; s < segments; s++) {
+            if ((s + Math.floor(rad * 0.08)) % 2 === 0) continue;
+            const baseAng = s * arcStep;
+            const midAng = baseAng + arcStep * 0.5;
+            const endAng = baseAng + arcStep;
+            const jitterR = (Math.sin(s * 7 + rad * 0.18) * 8) * alpha;
+            const x1 = p.x + Math.cos(baseAng) * rad;
+            const y1 = p.y + Math.sin(baseAng) * rad;
+            const xm = p.x + Math.cos(midAng) * (rad + jitterR);
+            const ym = p.y + Math.sin(midAng) * (rad + jitterR);
+            const x2 = p.x + Math.cos(endAng) * rad;
+            const y2 = p.y + Math.sin(endAng) * rad;
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(xm, ym);
+            ctx.lineTo(x2, y2);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else if (p.type === 'PULSE_RESONANCE') {
+        // Trailing deep azure resonance ring
+        const rad = Math.max(1, p.size);
+        ctx.strokeStyle = p.color || '#00b0ff';
+        ctx.lineWidth = Math.max(1.4, 4.8 * alpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (p.type === 'PULSE_BLOOM') {
+        // Translucent radial EMP bloom
+        const rad = Math.max(1, p.size);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
+        grad.addColorStop(0, 'rgba(0, 229, 255, 0.40)');
+        grad.addColorStop(0.35, 'rgba(0, 176, 255, 0.18)');
+        grad.addColorStop(1, 'rgba(0, 176, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === 'PULSE_VAPOR') {
+        // Bullet vaporization plasma ring
+        const rad = Math.max(1, p.size);
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = Math.max(1, 3.2 * alpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(1, 3.0 * alpha), 0, Math.PI * 2);
+        ctx.fill();
       }
 
       ctx.restore();

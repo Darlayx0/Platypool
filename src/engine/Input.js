@@ -13,6 +13,8 @@ export class InputManager {
     this.controlMode = 'MOUSE'; // 'MOUSE' or 'KEYBOARD'
     this.autoFire = false;
     this.pauseRequested = false;
+    this.pulseRequested = false;
+    this.speedBoostRequested = false;
     this.onAutoFireChanged = null;
 
     this.bindEvents();
@@ -43,6 +45,20 @@ export class InputManager {
         this.toggleAutoFire();
       }
 
+      // Keyboard Z: Pulse Blast (Erase all enemy bullets)
+      if (e.code === 'KeyZ') {
+        if (!e.repeat) {
+          this.pulseRequested = true;
+        }
+      }
+
+      // Keyboard X: Toggle Hyper Velocity Bullet Speed
+      if (e.code === 'KeyX') {
+        if (!e.repeat) {
+          this.speedBoostRequested = true;
+        }
+      }
+
       // Switch to keyboard mode if arrow or WASD pressed
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         this.controlMode = 'KEYBOARD';
@@ -67,8 +83,25 @@ export class InputManager {
       this.mouse.active = true;
     });
 
+    const checkVirtualHudButtons = (x, y) => {
+      // Pulse pill [Z]: center 1118, y 674, w 88, h 32
+      if (x >= 1068 && x <= 1168 && y >= 652 && y <= 698) {
+        this.pulseRequested = true;
+        return true;
+      }
+      // Speed Boost pill [X]: center 992, y 674, w 138, h 32
+      if (x >= 918 && x <= 1066 && y >= 652 && y <= 698) {
+        this.speedBoostRequested = true;
+        return true;
+      }
+      return false;
+    };
+
     this.canvas.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
+        if (checkVirtualHudButtons(this.mouse.x, this.mouse.y)) {
+          return;
+        }
         // Left click: shoot
         this.mouse.isDown = true;
         this.mouse.active = true;
@@ -98,6 +131,9 @@ export class InputManager {
         const rawY = (touch.clientY - rect.top) * scaleY;
         this.mouse.x = Math.max(0, Math.min(1280, rawX));
         this.mouse.y = Math.max(0, Math.min(720, rawY));
+        if (checkVirtualHudButtons(this.mouse.x, this.mouse.y)) {
+          return;
+        }
         this.mouse.isDown = true;
         this.controlMode = 'MOUSE';
       }
@@ -173,5 +209,25 @@ export class InputManager {
     const p = this.pauseRequested;
     this.pauseRequested = false;
     return p;
+  }
+
+  consumePulse() {
+    const p = this.pulseRequested;
+    this.pulseRequested = false;
+    return p;
+  }
+
+  consumeSpeedBoost() {
+    const s = this.speedBoostRequested;
+    this.speedBoostRequested = false;
+    return s;
+  }
+
+  requestPulse() {
+    this.pulseRequested = true;
+  }
+
+  requestSpeedBoost() {
+    this.speedBoostRequested = true;
   }
 }

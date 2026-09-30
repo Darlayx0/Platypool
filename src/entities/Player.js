@@ -84,6 +84,15 @@ export class Player {
     this.keepWeaponOnDeath = Boolean(diff.keepWeaponOnDeath) || Boolean(this.infiniteWeapon);
     this.shootTimer = 0;
 
+    // 5. Active Skills: Pulse (Z) & Speed Boost (X)
+    this.pulseMaxStock = diff.pulseMaxStock !== undefined ? diff.pulseMaxStock : 1;
+    this.pulseCharges = diff.pulseStartingStock !== undefined ? Math.min(this.pulseMaxStock, diff.pulseStartingStock) : 1;
+    this.speedBoostMaxDuration = diff.speedBoostMaxDuration !== undefined ? diff.speedBoostMaxDuration : 30.0;
+    this.speedBoostDurationPerDrop = diff.speedBoostDurationPerDrop !== undefined ? diff.speedBoostDurationPerDrop : 10.0;
+    this.speedBoostTimeLeft = 0;
+    this.speedBoostActive = false;
+    this.speedBoostVx = diff.speedBoostVx || 2100;
+
     // Invulnerability
     this.invulnerableTimer = this.invulnerableDuration;
     this.engineTick = 0;
@@ -98,16 +107,32 @@ export class Player {
       this.activeWeapon = 'NORMAL';
       this.weaponTimeLeft = 0;
     }
+    this.speedBoostActive = false;
     this.invulnerableTimer = this.invulnerableDuration;
   }
 
   setWeapon(type) {
     this.activeWeapon = type;
     this.weaponTimeLeft = this.infiniteWeapon ? Infinity : this.maxWeaponTime;
+    // Saat senjata spesial aktif, peningkat senjata normal otomatis nonaktif dan diblokir
+    if (this.activeWeapon !== 'NORMAL') {
+      this.speedBoostActive = false;
+    }
   }
 
   update(dt, input, particles) {
     this.engineTick++;
+
+    // Speed Boost countdown saat aktif (diblokir dan otomatis mati jika senjata bukan NORMAL)
+    if (this.activeWeapon !== 'NORMAL') {
+      this.speedBoostActive = false;
+    } else if (this.speedBoostActive && this.speedBoostTimeLeft > 0) {
+      this.speedBoostTimeLeft -= dt;
+      if (this.speedBoostTimeLeft <= 0) {
+        this.speedBoostTimeLeft = 0;
+        this.speedBoostActive = false;
+      }
+    }
 
     // Weapon duration countdown
     if (this.activeWeapon !== 'NORMAL') {
@@ -284,26 +309,30 @@ export class Player {
 
       case 'NORMAL':
       default:
-        // Balanced pea-shooter: boosted from 0.45 to 0.80 dmg each (~12.3 DPS) for reliable defense without rivaling power weapons
-        this.shootTimer = 0.13;
-        sound.playShoot('NORMAL');
+        // Balanced pea-shooter: boosted from 0.80 to 1.00 dmg each (~16.7 DPS)
+        this.shootTimer = 0.12;
+        const isBoosted = Boolean(this.speedBoostActive && this.speedBoostTimeLeft > 0);
+        const bulletSpeed = isBoosted ? this.speedBoostVx : 1050;
+        sound.playShoot(isBoosted ? 'NORMAL_BOOSTED' : 'NORMAL');
         bullets.push(new Bullet({
           x: noseX,
           y: wingTopY,
-          vx: 980,
+          vx: bulletSpeed,
           vy: 0,
-          damage: 0.80,
+          damage: isBoosted ? 1.15 : 1.00,
           type: 'NORMAL',
-          radius: 6
+          boosted: isBoosted,
+          radius: isBoosted ? 7 : 6.5
         }));
         bullets.push(new Bullet({
           x: noseX,
           y: wingBottomY,
-          vx: 980,
+          vx: bulletSpeed,
           vy: 0,
-          damage: 0.80,
+          damage: isBoosted ? 1.15 : 1.00,
           type: 'NORMAL',
-          radius: 6
+          boosted: isBoosted,
+          radius: isBoosted ? 7 : 6.5
         }));
         break;
     }

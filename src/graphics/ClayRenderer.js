@@ -1065,6 +1065,18 @@ export class ClayRenderer {
       ctx.lineWidth = 3;
       ctx.setLineDash([12, 6]);
       ctx.stroke();
+
+      // Trajectory dash warning line pointing to player coordinate
+      const dy = (boss.targetDashY || boss.y) - boss.y;
+      ctx.beginPath();
+      ctx.moveTo(-boss.radius, 0);
+      ctx.lineTo(-880, dy);
+      ctx.strokeStyle = 'rgba(255, 23, 68, 0.75)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([16, 8]);
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 6;
+      ctx.stroke();
       ctx.restore();
     } else if (boss.dashState === 'RUSH') {
       // Hyper-speed supersonic cone trailing to the right
@@ -1206,6 +1218,18 @@ export class ClayRenderer {
     const corePulse = 18 + Math.sin(boss.tick * 0.2) * 3;
     this.drawClayBlob(ctx, -75, 0, corePulse, corePulse, coreColor, coreShadow);
 
+    // Wave Barrage charging ring indicator
+    if (boss.sineStreamDuration > 0) {
+      ctx.save();
+      const wavePulse = 26 + Math.sin(boss.tick * 0.5) * 6;
+      ctx.beginPath();
+      ctx.arc(-75, 0, wavePulse, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffeb3b';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Front ramming jaw
     this.drawClayCapsule(ctx, -95, -22, 45, 14, '#455a64', '#1c2833', 0.25);
     this.drawClayCapsule(ctx, -95, 22, 45, 14, '#455a64', '#1c2833', -0.25);
@@ -1264,6 +1288,14 @@ export class ClayRenderer {
       this.drawClayBlob(ctx, -40, -78, 16, 12, '#37474f', '#212121');
     }
 
+    // Upper Catapult Flight Deck Track
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(-65, -78, 70, 5);
+    ctx.fillStyle = boss.rageMode ? '#ff1744' : '#ffd54f';
+    for (let tx = -60; tx <= -5; tx += 12) {
+      ctx.fillRect(tx, -77, 6, 3);
+    }
+
     // Lower Drone Hangar Bay (if alive)
     if (boss.hangarAlive) {
       this.drawClayCapsule(ctx, 20, 65, 60, 22, '#00838f', '#004d40');
@@ -1272,6 +1304,7 @@ export class ClayRenderer {
       this.drawClayCapsule(ctx, 20, 65, 42, 10, glow, '#006064');
     } else {
       this.drawClayCapsule(ctx, 20, 65, 48, 18, '#37474f', '#212121');
+      this.drawClayBlob(ctx, 20, 65, 8, 8, '#ff5722', '#bf360c');
     }
 
     // Forward Ramming Nose & Core
@@ -1377,6 +1410,270 @@ export class ClayRenderer {
   }
 
   /**
+   * Draw Modern, Elegant, Minimalist Vector Weapon Icons (Free of any text letters)
+   */
+  static drawWeaponIcon(ctx, x, y, type, size = 16, color = '#ffffff') {
+    ctx.save();
+    ctx.translate(x, y);
+
+    switch (type) {
+      case 'SPREAD': {
+        // 3-way elegant aerodynamic spread darts / shot rays fanning forward
+        const angles = [-0.46, 0, 0.46];
+        angles.forEach((ang, idx) => {
+          ctx.save();
+          ctx.rotate(ang);
+          const dartLen = idx === 1 ? size * 0.95 : size * 0.82;
+          const dartW = size * 0.22;
+          ctx.beginPath();
+          ctx.moveTo(-size * 0.35, -dartW * 0.5);
+          ctx.lineTo(dartLen * 0.55, -dartW * 0.5);
+          ctx.lineTo(dartLen * 0.95, 0);
+          ctx.lineTo(dartLen * 0.55, dartW * 0.5);
+          ctx.lineTo(-size * 0.35, dartW * 0.5);
+          ctx.closePath();
+          ctx.fillStyle = idx === 1 ? '#ffffff' : color;
+          ctx.fill();
+          ctx.restore();
+        });
+        // Rear focal hub
+        ctx.beginPath();
+        ctx.arc(-size * 0.4, 0, size * 0.22, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        break;
+      }
+
+      case 'LASER': {
+        // Piercing high-energy directed beam with focus brackets
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1.8, size * 0.15);
+        ctx.lineCap = 'round';
+
+        // Outer focus brackets
+        ctx.beginPath();
+        ctx.arc(-size * 0.45, 0, size * 0.52, -Math.PI * 0.35, Math.PI * 0.35);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(size * 0.45, 0, size * 0.52, Math.PI * 0.65, Math.PI * 1.35);
+        ctx.stroke();
+
+        // Primary horizontal beam
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.85, 0);
+        ctx.lineTo(size * 0.85, 0);
+        ctx.lineWidth = Math.max(2.6, size * 0.26);
+        ctx.stroke();
+
+        // Core white beam
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1.2, size * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.72, 0);
+        ctx.lineTo(size * 0.72, 0);
+        ctx.stroke();
+
+        // Central emitter lens node
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.24, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        break;
+      }
+
+      case 'HOMING': {
+        // Tactical lock-on reticle brackets + guided seeker dart
+        const r = size * 0.66;
+        const b = size * 0.32;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1.8, size * 0.15);
+        ctx.lineCap = 'round';
+
+        // 4 Reticle corner brackets
+        ctx.beginPath();
+        ctx.moveTo(-r, -r + b);
+        ctx.lineTo(-r, -r);
+        ctx.lineTo(-r + b, -r);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(r - b, -r);
+        ctx.lineTo(r, -r);
+        ctx.lineTo(r, -r + b);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(r, r - b);
+        ctx.lineTo(r, r);
+        ctx.lineTo(r - b, r);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(-r + b, r);
+        ctx.lineTo(-r, r);
+        ctx.lineTo(-r, r - b);
+        ctx.stroke();
+
+        // Center seeker missile diamond
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.36);
+        ctx.lineTo(size * 0.28, 0);
+        ctx.lineTo(0, size * 0.36);
+        ctx.lineTo(-size * 0.28, 0);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // Center lock dot
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.14, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        break;
+      }
+
+      case 'FLAK': {
+        // 8-point radial fragmentation detonation starburst
+        const points = 8;
+        const outerR = size * 0.78;
+        const innerR = size * 0.32;
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+          const ang = (i * Math.PI) / points - Math.PI / 2;
+          const rad = (i % 2 === 0) ? outerR : innerR;
+          const px = Math.cos(ang) * rad;
+          const py = Math.sin(ang) * rad;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // Explosive core dot
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.22, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        break;
+      }
+
+      case 'PLASMA': {
+        // Tilted orbital elliptical ion ring + high-voltage central plasma nucleus
+        ctx.save();
+        ctx.rotate(-Math.PI * 0.2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1.8, size * 0.14);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.8, size * 0.32, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Orbital nodes
+        ctx.beginPath();
+        ctx.arc(size * 0.72, 0, size * 0.14, 0, Math.PI * 2);
+        ctx.arc(-size * 0.72, 0, size * 0.14, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.restore();
+
+        // Dense plasma nucleus
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.38, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // Glowing center core
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.18, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        break;
+      }
+
+      case 'SPEED_BOOST': {
+        // Twin supersonic forward velocity chevrons
+        const drawChevron = (cx, fill) => {
+          ctx.beginPath();
+          ctx.moveTo(cx - size * 0.3, -size * 0.52);
+          ctx.lineTo(cx + size * 0.22, 0);
+          ctx.lineTo(cx - size * 0.3, size * 0.52);
+          ctx.lineTo(cx - size * 0.08, size * 0.52);
+          ctx.lineTo(cx + size * 0.44, 0);
+          ctx.lineTo(cx - size * 0.08, -size * 0.52);
+          ctx.closePath();
+          ctx.fillStyle = fill;
+          ctx.fill();
+        };
+
+        // Left chevron
+        drawChevron(-size * 0.32, color);
+        // Right lead chevron
+        drawChevron(size * 0.22, '#ffffff');
+        break;
+      }
+
+      case 'PULSE': {
+        // Concentric EMP shockwave nova with solid energy core and corona spikes
+        // 1. Outer shockwave ring
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1.8, size * 0.15);
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.92, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 2. Mid resonance ring
+        ctx.strokeStyle = color === '#ffffff' ? '#80deea' : color;
+        ctx.lineWidth = Math.max(1.2, size * 0.11);
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.65, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 3. 4 Cardinal corona discharge spikes
+        const inD = size * 0.42;
+        const outD = size * 1.10;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1.5, size * 0.13);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, -inD); ctx.lineTo(0, -outD);
+        ctx.moveTo(outD, 0); ctx.lineTo(inD, 0);
+        ctx.moveTo(0, inD); ctx.lineTo(0, outD);
+        ctx.moveTo(-outD, 0); ctx.lineTo(-inD, 0);
+        ctx.stroke();
+
+        // 4. Solid Central EMP Energy Orb
+        ctx.fillStyle = color === '#ffffff' ? '#00e5ff' : color;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.44, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brilliant specular core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-size * 0.12, -size * 0.12, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+
+      default: {
+        // Fallback smooth geometric diamond
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.6);
+        ctx.lineTo(size * 0.6, 0);
+        ctx.lineTo(0, size * 0.6);
+        ctx.lineTo(-size * 0.6, 0);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        break;
+      }
+    }
+
+    ctx.restore();
+  }
+
+  /**
    * Draw the cycling Weapon Power-Up Capsule (Classic Platypus mechanic)
    */
   static drawPowerUpCapsule(ctx, x, y, weaponType, tick = 0) {
@@ -1384,11 +1681,11 @@ export class ClayRenderer {
     ctx.translate(x, y);
 
     const colors = {
-      SPREAD: { main: '#e53935', shadow: '#b71c1c', label: 'S', name: 'SPREAD' },
-      LASER: { main: '#1e88e5', shadow: '#0d47a1', label: 'L', name: 'LASER' },
-      HOMING: { main: '#43a047', shadow: '#1b5e20', label: 'H', name: 'HOMING' },
-      FLAK: { main: '#fbc02d', shadow: '#f57f17', label: 'F', name: 'FLAK' },
-      PLASMA: { main: '#ab47bc', shadow: '#4a148c', label: 'P', name: 'PLASMA' }
+      SPREAD: { main: '#e53935', shadow: '#b71c1c', name: 'SPREAD' },
+      LASER: { main: '#1e88e5', shadow: '#0d47a1', name: 'LASER' },
+      HOMING: { main: '#43a047', shadow: '#1b5e20', name: 'HOMING' },
+      FLAK: { main: '#fbc02d', shadow: '#f57f17', name: 'FLAK' },
+      PLASMA: { main: '#ab47bc', shadow: '#4a148c', name: 'PLASMA' }
     };
 
     const cfg = colors[weaponType] || colors.SPREAD;
@@ -1412,14 +1709,274 @@ export class ClayRenderer {
     this.drawClayBlob(ctx, 0, 0, 16, 16, cfg.main, cfg.shadow);
     ctx.restore();
 
-    // Weapon letter emblem
-    ctx.font = 'bold 15px Luckiest Guy, cursive';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // Weapon vector graphic emblem (Modern, elegant, free of text/letters)
     ctx.shadowColor = 'rgba(0,0,0,0.6)';
     ctx.shadowBlur = 4;
-    ctx.fillText(cfg.label, 0, 1);
+    this.drawWeaponIcon(ctx, 0, 0, weaponType, 13, '#ffffff');
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw the Pulse Drop Collectible (Sculpted 3D Claymorphism, no round container)
+   */
+  static drawPulseDrop(ctx, x, y, tick = 0, angle = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    const floatY = Math.sin(tick * 0.12) * 3.5;
+    ctx.translate(0, floatY);
+    if (angle) ctx.rotate(angle);
+
+    // Glowing cyan electric ambient aura
+    const auraPulse = 22 + Math.sin(tick * 0.2) * 4;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, auraPulse + 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#00e5ff';
+    ctx.globalAlpha = 0.28;
+    ctx.fill();
+    ctx.restore();
+
+    // 1. Ambient Drop Shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 30, 45, 0.65)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 20, 30, 0.35)';
+    ctx.fill();
+    ctx.restore();
+
+    // 2. Outer 3D Clay Shockwave Ring (radius 18)
+    // Dark underside bevel
+    ctx.strokeStyle = '#006064';
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    ctx.arc(0, 1.5, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Main vibrant cyan clay body
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Specular highlight curve
+    ctx.strokeStyle = 'rgba(224, 247, 250, 0.9)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.stroke();
+
+    // 3. Inner 3D Clay Concentric Ring (radius 11)
+    ctx.strokeStyle = '#00838f';
+    ctx.lineWidth = 3.8;
+    ctx.beginPath();
+    ctx.arc(0, 1.2, 11, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#80deea';
+    ctx.lineWidth = 3.0;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11, -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.stroke();
+
+    // 4. Four 3D Clay Corona Discharge Spikes
+    const spikeInner = 8;
+    const spikeOuter = 21;
+    ctx.fillStyle = '#00e5ff';
+    const drawSpike = (rot) => {
+      ctx.save();
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.moveTo(-2.5, -spikeInner);
+      ctx.lineTo(0, -spikeOuter);
+      ctx.lineTo(2.5, -spikeInner);
+      ctx.closePath();
+      ctx.fill();
+      // Highlight tip
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, -spikeOuter + 1, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+    drawSpike(0);
+    drawSpike(Math.PI * 0.5);
+    drawSpike(Math.PI);
+    drawSpike(Math.PI * 1.5);
+
+    // 5. Center 3D Clay EMP Nucleus Sphere (solid, substantial, glossy)
+    this.drawClayBlob(ctx, 0, 0, 9, 9, '#00e5ff', '#00838f');
+    // Specular center gloss
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-2.5, -2.5, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw the Speed Boost Drop Collectible (Sculpted 3D Claymorphism >> Chevrons, no round container)
+   */
+  static drawSpeedBoostDrop(ctx, x, y, tick = 0, angle = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    const floatY = Math.sin(tick * 0.12) * 3.5;
+    ctx.translate(0, floatY);
+    if (angle) ctx.rotate(angle);
+
+    // Glowing fiery sonic aura
+    const auraPulse = 20 + Math.sin(tick * 0.2) * 4;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, auraPulse + 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff6d00';
+    ctx.globalAlpha = 0.22;
+    ctx.fill();
+    ctx.restore();
+
+    // Helper to draw beveled chevron path
+    const drawChevronPath = (cx, cyOff, s) => {
+      ctx.beginPath();
+      ctx.moveTo(cx - s * 0.42, cyOff - s * 0.75);
+      ctx.lineTo(cx + s * 0.35, cyOff);
+      ctx.lineTo(cx - s * 0.42, cyOff + s * 0.75);
+      ctx.lineTo(cx - s * 0.12, cyOff + s * 0.75);
+      ctx.lineTo(cx + s * 0.65, cyOff);
+      ctx.lineTo(cx - s * 0.12, cyOff - s * 0.75);
+      ctx.closePath();
+    };
+
+    const s = 18;
+
+    // 1. Ambient Drop Shadow underneath both chevrons
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = '#bf360c';
+    drawChevronPath(-s * 0.45, 0, s);
+    ctx.fill();
+    drawChevronPath(s * 0.35, 0, s);
+    ctx.fill();
+    ctx.restore();
+
+    // 2. REAR CHEVRON (Warm Amber Clay)
+    // Darker underside bevel
+    ctx.fillStyle = '#d84315';
+    drawChevronPath(-s * 0.45, 1.5, s);
+    ctx.fill();
+    // Main vibrant body
+    ctx.fillStyle = '#ff9100';
+    drawChevronPath(-s * 0.45, 0, s);
+    ctx.fill();
+    // Specular light edge highlight
+    ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.45 - s * 0.12, -s * 0.75);
+    ctx.lineTo(-s * 0.45 + s * 0.65, 0);
+    ctx.stroke();
+
+    // 3. LEAD CHEVRON (Golden-Yellow Clay with Specular Glare)
+    // Darker underside bevel
+    ctx.fillStyle = '#f57c00';
+    drawChevronPath(s * 0.35, 1.5, s);
+    ctx.fill();
+    // Main bright body
+    ctx.fillStyle = '#ffd54f';
+    drawChevronPath(s * 0.35, 0, s);
+    ctx.fill();
+    // Highlight facet
+    ctx.fillStyle = '#fff9c4';
+    drawChevronPath(s * 0.35, -0.8, s * 0.88);
+    ctx.fill();
+    // Specular top highlight glare
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(s * 0.35 - s * 0.12, -s * 0.75);
+    ctx.lineTo(s * 0.35 + s * 0.65, 0);
+    ctx.stroke();
+
+    // 4. Trailing clay propulsion exhaust nodules
+    this.drawClayBlob(ctx, -s * 1.05, -s * 0.25, 4, 3, '#ffab00', '#bf360c');
+    this.drawClayBlob(ctx, -s * 1.05, s * 0.25, 4, 3, '#ffab00', '#bf360c');
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Modern & Simple Pulse Icon (for HUD Fleet/Row Display)
+   */
+  static drawModernPulseIcon(ctx, x, y, size = 11, alpha = 1.0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = alpha;
+
+    // Glowing cyan electric ambient shadow
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = Math.min(8, size * 0.6);
+
+    // 1. Outer concentric shockwave wave
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = Math.max(1.6, size * 0.16);
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.95, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. Mid resonance wave
+    ctx.strokeStyle = '#80deea';
+    ctx.lineWidth = Math.max(1.2, size * 0.12);
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.66, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 3. 4 Cardinal energy discharge spikes
+    const inD = size * 0.42;
+    const outD = size * 1.15;
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = Math.max(1.4, size * 0.14);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -inD); ctx.lineTo(0, -outD);
+    ctx.moveTo(outD, 0); ctx.lineTo(inD, 0);
+    ctx.moveTo(0, inD); ctx.lineTo(0, outD);
+    ctx.moveTo(-outD, 0); ctx.lineTo(-inD, 0);
+    ctx.stroke();
+
+    // 4. Solid Central EMP Energy Orb
+    ctx.shadowBlur = 0;
+    // Base darker blue clay
+    ctx.fillStyle = '#00838f';
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Vibrant electric cyan inner sphere
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(-size * 0.05, -size * 0.05, size * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Brilliant white specular gloss highlight
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-size * 0.14, -size * 0.14, size * 0.17, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.restore();
   }

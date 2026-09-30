@@ -22,6 +22,7 @@ export class Enemy {
     this.tick = Math.random() * 50;
     this.dead = false;
     this.slowTimer = 0;
+    this.spawnGraceTimer = 0.6; // Anti-blind fire grace period
 
     // Type-specific setup
     this.initType();
@@ -289,6 +290,10 @@ export class Enemy {
   update(dt, player, bullets, sound, extraEnemies = []) {
     this.tick++;
 
+    if (this.spawnGraceTimer > 0) {
+      this.spawnGraceTimer -= dt;
+    }
+
     if (this.slowTimer > 0) {
       this.slowTimer -= dt;
       dt *= 0.65; // Electro-disruption: 35% speed penalty to movement and fire
@@ -306,7 +311,7 @@ export class Enemy {
         this.y += Math.sign(dyDrone) * Math.min(Math.abs(dyDrone), 140 * dt * this.speedMult);
 
         this.shootTimer -= dt;
-        if (this.shootTimer <= 0 && this.x < 1150 && this.x > player.x + 80) {
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1150 && this.x > player.x + 80) {
           this.shootTimer = (2.0 + Math.random()) * this.shootCooldownMult;
           bullets.push(new Bullet({
             x: this.x - 15,
@@ -328,7 +333,7 @@ export class Enemy {
         }
 
         this.shootTimer -= dt;
-        if (this.shootTimer <= 0 && this.x < 1200 && this.x > player.x + 50) {
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200 && this.x > player.x + 50) {
           this.shootTimer = 1.8 * this.shootCooldownMult;
           const angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
           const spd = 360 * this.bulletSpeedMult;
@@ -350,7 +355,7 @@ export class Enemy {
       case 'BLIMP':
         this.x += this.vx * dt;
         this.shootTimer -= dt;
-        if (this.shootTimer <= 0 && this.x < 1200 && this.x > player.x + 50) {
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200 && this.x > player.x + 50) {
           this.shootTimer = 1.6 * this.shootCooldownMult;
           bullets.push(new Bullet({
             x: this.x - 60,
@@ -391,7 +396,7 @@ export class Enemy {
         break;
 
       case 'SNIPER':
-        if (this.x > this.targetX) {
+        if (this.x > this.targetX || this.spawnGraceTimer > 0) {
           this.x += this.vx * dt;
         } else {
           // Hover in place and aim laser at player (aims faster in higher worlds)
@@ -423,7 +428,7 @@ export class Enemy {
       case 'BOMBER':
         this.x += this.vx * dt;
         this.bombTimer -= dt;
-        if (this.bombTimer <= 0 && this.x > 150 && this.x < 1180) {
+        if (this.bombTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 150 && this.x < 1180) {
           this.bombTimer = (1.8 + Math.random() * 0.8) * this.shootCooldownMult;
           bullets.push(new Bullet({
             x: this.x,
@@ -453,7 +458,7 @@ export class Enemy {
         }
 
         this.sparkTimer -= dt;
-        if (this.sparkTimer <= 0 && this.x < 1150 && this.x > 100) {
+        if (this.sparkTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1150 && this.x > 100) {
           this.sparkTimer = 1.4 * this.shootCooldownMult;
           // 4 radial sparks
           const spkSpd = 320 * this.bulletSpeedMult;
@@ -479,7 +484,7 @@ export class Enemy {
         }
 
         this.shootTimer -= dt;
-        if (this.shootTimer <= 0 && this.x < 1200 && this.x > player.x + 60) {
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200 && this.x > player.x + 60) {
           this.shootTimer = 1.9 * this.shootCooldownMult;
           const a = Math.atan2(player.y - this.y, player.x - this.x);
           const scSpd = 380 * this.bulletSpeedMult;
@@ -506,7 +511,7 @@ export class Enemy {
       case 'MINE_LAYER':
         this.x += this.vx * dt;
         this.mineTimer -= dt;
-        if (this.mineTimer <= 0 && this.x > 300 && this.x < 1180) {
+        if (this.mineTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 300 && this.x < 1180) {
           this.mineTimer = (2.4 + Math.random()) * this.shootCooldownMult;
           extraEnemies.push(new Enemy({
             type: 'MINE',
@@ -530,7 +535,7 @@ export class Enemy {
         this.x += Math.cos(this.loopPhase) * 40 * dt;
 
         this.shootTimer -= dt;
-        if (this.shootTimer <= 0 && this.x < 1150 && this.x > player.x + 80) {
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1150 && this.x > player.x + 80) {
           this.shootTimer = 1.2 * this.shootCooldownMult;
           const aceAngle = Math.atan2(player.y - this.y, player.x - this.x);
           bullets.push(new Bullet({
@@ -558,7 +563,7 @@ export class Enemy {
           this.x += (this.vx * 0.18) * dt;
           this.y += Math.sin(this.tick * 0.1) * 35 * dt;
           this.stateTimer -= dt;
-          if (!this.hasShot && this.stateTimer <= 0.3) {
+          if (!this.hasShot && this.stateTimer <= 0.3 && this.spawnGraceTimer <= 0) {
             this.hasShot = true;
             const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
             const offs = [-0.22, 0, 0.22];
@@ -592,7 +597,7 @@ export class Enemy {
 
         // Twin heavy mortar shells
         this.mortarTimer -= dt;
-        if (this.mortarTimer <= 0 && this.x < 1250 && this.x > player.x + 80) {
+        if (this.mortarTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1250 && this.x > player.x + 80) {
           this.mortarTimer = 2.4 * this.shootCooldownMult;
           for (let k = 0; k < 2; k++) {
             const yOff = k === 0 ? -22 : 22;
@@ -612,7 +617,7 @@ export class Enemy {
 
         // Radial 5-way clay burst
         this.burstTimer -= dt;
-        if (this.burstTimer <= 0 && this.x < 1180 && this.x > player.x + 50) {
+        if (this.burstTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1180 && this.x > player.x + 50) {
           this.burstTimer = 1.6 * this.shootCooldownMult;
           const baseAng = Math.atan2(player.y - this.y, player.x - this.x);
           const bAngles = [-0.35, -0.18, 0, 0.18, 0.35];
@@ -637,7 +642,7 @@ export class Enemy {
         this.y = this.baseY + Math.sin(this.orbitPhase) * 85;
 
         this.vortexTimer -= dt;
-        if (this.vortexTimer <= 0 && this.x < 1200 && this.x > player.x + 70) {
+        if (this.vortexTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200 && this.x > player.x + 70) {
           this.vortexTimer = 2.4 * this.shootCooldownMult;
           for (let k = 0; k < 2; k++) {
             const yOff = k === 0 ? -20 : 20;
@@ -712,19 +717,43 @@ export class Enemy {
         ClayRenderer.drawBlimp(ctx, this.x, this.y, hpRatio, this.tick);
         break;
       case 'STINGER':
+        if (this.charging) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 179, 0, 0.40)';
+          ctx.beginPath();
+          ctx.ellipse(this.x + 18, this.y, 18, 9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
         ClayRenderer.drawStinger(ctx, this.x, this.y, this.tick);
         break;
       case 'SNIPER':
-        // Draw telegraph targeting laser line when aiming
+        // Draw 3-stage telegraph targeting laser line when aiming
         if (this.isAiming) {
           ctx.save();
+          const aimRatio = Math.min(1.0, this.aimTimer / this.maxAimTime);
+          const startX = this.x - 30;
+          const startY = this.y;
+          const endX = startX + Math.cos(this.aimAngle) * 1200;
+          const endY = startY + Math.sin(this.aimAngle) * 1200;
+
           ctx.beginPath();
-          ctx.moveTo(this.x - 30, this.y);
-          ctx.lineTo(this.x - 30 + Math.cos(this.aimAngle) * 1200, this.y + Math.sin(this.aimAngle) * 1200);
-          const aimAlpha = 0.2 + (this.aimTimer / this.maxAimTime) * 0.7;
-          ctx.strokeStyle = `rgba(255, 23, 68, ${aimAlpha})`;
-          ctx.lineWidth = 1.5 + (this.aimTimer / this.maxAimTime) * 2;
-          ctx.setLineDash([8, 4]);
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(endX, endY);
+
+          if (aimRatio < 0.6) {
+            // Stage 1: Yellow tracking line
+            ctx.strokeStyle = `rgba(255, 235, 59, ${0.30 + aimRatio * 0.40})`;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+          } else {
+            // Stage 2: Locked Red warning line with outer glow
+            ctx.strokeStyle = `rgba(255, 23, 68, ${0.75 + (aimRatio - 0.6) * 0.60})`;
+            ctx.lineWidth = 2.5 + (aimRatio - 0.6) * 3.5;
+            ctx.setLineDash([12, 4]);
+            ctx.shadowColor = '#ff1744';
+            ctx.shadowBlur = 8;
+          }
           ctx.stroke();
           ctx.restore();
         }

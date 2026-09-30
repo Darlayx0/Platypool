@@ -22,6 +22,7 @@ export class Bullet {
     this.arcTimer = options.arcTimer || 0;
     this.activeArcs = [];
     this.startX = options.startX !== undefined ? options.startX : this.x;
+    this.boosted = options.boosted || false;
     this.dead = false;
   }
 
@@ -370,8 +371,19 @@ export class Bullet {
 
       case 'NORMAL':
       default:
-        // Punchier standard pea-shooter pellet
-        ClayRenderer.drawClayCapsule(ctx, this.x, this.y, 16, 6, '#ffee58', '#f57f17');
+        if (this.boosted) {
+          ctx.save();
+          // High-speed sonic streak & cyan-gold core
+          ctx.fillStyle = 'rgba(0, 229, 255, 0.35)';
+          ctx.fillRect(this.x - 32, this.y - 3, 32, 6);
+          ClayRenderer.drawClayCapsule(ctx, this.x, this.y, 24, 7, '#00e5ff', '#0097a7');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(this.x - 8, this.y - 1.5, 16, 3);
+          ctx.restore();
+        } else {
+          // Punchier standard pea-shooter pellet
+          ClayRenderer.drawClayCapsule(ctx, this.x, this.y, 18, 6.5, '#ffee58', '#f57f17');
+        }
         break;
     }
   }

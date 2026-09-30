@@ -3,7 +3,7 @@ import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
 import { Bullet } from '../entities/Bullet.js';
-import { PowerUpCapsule, FruitDrop, getRandomFruitType, FRUIT_CONFIGS, getWorldMultiplier } from '../entities/PowerUp.js';
+import { PowerUpCapsule, FruitDrop, PulseDrop, SpeedBoostDrop, getRandomFruitType, FRUIT_CONFIGS, getWorldMultiplier } from '../entities/PowerUp.js';
 import { ParticleSystem } from '../entities/Particle.js';
 import { ParallaxBackground } from '../graphics/ParallaxBg.js';
 import { Camera } from './Camera.js';
@@ -46,6 +46,16 @@ export const DIFFICULTY_CONFIGS = {
     bossLifeAmount: 2,
     weaponDropInterval: { min: 8.0, max: 20.0 },
     invulnerableDuration: 4.0,
+    waveInterval: 14.0,
+    pulseStartingStock: 2,
+    pulseMaxStock: 3,
+    pulseDropChance: 0.008,
+    pulseHeavyDropChance: 0.035,
+    speedBoostDurationPerDrop: 15.0,
+    speedBoostMaxDuration: 45.0,
+    speedBoostVx: 2000,
+    speedBoostDropChance: 0.014,
+    speedBoostHeavyDropChance: 0.060,
     description: 'Pemula: Skor 0.25x, +1 Nyawa tiap 100k Skor & 2 Nyawa/Boss, HP Musuh 0.75x, Peluru Lambat'
   },
   EASY: {
@@ -67,6 +77,16 @@ export const DIFFICULTY_CONFIGS = {
     bossLifeAmount: 1,
     weaponDropInterval: { min: 10.0, max: 40.0 },
     invulnerableDuration: 3.0,
+    waveInterval: 12.0,
+    pulseStartingStock: 2,
+    pulseMaxStock: 2,
+    pulseDropChance: 0.005,
+    pulseHeavyDropChance: 0.024,
+    speedBoostDurationPerDrop: 12.0,
+    speedBoostMaxDuration: 40.0,
+    speedBoostVx: 2000,
+    speedBoostDropChance: 0.010,
+    speedBoostHeavyDropChance: 0.045,
     description: 'Santai: Skor 0.5x, +1 Nyawa tiap 500k Skor & Boss, Peluru Halus, Senjata 20s Tak Hancur Saat Mati'
   },
   NORMAL: {
@@ -88,6 +108,16 @@ export const DIFFICULTY_CONFIGS = {
     bossLifeAmount: 1,
     weaponDropInterval: { min: 10.0, max: 40.0 },
     invulnerableDuration: 2.5,
+    waveInterval: 10.0,
+    pulseStartingStock: 1,
+    pulseMaxStock: 1,
+    pulseDropChance: 0.003,
+    pulseHeavyDropChance: 0.015,
+    speedBoostDurationPerDrop: 10.0,
+    speedBoostMaxDuration: 30.0,
+    speedBoostVx: 2100,
+    speedBoostDropChance: 0.007,
+    speedBoostHeavyDropChance: 0.030,
     description: 'Klasik Arcade: Skor 1x, +1 Nyawa tiap 2 Juta Skor & Boss, Senjata 15s (Hancur Saat Mati)'
   },
   HARD: {
@@ -109,6 +139,16 @@ export const DIFFICULTY_CONFIGS = {
     bossLifeAmount: 0,
     weaponDropInterval: { min: 20.0, max: 40.0 },
     invulnerableDuration: 2.0,
+    waveInterval: 8.0,
+    pulseStartingStock: 1,
+    pulseMaxStock: 1,
+    pulseDropChance: 0.002,
+    pulseHeavyDropChance: 0.010,
+    speedBoostDurationPerDrop: 8.0,
+    speedBoostMaxDuration: 25.0,
+    speedBoostVx: 2100,
+    speedBoostDropChance: 0.004,
+    speedBoostHeavyDropChance: 0.020,
     description: 'Tantangan Hardcore: Skor 2x, +1 Nyawa tiap 10 Juta Skor, Peluru Cepat & Rapat, Boss Tanpa Nyawa'
   },
   EXTREME: {
@@ -133,6 +173,16 @@ export const DIFFICULTY_CONFIGS = {
     revengeBullets: true,
     bossRageThreshold: 0.50,
     rageThreshold: 0.50,
+    waveInterval: 6.5,
+    pulseStartingStock: 0,
+    pulseMaxStock: 1,
+    pulseDropChance: 0.001,
+    pulseHeavyDropChance: 0.005,
+    speedBoostDurationPerDrop: 5.0,
+    speedBoostMaxDuration: 20.0,
+    speedBoostVx: 2200,
+    speedBoostDropChance: 0.002,
+    speedBoostHeavyDropChance: 0.010,
     description: 'Neraka Tanah Liat: Skor 5x, HP Musuh 1.5x, +1 Nyawa tiap 50 Juta Skor, Peluru Brutal & Revenge Shots!'
   }
 };
@@ -266,21 +316,18 @@ export const STAGE_CONFIGS = [
     subtitle: 'WASPADA TAWON STINGER YANG MELUNCUR KENCANG',
     biome: 'CANYON',
     waves: [
-      (game) => {
-        for (let i = 0; i < 4; i++) {
-          game.scheduleSpawn(i * 0.8, () => {
-            game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 160 + i * 130 }));
-          });
-        }
+      // Wave 1: Relief & Scenery Breather Wave pasca-Boss 1
+      (game, fid) => {
+        game.spawnScoutFormation(6, 280, fid);
+        game.scheduleSpawn(1.2, () => game.spawnScoutFormation(5, 440, fid + '_b'));
       },
+      // Wave 2: First Stinger introduction (gentle curve)
       (game, fid) => {
         game.spawnScoutFormation(5, 240, fid);
-        for (let i = 0; i < 3; i++) {
-          game.scheduleSpawn(1.0 + i * 0.7, () => {
-            game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 380 + (i % 2 === 0 ? 80 : -80) }));
-          });
-        }
+        game.scheduleSpawn(1.0, () => game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 320 })));
+        game.scheduleSpawn(2.0, () => game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 200 })));
       },
+      // Wave 3: Canyon Ambush: Gunship + Stinger Swarm
       (game) => {
         game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 280 }));
         for (let i = 0; i < 3; i++) {
@@ -355,9 +402,9 @@ export const STAGE_CONFIGS = [
         game.spawnScoutFormation(4, 350, fid);
       },
       (game) => {
-        for (let i = 0; i < 3; i++) {
-          game.scheduleSpawn(i * 0.7, () => {
-            game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 220 + i * 130 }));
+        for (let i = 0; i < 2; i++) {
+          game.scheduleSpawn(i * 1.0, () => {
+            game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 240 + i * 200 }));
           });
         }
         game.scheduleSpawn(1.5, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 150 })));
@@ -556,57 +603,53 @@ export const STAGE_CONFIGS = [
           });
         }
       },
-      // Wave 4: Heavy Juggernaut & Shield Cruiser
+      // Wave 4: RESUPPLY WAVE 1 (Breather & Power-Up Drops)
+      (game, fid) => {
+        game.spawnScoutFormation(6, 240, fid);
+        game.scheduleSpawn(1.0, () => game.spawnScoutFormation(6, 440, fid + '_b'));
+        game.scheduleSpawn(0.6, () => game.spawnWeaponCapsule(1320, 320));
+      },
+      // Wave 5: Heavy Juggernaut & Shield Cruiser (Staggered Arrival)
       (game) => {
         game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 320 }));
-        game.scheduleSpawn(0.8, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 460 })));
-        game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 180 })));
-      },
-      // Wave 5: Mine Layers, Aces & Vortex Drone
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1320, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1320, y: 460 }));
-        game.scheduleSpawn(0.6, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 340 })));
-        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 180 })));
+        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 460 })));
+        game.scheduleSpawn(2.0, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 180 })));
       },
       // Wave 6: Twin Blimp Dreadnoughts & Escort Aces
       (game) => {
         game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 200 }));
-        game.scheduleSpawn(0.8, () => game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 460 })));
-        game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 330 })));
+        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 460 })));
+        game.scheduleSpawn(1.8, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 330 })));
       },
-      // Wave 7: Quad Interceptor Firing Squad
-      (game) => {
-        for (let i = 0; i < 3; i++) {
-          game.scheduleSpawn(i * 0.6, () => {
-            game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1320, y: 160 + i * 170 }));
-          });
-        }
-        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 420 })));
+      // Wave 7: RESUPPLY WAVE 2 (Pre-Climax Bounty & Extra Life Boost)
+      (game, fid) => {
+        game.spawnScoutFormation(7, 320, fid);
+        game.scheduleSpawn(0.8, () => game.spawnWeaponCapsule(1320, 240));
+        game.scheduleSpawn(1.4, () => game.spawnScoutFormation(5, 180, fid + '_c'));
       },
       // Wave 8: Double Shield Cruisers & Bombers
       (game) => {
         game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 200 }));
-        game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 460 }));
-        game.scheduleSpawn(0.8, () => game.enemies.push(new Enemy({ type: 'BOMBER', x: 1340, y: 150 })));
-        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 510 })));
+        game.scheduleSpawn(0.8, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 460 })));
+        game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'BOMBER', x: 1340, y: 150 })));
+        game.scheduleSpawn(1.8, () => game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 510 })));
       },
       // Wave 9: Stinger Storm & Juggernaut Mortar Barrage
       (game) => {
         game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 300 }));
         for (let i = 0; i < 4; i++) {
-          game.scheduleSpawn(0.5 + i * 0.4, () => {
+          game.scheduleSpawn(0.6 + i * 0.45, () => {
             game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 140 + i * 140 }));
           });
         }
       },
-      // Wave 10: Supreme Gauntlet Climax!
+      // Wave 10: Supreme Gauntlet Climax! (Staggered Arrivals)
       (game) => {
         game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 240 }));
-        game.enemies.push(new Enemy({ type: 'BLIMP', x: 1350, y: 460 }));
-        game.scheduleSpawn(0.6, () => game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1320, y: 180 })));
-        game.scheduleSpawn(1.0, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 480 })));
-        game.scheduleSpawn(1.5, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 330 })));
+        game.scheduleSpawn(1.0, () => game.enemies.push(new Enemy({ type: 'BLIMP', x: 1350, y: 460 })));
+        game.scheduleSpawn(1.6, () => game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1320, y: 180 })));
+        game.scheduleSpawn(2.2, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 480 })));
+        game.scheduleSpawn(2.8, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 330 })));
       }
     ]
   },
@@ -751,7 +794,7 @@ export const STAGE_CONFIGS = [
   {
     stage: 18,
     title: 'SKUADRON BADAI BINTANG EKSTREM',
-    subtitle: 'SKUADRON ACE & INTERCEPTOR ELIT: 8 GELOMBANG SENGIT!',
+    subtitle: 'SKUADRON ACE & INTERCEPTOR ELIT: 5 GELOMBANG TAKTIS!',
     biome: 'COSMIC_VOID',
     waves: [
       // Wave 1: Ace & Interceptor Blitz
@@ -782,17 +825,7 @@ export const STAGE_CONFIGS = [
           });
         }
       },
-      // Wave 4: Interceptor Squadron & Vortex Drones
-      (game) => {
-        for (let i = 0; i < 3; i++) {
-          game.scheduleSpawn(i * 0.6, () => {
-            game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1320, y: 180 + i * 150 }));
-          });
-        }
-        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 240 })));
-        game.scheduleSpawn(1.6, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 440 })));
-      },
-      // Wave 5: Bombers, Mine Layers & Aces
+      // Wave 4: Bombers, Mine Layers & Aces
       (game) => {
         game.enemies.push(new Enemy({ type: 'BOMBER', x: 1320, y: 200 }));
         game.enemies.push(new Enemy({ type: 'BOMBER', x: 1320, y: 480 }));
@@ -800,26 +833,7 @@ export const STAGE_CONFIGS = [
         game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 160 })));
         game.scheduleSpawn(1.8, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 520 })));
       },
-      // Wave 6: Dual Juggernauts with Snipers
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 220 }));
-        game.scheduleSpawn(0.8, () => game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 460 })));
-        game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 340 })));
-      },
-      // Wave 7: Quad Ace Loopers & Stinger Storm
-      (game) => {
-        for (let i = 0; i < 4; i++) {
-          game.scheduleSpawn(i * 0.5, () => {
-            game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 140 + i * 140 }));
-          });
-        }
-        for (let i = 0; i < 4; i++) {
-          game.scheduleSpawn(1.0 + i * 0.4, () => {
-            game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 150 + i * 130 }));
-          });
-        }
-      },
-      // Wave 8: Climax Star Fleet Assault!
+      // Wave 5: Climax Star Fleet Assault!
       (game) => {
         game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 240 }));
         game.enemies.push(new Enemy({ type: 'BLIMP', x: 1350, y: 460 }));
@@ -847,13 +861,12 @@ export const STAGE_CONFIGS = [
         game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1340, y: 200 })));
         game.scheduleSpawn(1.6, () => game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1340, y: 480 })));
       },
-      // Wave 2: Quad Snipers, Bombers & Vortex Drone
+      // Wave 2: Snipers, Bomber & Vortex Drone (Max 2 cognitive layers)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 150 }));
-        game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 520 }));
-        game.scheduleSpawn(0.6, () => game.enemies.push(new Enemy({ type: 'BOMBER', x: 1320, y: 330 })));
-        game.scheduleSpawn(1.0, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 240 })));
-        game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 440 })));
+        game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 180 }));
+        game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 500 }));
+        game.scheduleSpawn(0.8, () => game.enemies.push(new Enemy({ type: 'BOMBER', x: 1320, y: 340 })));
+        game.scheduleSpawn(1.6, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 340 })));
       },
       // Wave 3: Shield Cruisers, Spinners & Mine Layers
       (game) => {
@@ -882,13 +895,13 @@ export const STAGE_CONFIGS = [
         game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 480 })));
         game.scheduleSpawn(1.8, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 340 })));
       },
-      // Wave 6: Heavy Fortress - Dual Juggernauts & Shield Cruisers
+      // Wave 6: Heavy Fortress - Staggered Dual Juggernauts & Shield Cruisers
       (game) => {
         game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 460 }));
+        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 460 })));
         game.scheduleSpawn(0.6, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 340 })));
-        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 160 })));
-        game.scheduleSpawn(1.6, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 520 })));
+        game.scheduleSpawn(1.8, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 160 })));
+        game.scheduleSpawn(2.2, () => game.enemies.push(new Enemy({ type: 'SNIPER', x: 1340, y: 520 })));
       },
       // Wave 7: Bullet-Hell Spiral - Spinners, Bombers & Interceptors
       (game) => {
@@ -923,16 +936,15 @@ export const STAGE_CONFIGS = [
           });
         }
       },
-      // Wave 10: Supreme Pre-Boss Climax Gauntlet!
+      // Wave 10: Supreme Pre-Boss Climax Gauntlet! (Staggered Arrivals)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 460 }));
-        game.scheduleSpawn(0.6, () => game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 340 })));
-        game.scheduleSpawn(1.0, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 180 })));
-        game.scheduleSpawn(1.4, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 500 })));
-        game.scheduleSpawn(1.8, () => game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1340, y: 260 })));
-        game.scheduleSpawn(2.2, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 420 })));
-        game.scheduleSpawn(2.6, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 340 })));
+        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 240 }));
+        game.scheduleSpawn(1.2, () => game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 460 })));
+        game.scheduleSpawn(0.6, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 180 })));
+        game.scheduleSpawn(1.6, () => game.enemies.push(new Enemy({ type: 'SHIELD_CRUISER', x: 1320, y: 500 })));
+        game.scheduleSpawn(2.2, () => game.enemies.push(new Enemy({ type: 'INTERCEPTOR', x: 1340, y: 260 })));
+        game.scheduleSpawn(2.8, () => game.enemies.push(new Enemy({ type: 'VORTEX_DRONE', x: 1340, y: 420 })));
+        game.scheduleSpawn(3.4, () => game.enemies.push(new Enemy({ type: 'ACE', x: 1320, y: 340 })));
       }
     ]
   },
@@ -1061,6 +1073,10 @@ export class Game {
     this.isTransitioningStage = false;
     this.spawnQueue = [];
     this.formationsTracker = new Map();
+
+    // Bad Luck Protection (Pity System) counters to guarantee rare drops eventually appear
+    this.speedBoostKillsSinceDrop = 0;
+    this.pulseKillsSinceDrop = 0;
 
     // Weapon Drop Timer according to difficulty interval
     this.weaponDropTimer = this.getRandomWeaponDropInterval();
@@ -1240,6 +1256,8 @@ export class Game {
     this.stageTransitionTimer = 0;
     this.isTransitioningStage = false;
     this.formationsTracker.clear();
+    this.speedBoostKillsSinceDrop = 0;
+    this.pulseKillsSinceDrop = 0;
 
     const cfg = this.currentStageConfig;
     this.bg.setBiome(cfg.biome);
@@ -1329,6 +1347,16 @@ export class Game {
     // 2. Update Player
     this.player.update(dt, input, this.particles);
 
+    // Active Weapons: Pulse (Z) and Speed Boost (X)
+    if (input) {
+      if (input.consumePulse()) {
+        this.triggerPulse();
+      }
+      if (input.consumeSpeedBoost()) {
+        this.toggleSpeedBoost();
+      }
+    }
+
     // Shooting
     if (input && input.isShooting()) {
       const newBullets = this.player.shoot(this.sound);
@@ -1385,8 +1413,14 @@ export class Game {
     if (this.boss) {
       const extraBossEnemies = [];
       const wasRage = this.boss.rageMode;
-      const bossAlive = this.boss.update(dt, this.player, this.bullets, this.sound, this.camera, this.particles, extraBossEnemies);
+      const bossAlive = this.boss.update(dt, this.player, this.bullets, this.sound, this.camera, this.particles, extraBossEnemies, this.enemies);
       if (extraBossEnemies.length > 0) {
+        for (const e of extraBossEnemies) {
+          if (e.formationId && !this.formationsTracker.has(e.formationId)) {
+            const count = extraBossEnemies.filter(x => x.formationId === e.formationId).length;
+            this.formationsTracker.set(e.formationId, { total: count, killed: 0 });
+          }
+        }
         this.enemies.push(...extraBossEnemies);
       }
 
@@ -1458,36 +1492,57 @@ export class Game {
       }
     }
 
-    this.waveTimer += dt;
+    const effDiff = this.difficultyConfig || {};
+    const waveInterval = effDiff.waveInterval || 10.0;
 
-    // Check if current wave is cleared
-    if (this.waveInProgress && this.spawnQueue.length === 0 && this.enemies.length === 0) {
-      this.waveInProgress = false;
-      this.waveTimer = 0;
-      this.currentWave++;
+    // Check if wave is in progress
+    if (this.waveInProgress) {
+      const isSpawningComplete = (this.spawnQueue.length === 0);
 
-      // If all waves in current stage cleared
-      if (this.currentWave > this.totalWavesInStage) {
-        this.handleStageCleared();
-        return;
+      // Countdown wave otomatis hanya dimulai saat semua musuh wave saat ini selesai dimunculkan
+      if (isSpawningComplete) {
+        this.waveTimer += dt;
       } else {
-        const cfg = this.currentStageConfig;
-        if (cfg.isBossStage && this.currentWave === this.totalWavesInStage) {
-          // Boss wave alert
-          this.sound.playBossAlarm();
-          this.sound.setBossMode(true);
-          this.camera.addTrauma(0.5);
-          this.hud.showBanner('PERINGATAN BAHAYA!', `${cfg.title} MUNCUL!`, 3.5, '#ff1744');
+        this.waveTimer = 0;
+      }
+
+      const isClearedEarly = (isSpawningComplete && this.enemies.length === 0);
+      const isTimeUp = (isSpawningComplete && this.waveTimer >= waveInterval);
+
+      if (this.currentWave < this.totalWavesInStage) {
+        // Automatically spawn next wave when interval countdown completes or all enemies are eliminated early
+        if (isTimeUp || isClearedEarly) {
+          this.currentWave++;
+          this.waveTimer = 0;
+          const cfg = this.currentStageConfig;
+          if (cfg.isBossStage && this.currentWave === this.totalWavesInStage) {
+            // Boss wave alert
+            this.sound.playBossAlarm();
+            this.sound.setBossMode(true, cfg.biome, cfg.bossType);
+            this.camera.addTrauma(0.5);
+            this.hud.showBanner('PERINGATAN BAHAYA!', `${cfg.title} MUNCUL!`, 3.5, '#ff1744');
+          }
+          this.spawnCurrentWave();
         }
-        // No large center banner on regular wave transitions to avoid interrupting player vision
+      } else {
+        // Final wave of the stage
+        const cfg = this.currentStageConfig;
+        if (!cfg.isBossStage && isSpawningComplete && this.enemies.length === 0) {
+          this.handleStageCleared();
+          return;
+        }
       }
       return;
     }
 
-    // Spawn next wave after small breathing pause
-    if (!this.waveInProgress && this.currentWave <= this.totalWavesInStage && this.waveTimer > 1.2) {
-      this.waveInProgress = true;
-      this.spawnCurrentWave();
+    // Spawn first wave after small initial breathing pause
+    if (!this.waveInProgress && this.currentWave <= this.totalWavesInStage) {
+      this.waveTimer += dt;
+      if (this.waveTimer > 1.2) {
+        this.waveInProgress = true;
+        this.waveTimer = 0;
+        this.spawnCurrentWave();
+      }
     }
   }
 
@@ -1500,6 +1555,69 @@ export class Game {
       const fid = `form_s${this.currentStage}_w${this.currentWave}_${Date.now()}`;
       waveFn(this, fid);
     }
+  }
+
+  triggerPulse() {
+    if (!this.player || this.player.dead || this.state !== GAME_STATES.PLAYING) return;
+    if (this.player.pulseCharges <= 0) {
+      if (this.sound) this.sound.playEmptyClick();
+      this.particles.createFloatingText(this.player.x, this.player.y - 30, 'PULSE KOSONG! [Z]', '#b0bec5');
+      return;
+    }
+
+    this.player.pulseCharges--;
+    if (this.sound) this.sound.playPulseBlast();
+    if (this.camera) this.camera.addTrauma(0.55);
+
+    // Multi-layer expanding EMP shockwave from player position
+    this.particles.createPulseShockwave(this.player.x, this.player.y);
+
+    // Vaporize all hostile enemy bullets on screen with micro-plasma rings
+    let erasedCount = 0;
+    for (let i = 0; i < this.bullets.length; i++) {
+      const b = this.bullets[i];
+      if (b && !b.dead && b.isEnemy) {
+        b.dead = true;
+        erasedCount++;
+        this.particles.createPulseBulletVaporization(b.x, b.y);
+      }
+    }
+
+    // EMP Interference overload on all enemies on screen
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      if (e && !e.dead && e.x > -30 && e.x < this.width + 30) {
+        this.particles.createElectricSpark(e.x, e.y, 6, '#00e5ff', '#ffffff');
+      }
+    }
+    if (this.boss && !this.boss.dead) {
+      this.particles.createElectricSpark(this.boss.x, this.boss.y, 18, '#00e5ff', '#ffffff');
+    }
+
+    const bannerMsg = erasedCount > 0 ? `⚡ PULSE! ${erasedCount} PELURU LENYAP!` : '⚡ PULSE DIAKTIFKAN!';
+    this.particles.createFloatingText(this.player.x, this.player.y - 45, bannerMsg, '#00e5ff');
+  }
+
+  toggleSpeedBoost() {
+    if (!this.player || this.player.dead || this.state !== GAME_STATES.PLAYING) return;
+    // Saat senjata spesial aktif, peningkat senjata normal otomatis nonaktif dan diblokir
+    if (this.player.activeWeapon !== 'NORMAL') {
+      if (this.sound) this.sound.playEmptyClick();
+      this.particles.createFloatingText(this.player.x, this.player.y - 30, 'DIBLOKIR: KHUSUS SENJATA NORMAL! [X]', '#ff5252');
+      return;
+    }
+    if (this.player.speedBoostTimeLeft <= 0) {
+      if (this.sound) this.sound.playEmptyClick();
+      this.particles.createFloatingText(this.player.x, this.player.y - 30, 'DURASI CEPAT HABIS! [X]', '#b0bec5');
+      return;
+    }
+
+    this.player.speedBoostActive = !this.player.speedBoostActive;
+    if (this.sound) this.sound.playSpeedToggle(this.player.speedBoostActive);
+
+    const statusText = this.player.speedBoostActive ? '🚀 OVERDRIVE AKTIF! [X]' : '⏸️ OVERDRIVE MATI [X]';
+    const statusColor = this.player.speedBoostActive ? '#ffeb3b' : '#ffb74d';
+    this.particles.createFloatingText(this.player.x, this.player.y - 35, statusText, statusColor);
   }
 
   spawnBoss(bossType) {
@@ -1587,6 +1705,23 @@ export class Game {
     }
 
     this.sound.transitionToBiome(cfg.biome, false);
+
+    // Bersihkan peluru musuh dan minion sisa agar pemain tidak tertembak saat selebrasi stage clear
+    for (let i = 0; i < this.bullets.length; i++) {
+      const b = this.bullets[i];
+      if (b.isEnemy && !b.dead) {
+        b.dead = true;
+        this.particles.createClaySplat(b.x, b.y, 4, '#ffca28', '#ff6f00');
+      }
+    }
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      if (!e.dead) {
+        e.dead = true;
+        this.particles.createClaySplat(e.x, e.y, 14, e.color || '#ff5722', e.shadowColor || '#bf360c');
+        this.sound.playExplosion('small');
+      }
+    }
 
     // Penambahan nyawa setiap berhasil mengalahkan boss (hanya jika diizinkan di mode ini)
     if (this.difficultyConfig && this.difficultyConfig.bossGrantsLife) {
@@ -1909,6 +2044,30 @@ export class Game {
           const earned = this.addPlayerScore(c.points);
           this.particles.createClaySplat(c.x, c.y, 14, '#81c784', '#2e7d32');
           this.particles.createFloatingText(c.x, c.y - 25, `${c.label || ''} +${earned.toLocaleString()}!`, '#ffd54f');
+        } else if (c instanceof PulseDrop) {
+          this.sound.playSpecialDropCollect();
+          this.camera.addTrauma(0.2);
+          this.particles.createClaySplat(c.x, c.y, 16, '#00e5ff', '#0097a7');
+          if (player.pulseCharges < player.pulseMaxStock) {
+            player.pulseCharges++;
+            this.particles.createFloatingText(c.x, c.y - 25, `+1 PULSE [Z]! (${player.pulseCharges}/${player.pulseMaxStock})`, '#00e5ff');
+          } else {
+            const earned = this.addPlayerScore(5000);
+            this.particles.createFloatingText(c.x, c.y - 25, `PULSE PENUH! (+${earned.toLocaleString()})`, '#00e5ff');
+          }
+        } else if (c instanceof SpeedBoostDrop) {
+          this.sound.playSpecialDropCollect();
+          this.camera.addTrauma(0.15);
+          this.particles.createClaySplat(c.x, c.y, 16, '#ffd54f', '#ff6f00');
+          const addTime = player.speedBoostDurationPerDrop || 10.0;
+          const maxTime = player.speedBoostMaxDuration || 30.0;
+          if (player.speedBoostTimeLeft < maxTime) {
+            player.speedBoostTimeLeft = Math.min(maxTime, player.speedBoostTimeLeft + addTime);
+            this.particles.createFloatingText(c.x, c.y - 25, `+${Math.round(addTime)}s PELURU CEPAT [X]! (${Math.round(player.speedBoostTimeLeft)}s)`, '#ffd54f');
+          } else {
+            const earned = this.addPlayerScore(5000);
+            this.particles.createFloatingText(c.x, c.y - 25, `DURASI CEPAT PENUH! (+${earned.toLocaleString()})`, '#ffd54f');
+          }
         }
       }
     }
@@ -2014,6 +2173,26 @@ export class Game {
             }
           ));
         }
+
+        // Formation Clear Special Drop Roll (Sangat Langka: 5% Speed Boost, 2% Pulse)
+        // Dilengkapi Bad Luck Protection (Pity System) agar drop pasti muncul berkala
+        const hasSpeedOnScreen = this.collectibles.some(c => c instanceof SpeedBoostDrop && !c.dead);
+        const hasPulseOnScreen = this.collectibles.some(c => c instanceof PulseDrop && !c.dead);
+        const pulseCanDrop = this.player && this.player.pulseCharges < (this.player.pulseMaxStock || 1);
+
+        const rollSpecial = Math.random();
+        if (!hasSpeedOnScreen && (this.speedBoostKillsSinceDrop >= 32 || rollSpecial < 0.05)) {
+          this.collectibles.push(new SpeedBoostDrop(e.x + 20, e.y));
+          if (this.sound && this.sound.playSpecialDropSpawn) this.sound.playSpecialDropSpawn();
+          this.particles.createElectricSpark(e.x + 20, e.y, 12, '#ffd54f', '#ff9100');
+          this.speedBoostKillsSinceDrop = 0;
+        } else if (!hasPulseOnScreen && pulseCanDrop && (this.pulseKillsSinceDrop >= 55 || (rollSpecial >= 0.05 && rollSpecial < 0.07))) {
+          this.collectibles.push(new PulseDrop(e.x + 20, e.y));
+          if (this.sound && this.sound.playSpecialDropSpawn) this.sound.playSpecialDropSpawn();
+          this.particles.createElectricSpark(e.x + 20, e.y, 12, '#00e5ff', '#00b0ff');
+          this.pulseKillsSinceDrop = 0;
+        }
+
         this.particles.createFloatingText(e.x, e.y - 35, 'FORMATION CLEARED!', '#69f0ae');
       }
     }
@@ -2052,6 +2231,45 @@ export class Game {
         }
       ));
     }
+
+    // Drop roll for tactical consumables: Pulse (Z) and Speed Boost (X)
+    // SANGAT LANGKA dengan Bad Luck Protection (Pity Guarantee System)
+    this.speedBoostKillsSinceDrop++;
+    this.pulseKillsSinceDrop++;
+
+    const effDiff = this.difficultyConfig || {};
+    const pulseChance = isHeavy 
+      ? (effDiff.pulseHeavyDropChance !== undefined ? effDiff.pulseHeavyDropChance : 0.015)
+      : (effDiff.pulseDropChance !== undefined ? effDiff.pulseDropChance : 0.003);
+    const speedBoostChance = isHeavy 
+      ? (effDiff.speedBoostHeavyDropChance !== undefined ? effDiff.speedBoostHeavyDropChance : 0.030)
+      : (effDiff.speedBoostDropChance !== undefined ? effDiff.speedBoostDropChance : 0.007);
+
+    // Bad Luck Protection (Cegah tidak munculnya drop rate):
+    // Speed Boost: Dijamin muncul pada musuh Heavy setelah 35 kills, atau musuh mana saja setelah 46 kills
+    const speedBoostGuaranteed = (isHeavy && this.speedBoostKillsSinceDrop >= 35) || (this.speedBoostKillsSinceDrop >= 46);
+
+    // Pulse: Dijamin muncul jika stok belum penuh pada musuh Heavy setelah 60 kills, atau musuh mana saja setelah 80 kills
+    const playerCanPulse = this.player && this.player.pulseCharges < (this.player.pulseMaxStock || 1);
+    const pulseGuaranteed = playerCanPulse && ((isHeavy && this.pulseKillsSinceDrop >= 60) || (this.pulseKillsSinceDrop >= 80));
+
+    // Cegah duplikasi jika item jenis tersebut sudah melayang aktif di layar
+    const hasSpeedActive = this.collectibles.some(c => c instanceof SpeedBoostDrop && !c.dead);
+    const hasPulseActive = this.collectibles.some(c => c instanceof PulseDrop && !c.dead);
+
+    if (!hasPulseActive && playerCanPulse && (pulseGuaranteed || Math.random() < pulseChance)) {
+      this.collectibles.push(new PulseDrop(e.x, e.y));
+      if (this.sound && this.sound.playSpecialDropSpawn) this.sound.playSpecialDropSpawn();
+      this.particles.createElectricSpark(e.x, e.y, 14, '#00e5ff', '#ffffff');
+      this.pulseKillsSinceDrop = 0;
+    }
+
+    if (!hasSpeedActive && (speedBoostGuaranteed || Math.random() < speedBoostChance)) {
+      this.collectibles.push(new SpeedBoostDrop(e.x + (Math.random() - 0.5) * 20, e.y));
+      if (this.sound && this.sound.playSpecialDropSpawn) this.sound.playSpecialDropSpawn();
+      this.particles.createElectricSpark(e.x, e.y, 14, '#ffd54f', '#ffffff');
+      this.speedBoostKillsSinceDrop = 0;
+    }
   }
 
   damagePlayer() {
@@ -2065,6 +2283,17 @@ export class Game {
         this.triggerGameOver();
       } else {
         this.player.respawn();
+        // Anti-spawnkill recovery shockwave: clear nearby hostile bullets
+        this.bullets = this.bullets.filter(b => {
+          if (!b.isEnemy) return true;
+          const dist = Math.hypot(b.x - this.player.x, b.y - this.player.y);
+          if (dist < 220) {
+            this.particles.createElectricSpark(b.x, b.y, 4, '#00e5ff', '#ffffff');
+            return false;
+          }
+          return true;
+        });
+        this.particles.createElectricSpark(this.player.x, this.player.y, 16, '#00e5ff', '#ffffff');
       }
     }
   }
@@ -2142,7 +2371,15 @@ export class Game {
 
     // 8. HUD Overlay (inside the scaled UHD context so all text & graphics are crisp vector quality)
     if (this.state === GAME_STATES.PLAYING || this.state === GAME_STATES.PAUSED) {
-      this.hud.draw(this.ctx, this.player, this.boss, { currentStage: this.currentStage, totalStages: this.totalStages });
+      this.hud.draw(this.ctx, this.player, this.boss, {
+        currentStage: this.currentStage,
+        totalStages: this.totalStages,
+        currentWave: this.currentWave,
+        totalWaves: this.totalWavesInStage,
+        waveTimer: this.waveTimer,
+        waveInterval: (this.difficultyConfig && this.difficultyConfig.waveInterval) || 10.0,
+        isBossStage: Boolean(this.currentStageConfig && this.currentStageConfig.isBossStage)
+      });
     }
 
     this.ctx.restore();

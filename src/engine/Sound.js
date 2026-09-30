@@ -1,5 +1,6 @@
 // Web Audio API Procedural Dynamic Sound & Soundtrack Synthesizer for Platypus Game
 // High-Fidelity, Smooth ADSR Envelopes, Multi-World Soundtracks & Intense Boss Themes
+import { N, TRACKS } from './MusicTracks.js';
 
 export class SoundController {
   constructor() {
@@ -23,10 +24,11 @@ export class SoundController {
     this.delayFilter = null;
 
     // Music Sequencing & State Machine
+    this.TRACKS = TRACKS;
     this.currentBiome = 'VALLEY';
     this.isBossMusic = false;
     this.currentBossType = null;
-    this.musicMode = 'GAMEPLAY'; // 'GAMEPLAY' | 'MENU' | 'GAMEOVER' | 'VICTORY'
+    this.musicMode = 'MENU'; // 'MENU' | 'GAMEPLAY' | 'BOSS' | 'PAUSED' | 'GAMEOVER' | 'VICTORY'
     this.musicStep = 0;
     this.nextNoteTime = 0;
     this.schedulerTimer = null;
@@ -34,6 +36,7 @@ export class SoundController {
     this.isMusicPlaying = false;
     this.isPausedDucked = false;
     this.listenersAttached = false;
+    this.savedMusicState = null;
 
     // Pre-allocated noise buffers for zero latency and garbage collection
     this.whiteNoiseBuffer = null;
@@ -78,9 +81,29 @@ export class SoundController {
       this.sfxGain.connect(this.warmthFilter);
 
       // 5. Music Bus Architecture:
-      // Music Voices -> musicGain -> musicFilter (pause sweep) -> musicDuckingGain (fade/duck) -> warmthFilter
+      // Music Voices -> musicGain -> Studio 3-Band Parametric EQ (LowShelf + MidDip + HighAir) -> musicFilter -> musicDuckingGain -> warmthFilter
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.setValueAtTime(this.musicEnabled ? (this.musicVolume * 0.45) : 0, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this.musicEnabled ? (this.musicVolume * 0.42) : 0, this.ctx.currentTime);
+
+      // Studio 3-Band Parametric EQ for pristine acoustic transparency ("Jernih & Bebas Lumpur/Muddiness")
+      // Band 1: Low-Shelf (115Hz, +1.5dB) - Deep rounded analog warmth without boominess
+      this.musicEQLow = this.ctx.createBiquadFilter();
+      this.musicEQLow.type = 'lowshelf';
+      this.musicEQLow.frequency.setValueAtTime(115, this.ctx.currentTime);
+      this.musicEQLow.gain.setValueAtTime(1.5, this.ctx.currentTime);
+
+      // Band 2: Peaking Mid-Dip (440Hz, -3.2dB, Q=1.3) - Eliminates the boxy buildup where digital saw/tri harmonics clash
+      this.musicEQMid = this.ctx.createBiquadFilter();
+      this.musicEQMid.type = 'peaking';
+      this.musicEQMid.frequency.setValueAtTime(440, this.ctx.currentTime);
+      this.musicEQMid.Q.setValueAtTime(1.3, this.ctx.currentTime);
+      this.musicEQMid.gain.setValueAtTime(-3.2, this.ctx.currentTime);
+
+      // Band 3: High-Shelf Air (7800Hz, +2.4dB) - Silky sheen, crystal sparkle for bells, hats & harmonics
+      this.musicEQHigh = this.ctx.createBiquadFilter();
+      this.musicEQHigh.type = 'highshelf';
+      this.musicEQHigh.frequency.setValueAtTime(7800, this.ctx.currentTime);
+      this.musicEQHigh.gain.setValueAtTime(2.4, this.ctx.currentTime);
 
       this.musicFilter = this.ctx.createBiquadFilter();
       this.musicFilter.type = 'lowpass';
@@ -90,7 +113,11 @@ export class SoundController {
       this.musicDuckingGain = this.ctx.createGain();
       this.musicDuckingGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
 
-      this.musicGain.connect(this.musicFilter);
+      // Routing through Studio Master EQ chain
+      this.musicGain.connect(this.musicEQLow);
+      this.musicEQLow.connect(this.musicEQMid);
+      this.musicEQMid.connect(this.musicEQHigh);
+      this.musicEQHigh.connect(this.musicFilter);
       this.musicFilter.connect(this.musicDuckingGain);
       this.musicDuckingGain.connect(this.warmthFilter);
 
@@ -99,16 +126,24 @@ export class SoundController {
       this.delayNode.delayTime.setValueAtTime(0.24, this.ctx.currentTime);
 
       this.delayFeedback = this.ctx.createGain();
-      this.delayFeedback.gain.setValueAtTime(0.28, this.ctx.currentTime);
+      this.delayFeedback.gain.setValueAtTime(0.26, this.ctx.currentTime);
 
       this.delayFilter = this.ctx.createBiquadFilter();
       this.delayFilter.type = 'lowpass';
-      this.delayFilter.frequency.setValueAtTime(2800, this.ctx.currentTime);
+      this.delayFilter.frequency.setValueAtTime(2600, this.ctx.currentTime);
 
       this.delayNode.connect(this.delayFilter);
       this.delayFilter.connect(this.delayFeedback);
       this.delayFeedback.connect(this.delayNode);
-      this.delayFilter.connect(this.musicGain);
+
+      if (this.ctx.createStereoPanner) {
+        this.delayPanner = this.ctx.createStereoPanner();
+        this.delayPanner.pan.setValueAtTime(0.26, this.ctx.currentTime);
+        this.delayFilter.connect(this.delayPanner);
+        this.delayPanner.connect(this.musicGain);
+      } else {
+        this.delayFilter.connect(this.musicGain);
+      }
 
       // 7. Initialize Noise Buffers
       this.initNoiseBuffers();
@@ -180,6 +215,9 @@ export class SoundController {
     // Unconditional user gesture listeners to unlock AudioContext autoplay policies across all browsers
     const unlockAudio = () => {
       this.resume();
+      if (this.musicMode === 'MENU' && this.musicEnabled && !this.isMusicPlaying) {
+        this.playMusic({ mode: 'MENU', fadeIn: true });
+      }
     };
     window.addEventListener('click', unlockAudio, { passive: true });
     window.addEventListener('touchstart', unlockAudio, { passive: true });
@@ -249,7 +287,7 @@ export class SoundController {
       }
     }
     if (this.musicEnabled) {
-      this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: false });
+      this.playMusic({ mode: this.musicMode, biome: this.currentBiome, isBoss: this.isBossMusic, bossType: this.currentBossType, forceRestart: false });
     } else {
       this.stopMusic();
     }
@@ -410,6 +448,30 @@ export class SoundController {
 
       osc.start(t);
       osc.stop(t + 0.16);
+    } else if (type === 'NORMAL_BOOSTED') {
+      // Supersonic boosted clay pellet: punchy laser ping with warm analog body
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(680, t);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.055);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(3200, t);
+      filter.frequency.exponentialRampToValueAtTime(600, t + 0.055);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.26, t + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(t);
+      osc.stop(t + 0.06);
     } else {
       // NORMAL: Round organic clay pellet pop (pleasant, comfortable on the ears, zero fatigue)
       const osc = this.ctx.createOscillator();
@@ -615,6 +677,161 @@ export class SoundController {
       osc.start(startTime);
       osc.stop(startTime + 0.23);
     });
+  }
+
+  playPulseBlast() {
+    if (!this.sfxEnabled || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    // Layer 1: Sub-bass heavy thump + expanding resonant sweep
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    const filter1 = this.ctx.createBiquadFilter();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(340, t);
+    osc1.frequency.exponentialRampToValueAtTime(32, t + 0.42);
+
+    filter1.type = 'lowpass';
+    filter1.frequency.setValueAtTime(2600, t);
+    filter1.frequency.exponentialRampToValueAtTime(60, t + 0.42);
+
+    gain1.gain.setValueAtTime(0.001, t);
+    gain1.gain.linearRampToValueAtTime(0.55, t + 0.015);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+
+    osc1.connect(filter1);
+    filter1.connect(gain1);
+    gain1.connect(this.sfxGain);
+
+    osc1.start(t);
+    osc1.stop(t + 0.46);
+
+    // Layer 2: High-voltage ionization resonant sweep
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    const filter2 = this.ctx.createBiquadFilter();
+
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(880, t);
+    osc2.frequency.exponentialRampToValueAtTime(140, t + 0.32);
+
+    filter2.type = 'bandpass';
+    filter2.Q.setValueAtTime(4.0, t);
+    filter2.frequency.setValueAtTime(3200, t);
+    filter2.frequency.exponentialRampToValueAtTime(400, t + 0.32);
+
+    gain2.gain.setValueAtTime(0.001, t);
+    gain2.gain.linearRampToValueAtTime(0.22, t + 0.02);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+
+    osc2.connect(filter2);
+    filter2.connect(gain2);
+    gain2.connect(this.sfxGain);
+
+    osc2.start(t);
+    osc2.stop(t + 0.36);
+  }
+
+  playSpecialDropSpawn() {
+    if (!this.sfxEnabled || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    // Fast arpeggiated crystal chime
+    const notes = [659.25, 880.0, 1318.51];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const st = t + idx * 0.045;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, st);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.04, st + 0.16);
+
+      gain.gain.setValueAtTime(0.001, st);
+      gain.gain.linearRampToValueAtTime(0.18, st + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, st + 0.18);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(st);
+      osc.stop(st + 0.20);
+    });
+  }
+
+  playSpeedToggle(active) {
+    if (!this.sfxEnabled || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    if (active) {
+      // Ascending electric pip
+      osc.frequency.setValueAtTime(540, t);
+      osc.frequency.exponentialRampToValueAtTime(980, t + 0.09);
+    } else {
+      // Descending power down click
+      osc.frequency.setValueAtTime(750, t);
+      osc.frequency.exponentialRampToValueAtTime(320, t + 0.08);
+    }
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.25, t + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.10);
+  }
+
+  playSpecialDropCollect() {
+    if (!this.sfxEnabled || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+    const notes = [659.25, 880.0, 1174.66, 1567.98]; // E5, A5, D6, G6
+    notes.forEach((freq, idx) => {
+      const startTime = t + idx * 0.04;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.28, startTime + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.15);
+    });
+  }
+
+  playEmptyClick() {
+    if (!this.sfxEnabled || !this.ctx) return;
+    this.resume();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(140, t);
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.045);
   }
 
   playFruitCollect() {
@@ -843,8 +1060,54 @@ export class SoundController {
 
   // =========================================================================
   // =========================================================================
-  // --- PROFESSIONAL DYNAMIC SOUNDTRACK ENGINE (WEB AUDIO LOOKAHEAD SCHEDULER) ---
+  // --- PROFESSIONAL MULTI-BAR POLYPHONIC DYNAMIC SOUNDTRACK ENGINE ---
   // =========================================================================
+
+  getMusicTrack() {
+    if (this.musicMode === 'MENU') {
+      return this.TRACKS.MENU;
+    }
+    if (this.musicMode === 'PAUSED') {
+      return this.TRACKS.PAUSED;
+    }
+    if (this.musicMode === 'GAMEOVER') {
+      return this.TRACKS.GAMEOVER;
+    }
+    if (this.musicMode === 'VICTORY') {
+      return this.TRACKS.VICTORY;
+    }
+
+    if (this.isBossMusic) {
+      if (this.currentBossType && this.TRACKS[this.currentBossType]) {
+        return this.TRACKS[this.currentBossType];
+      }
+      // Biome-based fallback if bossType is not explicitly supplied
+      switch (this.currentBiome) {
+        case 'CANYON':
+          return this.TRACKS.GOLIATH_ZEPPELIN;
+        case 'CYBER_NIGHT':
+          return this.TRACKS.LEVIATHAN_TITAN;
+        case 'COSMIC_VOID':
+          return this.TRACKS.OMEGA_COLOSSUS;
+        case 'VALLEY':
+        default:
+          return this.TRACKS.DREADNOUGHT;
+      }
+    }
+
+    // World Exploration Soundtracks
+    switch (this.currentBiome) {
+      case 'CANYON':
+        return this.TRACKS.CANYON;
+      case 'CYBER_NIGHT':
+        return this.TRACKS.CYBER_NIGHT;
+      case 'COSMIC_VOID':
+        return this.TRACKS.COSMIC_VOID;
+      case 'VALLEY':
+      default:
+        return this.TRACKS.VALLEY;
+    }
+  }
 
   setBiome(biomeKey, isBoss = false) {
     const validBiomes = ['VALLEY', 'CANYON', 'CYBER_NIGHT', 'COSMIC_VOID'];
@@ -853,7 +1116,6 @@ export class SoundController {
       this.isBossMusic = Boolean(isBoss);
       this.musicMode = 'GAMEPLAY';
 
-      // If music is enabled and currently stopped/interrupted, guarantee it starts playing!
       if (this.musicEnabled && (!this.isMusicPlaying || !this.schedulerTimer)) {
         this.playMusic({ biome: biomeKey, isBoss: this.isBossMusic, forceRestart: false, fadeIn: true });
       }
@@ -864,11 +1126,10 @@ export class SoundController {
     this.isBossMusic = Boolean(isBoss);
     if (biomeKey) this.currentBiome = biomeKey;
     if (bossType) this.currentBossType = bossType;
-    this.musicMode = 'GAMEPLAY';
+    this.musicMode = this.isBossMusic ? 'BOSS' : 'GAMEPLAY';
 
-    // If music is enabled and currently stopped, immediately start boss soundtrack!
     if (this.musicEnabled && (!this.isMusicPlaying || !this.schedulerTimer)) {
-      this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: false, fadeIn: true });
+      this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, bossType: this.currentBossType, forceRestart: false, fadeIn: true });
     }
   }
 
@@ -888,28 +1149,32 @@ export class SoundController {
     }
   }
 
-  restartMusic({ biome = null, isBoss = false } = {}) {
+  restartMusic({ biome = null, isBoss = false, bossType = null } = {}) {
     if (biome) this.currentBiome = biome;
     this.isBossMusic = Boolean(isBoss);
-    this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: true, fadeIn: true });
+    if (bossType) this.currentBossType = bossType;
+    this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, bossType: this.currentBossType, forceRestart: true, fadeIn: true });
   }
 
-  playMusic({ biome = null, isBoss = null, forceRestart = false, fadeIn = true } = {}) {
+  playMusic({ biome = null, isBoss = null, bossType = null, mode = null, forceRestart = false, fadeIn = true, startStep = 0 } = {}) {
     this.init();
     this.resume();
 
     if (biome) this.currentBiome = biome;
     if (isBoss !== null && isBoss !== undefined) this.isBossMusic = Boolean(isBoss);
-    this.musicMode = 'GAMEPLAY';
+    if (bossType) this.currentBossType = bossType;
+    if (mode) {
+      this.musicMode = mode;
+    } else {
+      this.musicMode = this.isBossMusic ? 'BOSS' : (this.musicMode === 'MENU' ? 'MENU' : 'GAMEPLAY');
+    }
 
     if (!this.musicEnabled) return;
 
-    // Reset ducking filter to open state in case previous game was paused
-    if (this.isPausedDucked) {
+    if (this.isPausedDucked && this.musicMode !== 'PAUSED') {
       this.setPauseDucking(false);
     }
 
-    // If music is already playing smoothly and not forced to restart from step 0:
     if (this.isMusicPlaying && this.schedulerTimer && !forceRestart) {
       return;
     }
@@ -921,7 +1186,7 @@ export class SoundController {
 
     if (this.ctx) {
       const t = this.ctx.currentTime;
-      this.musicStep = 0;
+      this.musicStep = startStep;
       this.nextNoteTime = t + 0.05;
       this.isMusicPlaying = true;
 
@@ -973,36 +1238,56 @@ export class SoundController {
     }
   }
 
-  setPauseDucking(isPaused) {
-    this.isPausedDucked = Boolean(isPaused);
-    if (!this.ctx || !this.musicFilter || !this.musicDuckingGain) return;
-    const t = this.ctx.currentTime;
-    try {
-      this.musicFilter.frequency.cancelScheduledValues(t);
-      this.musicDuckingGain.gain.cancelScheduledValues(t);
-      if (this.isPausedDucked) {
-        // Muffle music: sweep lowpass to 480 Hz and dip gain to 65% for delicious lo-fi pause vibe
-        this.musicFilter.frequency.setTargetAtTime(480, t, 0.08);
-        this.musicDuckingGain.gain.setTargetAtTime(0.65, t, 0.08);
-      } else {
-        // Unmuffle music: sweep lowpass back up to 18000 Hz and restore gain to 100%
-        this.musicFilter.frequency.setTargetAtTime(18000, t, 0.08);
-        this.musicDuckingGain.gain.setTargetAtTime(1.0, t, 0.08);
+  goToMainMenu() {
+    this.musicMode = 'MENU';
+    this.isBossMusic = false;
+    this.currentBossType = null;
+    this.savedMusicState = null;
+    if (this.musicEnabled) {
+      this.playMusic({ mode: 'MENU', forceRestart: true, fadeIn: true });
+    } else {
+      this.stopMusic({ fadeDuration: 0.2 });
+    }
+  }
+
+  setPauseState(isPaused) {
+    if (isPaused) {
+      if (this.musicMode !== 'PAUSED') {
+        this.savedMusicState = {
+          mode: this.musicMode,
+          biome: this.currentBiome,
+          isBoss: this.isBossMusic,
+          bossType: this.currentBossType,
+          step: this.musicStep
+        };
+        this.playMusic({ mode: 'PAUSED', forceRestart: true, fadeIn: true });
       }
-    } catch (e) {
-      if (this.isPausedDucked) {
-        this.musicFilter.frequency.setValueAtTime(480, t);
-        this.musicDuckingGain.gain.setValueAtTime(0.65, t);
+    } else {
+      if (this.savedMusicState) {
+        const s = this.savedMusicState;
+        this.savedMusicState = null;
+        this.playMusic({
+          mode: s.mode,
+          biome: s.biome,
+          isBoss: s.isBoss,
+          bossType: s.bossType,
+          startStep: s.step,
+          forceRestart: true,
+          fadeIn: true
+        });
       } else {
-        this.musicFilter.frequency.setValueAtTime(18000, t);
-        this.musicDuckingGain.gain.setValueAtTime(1.0, t);
+        this.playMusic({ biome: this.currentBiome, isBoss: this.isBossMusic, forceRestart: true, fadeIn: true });
       }
     }
   }
 
+  setPauseDucking(isPaused) {
+    this.setPauseState(isPaused);
+  }
+
   onGameOver() {
     this.musicMode = 'GAMEOVER';
-    this.stopMusic({ fadeDuration: 0.35 });
+    this.stopMusic({ fadeDuration: 0.25 });
     this.playGameOverJingle();
   }
 
@@ -1010,14 +1295,13 @@ export class SoundController {
     if (!this.sfxEnabled || !this.ctx || this.isMuted) return;
     this.resume();
     const t = this.ctx.currentTime + 0.05;
-    // Nostalgic retro arcade defeat descending minor motif
     const notes = [
       { freq: 440.00, dur: 0.16 }, // A4
       { freq: 392.00, dur: 0.16 }, // G4
       { freq: 349.23, dur: 0.16 }, // F4
       { freq: 329.63, dur: 0.22 }, // E4
       { freq: 293.66, dur: 0.24 }, // D4
-      { freq: 220.00, dur: 0.55 }  // A3 tonic
+      { freq: 220.00, dur: 0.55 }  // A3
     ];
 
     let offset = 0;
@@ -1051,6 +1335,13 @@ export class SoundController {
 
       offset += note.dur * 0.85;
     });
+
+    // Automatically transition to the reflective Game Over ambient loop
+    setTimeout(() => {
+      if (this.musicMode === 'GAMEOVER' && this.musicEnabled) {
+        this.playMusic({ mode: 'GAMEOVER', forceRestart: true, fadeIn: true });
+      }
+    }, 1500);
   }
 
   onVictory() {
@@ -1106,9 +1397,9 @@ export class SoundController {
       osc2.stop(noteTime + n.dur + 0.05);
     });
 
-    // Start looped celebratory victory synth track after fanfare concludes
+    // Start looped celebratory victory anthem after fanfare concludes
     setTimeout(() => {
-      if (this.musicMode === 'VICTORY') {
+      if (this.musicMode === 'VICTORY' && this.musicEnabled) {
         this.playVictoryLoop();
       }
     }, 1750);
@@ -1116,146 +1407,20 @@ export class SoundController {
 
   playVictoryLoop() {
     if (!this.musicEnabled || !this.ctx) return;
-    this.musicMode = 'VICTORY';
-    this.musicStep = 0;
-    this.nextNoteTime = this.ctx.currentTime + 0.05;
-    this.isMusicPlaying = true;
-    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
-    this.schedulerTimer = setInterval(() => {
-      this.scheduleMusicLookahead();
-    }, 25);
-  }
-
-  goToMainMenu() {
-    this.musicMode = 'MENU';
-    this.isBossMusic = false;
-    this.stopMusic({ fadeDuration: 0.3 });
-  }
-
-  getMusicTrack() {
-    if (this.musicMode === 'VICTORY') {
-      return {
-        bpm: 140,
-        bassWave: 'sawtooth',
-        leadWave: 'triangle',
-        bassSeq: [130.81, 0, 130.81, 130.81, 164.81, 0, 164.81, 164.81, 174.61, 0, 174.61, 174.61, 196.0, 0, 196.0, 196.0],
-        leadSeq: [523.25, 0, 659.25, 783.99, 0, 1046.5, 0, 783.99, 880.0, 0, 1046.5, 1174.66, 0, 1318.51, 1046.5, 0],
-        arpSeq:  [1046.5, 0, 1318.51, 0, 1567.98, 0, 2093.0, 0, 1760.0, 0, 2093.0, 0, 1567.98, 0, 1318.51, 0],
-        hasSubKick: true
-      };
-    }
-
-    // 8 distinct tracks: 4 World exploration tracks + 4 intense Boss battle tracks!
-    if (this.isBossMusic) {
-      switch (this.currentBiome) {
-        case 'CANYON':
-          // Boss 2: Goliath Zeppelin (Heavy Steampunk Industrial Pulse)
-          return {
-            bpm: 148,
-            bassWave: 'sawtooth',
-            leadWave: 'square',
-            bassSeq: [73.42, 0, 73.42, 82.41, 73.42, 0, 87.31, 98.0, 73.42, 0, 73.42, 110.0, 98.0, 87.31, 82.41, 65.41],
-            leadSeq: [293.66, 293.66, 0, 329.63, 349.23, 0, 392.0, 0, 440.0, 392.0, 349.23, 329.63, 293.66, 0, 349.23, 392.0],
-            arpSeq:  [0, 587.33, 0, 659.25, 0, 698.46, 0, 783.99, 0, 587.33, 0, 659.25, 0, 783.99, 0, 880.0],
-            hasSubKick: true
-          };
-        case 'CYBER_NIGHT':
-          // Boss 3: Ultimate Clay Leviathan (Fast Acid Dark Synth Cosmic Showdown)
-          return {
-            bpm: 156,
-            bassWave: 'sawtooth',
-            leadWave: 'sawtooth',
-            bassSeq: [82.41, 82.41, 92.50, 82.41, 110.0, 82.41, 98.0, 123.47, 82.41, 82.41, 130.81, 123.47, 110.0, 98.0, 92.50, 73.42],
-            leadSeq: [329.63, 0, 369.99, 392.0, 0, 440.0, 493.88, 0, 523.25, 493.88, 440.0, 392.0, 369.99, 0, 440.0, 493.88],
-            arpSeq:  [659.25, 0, 739.99, 0, 783.99, 0, 880.0, 0, 987.77, 0, 880.0, 0, 783.99, 0, 739.99, 0],
-            hasSubKick: true
-          };
-        case 'COSMIC_VOID':
-          // Boss 4: Omega Clay Colossus (The Climax Apocalyptic Final Showdown!)
-          return {
-            bpm: 164,
-            bassWave: 'sawtooth',
-            leadWave: 'square',
-            bassSeq: [65.41, 65.41, 77.78, 65.41, 87.31, 65.41, 98.0, 116.54, 65.41, 65.41, 130.81, 116.54, 98.0, 87.31, 77.78, 58.27],
-            leadSeq: [523.25, 0, 587.33, 622.25, 0, 698.46, 783.99, 0, 830.61, 783.99, 698.46, 622.25, 587.33, 0, 698.46, 783.99],
-            arpSeq:  [1046.5, 0, 1174.66, 0, 1244.51, 0, 1396.91, 0, 1567.98, 0, 1396.91, 0, 1244.51, 0, 1174.66, 0],
-            hasSubKick: true
-          };
-        case 'VALLEY':
-        default:
-          // Boss 1: Iron Clay Dreadnought (Driving Militaristic March)
-          return {
-            bpm: 142,
-            bassWave: 'sawtooth',
-            leadWave: 'square',
-            bassSeq: [73.42, 73.42, 0, 87.31, 73.42, 73.42, 98.0, 87.31, 73.42, 73.42, 0, 110.0, 98.0, 87.31, 73.42, 65.41],
-            leadSeq: [293.66, 0, 311.13, 293.66, 0, 349.23, 392.0, 0, 293.66, 349.23, 440.0, 0, 415.3, 392.0, 349.23, 311.13],
-            arpSeq:  [0, 587.33, 0, 622.25, 0, 698.46, 0, 784.0, 0, 880.0, 0, 784.0, 0, 698.46, 0, 587.33],
-            hasSubKick: true
-          };
-      }
-    }
-
-    // World Exploration Soundtracks (Peaceful, Groovy, Thematic, Polished)
-    switch (this.currentBiome) {
-      case 'CANYON':
-        // World 2: Sunset Canyon (Dorian Spanish/Western Steampunk Vibe)
-        return {
-          bpm: 125,
-          bassWave: 'triangle',
-          leadWave: 'triangle',
-          bassSeq: [73.42, 0, 0, 110.0, 73.42, 0, 98.0, 0, 82.41, 0, 0, 110.0, 73.42, 82.41, 87.31, 98.0],
-          leadSeq: [293.66, 0, 329.63, 0, 349.23, 392.0, 0, 440.0, 0, 392.0, 349.23, 0, 329.63, 0, 293.66, 0],
-          arpSeq:  [0, 440.0, 523.25, 0, 587.33, 0, 440.0, 0, 0, 392.0, 440.0, 0, 523.25, 0, 392.0, 0],
-          hasSubKick: false
-        };
-      case 'CYBER_NIGHT':
-        // World 3: Midnight Cyber-Clay (Lush 80s Synthwave / Neon Stratosphere)
-        return {
-          bpm: 132,
-          bassWave: 'sawtooth',
-          leadWave: 'sawtooth',
-          bassSeq: [92.50, 0, 92.50, 0, 82.41, 0, 82.41, 0, 73.42, 0, 73.42, 0, 82.41, 0, 87.31, 0],
-          leadSeq: [369.99, 0, 440.0, 0, 493.88, 554.37, 0, 440.0, 369.99, 0, 329.63, 0, 369.99, 0, 440.0, 0],
-          arpSeq:  [739.99, 880.0, 987.77, 880.0, 739.99, 659.25, 739.99, 880.0, 987.77, 1108.73, 987.77, 880.0, 739.99, 659.25, 739.99, 880.0],
-          hasSubKick: true
-        };
-      case 'COSMIC_VOID':
-        // World 4: The Cosmic Singularity (Progressive Celestial Space Opera)
-        return {
-          bpm: 136,
-          bassWave: 'triangle',
-          leadWave: 'sine',
-          bassSeq: [61.74, 0, 61.74, 92.50, 73.42, 0, 110.0, 0, 82.41, 0, 82.41, 123.47, 92.50, 0, 110.0, 92.50],
-          leadSeq: [493.88, 0, 554.37, 0, 587.33, 659.25, 0, 739.99, 0, 659.25, 587.33, 0, 554.37, 0, 493.88, 0],
-          arpSeq:  [987.77, 0, 1108.73, 0, 1174.66, 0, 1318.51, 0, 1479.98, 0, 1318.51, 0, 1174.66, 0, 1108.73, 0],
-          hasSubKick: true
-        };
-      case 'VALLEY':
-      default:
-        // World 1: Clay Valley (Upbeat, Whimsical, Organic Clay Odyssey)
-        return {
-          bpm: 120,
-          bassWave: 'triangle',
-          leadWave: 'square',
-          bassSeq: [110, 0, 110, 130.8, 146.8, 0, 164.8, 130.8, 110, 0, 110, 98, 110, 123.5, 130.8, 146.8],
-          leadSeq: [440, 0, 523.25, 0, 587.33, 659.25, 0, 523.25, 440, 392, 440, 0, 523.25, 0, 659.25, 0],
-          arpSeq:  [0, 523.25, 0, 659.25, 0, 783.99, 0, 1046.5, 0, 783.99, 0, 659.25, 0, 523.25, 0, 783.99],
-          hasSubKick: false
-        };
-    }
+    this.playMusic({ mode: 'VICTORY', forceRestart: true, fadeIn: true });
   }
 
   scheduleMusicLookahead() {
     if (!this.musicEnabled || !this.ctx || this.ctx.state !== 'running') return;
 
-    // Resync protection: prevent burst of missed steps after background tab switch or sleep
     if (this.nextNoteTime < this.ctx.currentTime - 0.20) {
       this.nextNoteTime = this.ctx.currentTime + 0.04;
       this.musicStep = Math.floor(this.musicStep / 16) * 16;
     }
 
     const track = this.getMusicTrack();
+    if (!track) return;
+
     const stepDuration = 60 / track.bpm / 4; // 16th notes
     const lookaheadTime = 0.12; // 120ms lookahead window
 
@@ -1269,125 +1434,265 @@ export class SoundController {
   }
 
   scheduleMusicStep(track, stepIndex, time, stepDuration) {
-    const idx = stepIndex % 16;
-    const bassFreq = track.bassSeq[idx];
-    const leadFreq = track.leadSeq[idx];
-    const arpFreq = track.arpSeq[idx];
+    const totalSteps = track.totalSteps || 128;
+    const idx = stepIndex % totalSteps;
 
-    // 1. Bass Voice
+    // 1. Polyphonic Chord Pad Channel (Highpass decoupled from bass + subtle stereo widening)
+    if (track.chords && track.chords[idx]) {
+      const chordDuration = (track.chordDuration || 16) * stepDuration;
+      this.schedulePadChord(track.chords[idx], time, chordDuration, idx);
+    }
+
+    // 2. Bass Channel (Warm, punchy, tightly filtered, centered)
+    const bassFreq = track.bassSeq ? track.bassSeq[idx] : 0;
     if (bassFreq > 0) {
-      const bOsc = this.ctx.createOscillator();
-      const bGain = this.ctx.createGain();
-      const bFilter = this.ctx.createBiquadFilter();
-
-      bOsc.type = track.bassWave;
-      bOsc.frequency.setValueAtTime(bassFreq, time);
-
-      bFilter.type = 'lowpass';
-      bFilter.frequency.setValueAtTime(track.bassWave === 'sawtooth' ? 1400 : 750, time);
-      bFilter.frequency.exponentialRampToValueAtTime(180, time + stepDuration * 0.9);
-
-      bGain.gain.setValueAtTime(0.001, time);
-      bGain.gain.linearRampToValueAtTime(this.isBossMusic ? 0.32 : 0.26, time + 0.008);
-      bGain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration * 0.95);
-
-      bOsc.connect(bFilter);
-      bFilter.connect(bGain);
-      bGain.connect(this.musicGain);
-
-      bOsc.start(time);
-      bOsc.stop(time + stepDuration);
+      this.scheduleBass(bassFreq, time, stepDuration, track.bassWave || 'triangle', track.bassFilter || 650);
     }
 
-    // 2. Lead Melody Voice
+    // 3. Lead Melody Channel (Dual Detuned Silky Lead with delayed pitch vibrato LFO)
+    const leadFreq = track.leadSeq ? track.leadSeq[idx] : 0;
     if (leadFreq > 0) {
-      const lOsc = this.ctx.createOscillator();
-      const lGain = this.ctx.createGain();
-      const lFilter = this.ctx.createBiquadFilter();
-
-      lOsc.type = track.leadWave;
-      lOsc.frequency.setValueAtTime(leadFreq, time);
-
-      // Subtle warm filter so lead sounds soft and pleasing
-      lFilter.type = 'lowpass';
-      lFilter.frequency.setValueAtTime(track.leadWave === 'sawtooth' ? 2200 : 1600, time);
-
-      lGain.gain.setValueAtTime(0.001, time);
-      lGain.gain.linearRampToValueAtTime(this.isBossMusic ? 0.16 : 0.13, time + 0.012);
-      lGain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration * 1.4);
-
-      lOsc.connect(lFilter);
-      lFilter.connect(lGain);
-      lGain.connect(this.musicGain);
-
-      // Send subtle portion to stereo delay
-      if (this.delayNode) {
-        lGain.connect(this.delayNode);
-      }
-
-      lOsc.start(time);
-      lOsc.stop(time + stepDuration * 1.45);
+      const hasVibrato = track.leadVibrato !== false;
+      this.scheduleLead(leadFreq, time, stepDuration, track.leadWave || 'triangle', track.leadFilter || 2400, track.delaySend || 0.28, hasVibrato);
     }
 
-    // 3. Arpeggiator / Harmonic Bell Voice
-    if (arpFreq > 0 && Math.random() > 0.08) {
-      const aOsc = this.ctx.createOscillator();
-      const aGain = this.ctx.createGain();
-
-      aOsc.type = 'sine';
-      aOsc.frequency.setValueAtTime(arpFreq, time);
-
-      aGain.gain.setValueAtTime(0.001, time);
-      aGain.gain.linearRampToValueAtTime(this.isBossMusic ? 0.12 : 0.09, time + 0.005);
-      aGain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration * 0.8);
-
-      aOsc.connect(aGain);
-      aGain.connect(this.musicGain);
-
-      if (this.delayNode) {
-        aGain.connect(this.delayNode);
-      }
-
-      aOsc.start(time);
-      aOsc.stop(time + stepDuration * 0.85);
+    // 4. Arpeggiator / Crystal Bell Channel (Hypnotic Ping-Pong Stereo Panning)
+    const arpFreq = track.arpSeq ? track.arpSeq[idx] : 0;
+    if (arpFreq > 0) {
+      this.scheduleArp(arpFreq, time, stepDuration, idx);
     }
 
-    // 4. Rhythm Section (Percussion: Kick, Snare, Hi-hats)
-    if (idx === 0 || idx === 8) {
-      // Punchy warm kick drum
-      this.scheduleKick(time, track.hasSubKick || this.isBossMusic);
+    // 5. Rhythm & Percussion Section
+    if (track.kickSet && track.kickSet.has(idx)) {
+      this.scheduleKick(time, this.isBossMusic || track.kickHeavy);
     }
 
-    if (idx === 4 || idx === 12) {
-      // Snare drum on 2 and 4
+    if (track.snareSet && track.snareSet.has(idx)) {
       this.scheduleSnare(time, this.isBossMusic);
     }
 
-    if (idx % 2 === 0) {
-      // Hi-hat groove
-      const isAccent = (idx === 2 || idx === 6 || idx === 10 || idx === 14);
-      this.scheduleHiHat(time, isAccent ? 0.06 : 0.03);
+    if (track.hatSet && track.hatSet.has(idx)) {
+      const isAccent = (idx % 4 === 2) || (idx % 8 === 0);
+      this.scheduleHiHat(time, isAccent, idx);
     }
+
+    if (track.percSet && track.percSet.has(idx)) {
+      this.scheduleWoodblock(time, 780, 0.06);
+    }
+  }
+
+  schedulePadChord(chordNotes, time, duration, stepIdx = 0) {
+    if (!this.ctx || !chordNotes || chordNotes.length === 0 || !this.musicEnabled) return;
+    const padGain = this.ctx.createGain();
+
+    // Lowpass filter for analog warmth
+    const padLowpass = this.ctx.createBiquadFilter();
+    padLowpass.type = 'lowpass';
+    padLowpass.frequency.setValueAtTime(1450, time);
+    padLowpass.Q.setValueAtTime(0.7, time);
+
+    // Highpass filter at 170Hz: Decouples chords from bassline, eliminating acoustic mud
+    const padHighpass = this.ctx.createBiquadFilter();
+    padHighpass.type = 'highpass';
+    padHighpass.frequency.setValueAtTime(170, time);
+    padHighpass.Q.setValueAtTime(0.7, time);
+
+    const noteGain = 0.085 / Math.max(1, chordNotes.length);
+    padGain.gain.setValueAtTime(0.0001, time);
+    padGain.gain.linearRampToValueAtTime(noteGain, time + 0.08); // 80ms gentle plush attack
+    padGain.gain.setValueAtTime(noteGain, time + Math.max(0.08, duration - 0.10));
+    padGain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    padLowpass.connect(padHighpass);
+    padHighpass.connect(padGain);
+
+    if (this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      // Gentle stereo drift between chords
+      const panVal = ((stepIdx / 16) % 2 === 0) ? -0.15 : 0.15;
+      panner.pan.setValueAtTime(panVal, time);
+      padGain.connect(panner);
+      panner.connect(this.musicGain);
+    } else {
+      padGain.connect(this.musicGain);
+    }
+
+    chordNotes.forEach((freq, noteIdx) => {
+      if (!freq || freq <= 0) return;
+      const osc = this.ctx.createOscillator();
+      osc.type = 'triangle';
+      // Subtle micro-detuning across voices creates lush chorus width
+      const detuneFactor = 1.0 + (noteIdx - Math.floor(chordNotes.length / 2)) * 0.0012;
+      osc.frequency.setValueAtTime(freq * detuneFactor, time);
+      osc.connect(padLowpass);
+      osc.start(time);
+      osc.stop(time + duration + 0.02);
+    });
+  }
+
+  scheduleLead(freq, time, stepDuration, wave = 'triangle', filterCutoff = 2400, delaySend = 0.28, hasVibrato = true) {
+    if (!this.ctx || !freq || freq <= 0 || !this.musicEnabled) return;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc1.type = wave;
+    osc2.type = 'triangle';
+    osc1.frequency.setValueAtTime(freq, time);
+    osc2.frequency.setValueAtTime(freq * 1.0024, time); // Silky warm +4.1 cents chorus
+
+    // Expressive Filter Envelope
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(filterCutoff * 1.15, time);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(400, filterCutoff * 0.55), time + stepDuration * 1.1);
+    filter.Q.setValueAtTime(1.6, time);
+
+    const targetGain = this.isBossMusic ? 0.15 : 0.125;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(targetGain, time + 0.012); // Clean 12ms attack (zero click)
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + stepDuration * 1.35);
+
+    // Natural Delayed Pitch Vibrato LFO (Singing analog expressiveness)
+    if (hasVibrato && stepDuration >= 0.11) {
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(5.2, time); // 5.2 Hz human vocal/instrument vibrato rate
+
+      lfoGain.gain.setValueAtTime(0, time);
+      lfoGain.gain.setValueAtTime(0, time + 0.07); // 70ms natural delay before vibrato blooms
+      lfoGain.gain.linearRampToValueAtTime(3.4, time + Math.min(0.24, stepDuration * 0.9)); // 3.4 Hz depth
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.frequency);
+      lfoGain.connect(osc2.frequency);
+
+      lfo.start(time);
+      lfo.stop(time + stepDuration * 1.4);
+    }
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.musicGain);
+
+    if (this.delayNode && delaySend > 0) {
+      const delaySendGain = this.ctx.createGain();
+      delaySendGain.gain.setValueAtTime(delaySend, time);
+      gain.connect(delaySendGain);
+      delaySendGain.connect(this.delayNode);
+    }
+
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(time + stepDuration * 1.4);
+    osc2.stop(time + stepDuration * 1.4);
+  }
+
+  scheduleBass(freq, time, stepDuration, wave = 'triangle', filterCutoff = 650) {
+    if (!this.ctx || !freq || freq <= 0 || !this.musicEnabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = wave;
+    osc.frequency.setValueAtTime(freq, time);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(filterCutoff, time);
+    filter.frequency.exponentialRampToValueAtTime(130, time + stepDuration * 0.85);
+    filter.Q.setValueAtTime(1.2, time);
+
+    const targetGain = this.isBossMusic ? 0.26 : 0.22;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(targetGain, time + 0.007);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + stepDuration * 0.95);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.musicGain); // Centered punch
+
+    osc.start(time);
+    osc.stop(time + stepDuration);
+  }
+
+  scheduleArp(freq, time, stepDuration, stepIdx = 0) {
+    if (!this.ctx || !freq || freq <= 0 || !this.musicEnabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3800, time);
+    filter.frequency.exponentialRampToValueAtTime(1200, time + stepDuration * 0.85);
+
+    const targetGain = this.isBossMusic ? 0.095 : 0.075;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(targetGain, time + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + stepDuration * 0.85);
+
+    osc.connect(filter);
+    filter.connect(gain);
+
+    // Ping-Pong Stereo Panning: Alternates left and right on every 16th note!
+    if (this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      const panVal = (stepIdx % 2 === 0) ? -0.36 : 0.36;
+      panner.pan.setValueAtTime(panVal, time);
+      gain.connect(panner);
+      panner.connect(this.musicGain);
+    } else {
+      gain.connect(this.musicGain);
+    }
+
+    if (this.delayNode) {
+      const send = this.ctx.createGain();
+      send.gain.setValueAtTime(0.24, time);
+      gain.connect(send);
+      send.connect(this.delayNode);
+    }
+
+    osc.start(time);
+    osc.stop(time + stepDuration * 0.9);
   }
 
   scheduleKick(time, heavy = false) {
     if (!this.ctx || !this.musicEnabled) return;
+
+    // Body sub oscillator
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(heavy ? 120 : 90, time);
-    osc.frequency.exponentialRampToValueAtTime(32, time + 0.12);
+    osc.frequency.setValueAtTime(heavy ? 130 : 100, time);
+    osc.frequency.exponentialRampToValueAtTime(34, time + 0.12);
 
     gain.gain.setValueAtTime(0.001, time);
-    gain.gain.linearRampToValueAtTime(heavy ? 0.42 : 0.3, time + 0.005);
+    gain.gain.linearRampToValueAtTime(heavy ? 0.44 : 0.32, time + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.14);
 
     osc.connect(gain);
     gain.connect(this.musicGain);
-
     osc.start(time);
     osc.stop(time + 0.15);
+
+    // Transient attack click (ensures crisp acoustic punch)
+    const click = this.ctx.createOscillator();
+    const clickGain = this.ctx.createGain();
+    click.type = 'triangle';
+    click.frequency.setValueAtTime(260, time);
+    click.frequency.exponentialRampToValueAtTime(45, time + 0.018);
+
+    clickGain.gain.setValueAtTime(0.12, time);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+
+    click.connect(clickGain);
+    clickGain.connect(this.musicGain);
+    click.start(time);
+    click.stop(time + 0.022);
   }
 
   scheduleSnare(time, isBoss = false) {
@@ -1399,11 +1704,11 @@ export class SoundController {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'highpass';
-    filter.frequency.setValueAtTime(1000, time);
+    filter.frequency.setValueAtTime(1100, time);
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0.001, time);
-    gain.gain.linearRampToValueAtTime(isBoss ? 0.16 : 0.11, time + 0.004);
+    gain.gain.linearRampToValueAtTime(isBoss ? 0.16 : 0.115, time + 0.003);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.11);
 
     noise.connect(filter);
@@ -1417,39 +1722,84 @@ export class SoundController {
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(180, time);
-    osc.frequency.exponentialRampToValueAtTime(70, time + 0.07);
+    osc.frequency.setValueAtTime(210, time);
+    osc.frequency.exponentialRampToValueAtTime(75, time + 0.065);
 
     oscGain.gain.setValueAtTime(0.001, time);
-    oscGain.gain.linearRampToValueAtTime(0.14, time + 0.004);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.07);
+    oscGain.gain.linearRampToValueAtTime(0.14, time + 0.003);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.065);
 
     osc.connect(oscGain);
     oscGain.connect(this.musicGain);
 
     osc.start(time);
-    osc.stop(time + 0.08);
+    osc.stop(time + 0.075);
   }
 
-  scheduleHiHat(time, volume = 0.04) {
+  scheduleHiHat(time, isAccent = false, stepIdx = 0) {
     if (!this.ctx || !this.musicEnabled || !this.whiteNoiseBuffer) return;
     const noise = this.ctx.createBufferSource();
     noise.buffer = this.whiteNoiseBuffer;
 
     const filter = this.ctx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.setValueAtTime(6500, time);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(7400, time);
+    filter.Q.setValueAtTime(2.8, time);
 
+    const volume = isAccent ? 0.065 : 0.035;
+    const decay = isAccent ? 0.055 : 0.030;
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0.001, time);
     gain.gain.linearRampToValueAtTime(volume, time + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
 
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(this.musicGain);
+
+    if (this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.setValueAtTime(0.20, time); // Natural drum kit hi-hat placement
+      gain.connect(panner);
+      panner.connect(this.musicGain);
+    } else {
+      gain.connect(this.musicGain);
+    }
 
     noise.start(time);
-    noise.stop(time + 0.04);
+    noise.stop(time + decay + 0.005);
+  }
+
+  scheduleWoodblock(time, pitch = 780, volume = 0.06) {
+    if (!this.ctx || !this.musicEnabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(pitch, time);
+    osc.frequency.exponentialRampToValueAtTime(pitch * 0.45, time + 0.04);
+
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(pitch, time);
+    filter.Q.setValueAtTime(4.0, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(volume, time + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.045);
+
+    osc.connect(filter);
+    filter.connect(gain);
+
+    if (this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.setValueAtTime(-0.22, time); // Natural percussion placement
+      gain.connect(panner);
+      panner.connect(this.musicGain);
+    } else {
+      gain.connect(this.musicGain);
+    }
+
+    osc.start(time);
+    osc.stop(time + 0.05);
   }
 }

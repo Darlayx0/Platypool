@@ -114,15 +114,15 @@ export class HUD {
     // 2. Lives Remaining & Horizontal Fleet of Ships (Bottom Left - Frameless Floating)
     this.drawLivesPanel(ctx, player);
 
-    // 3. Minimal Circular Weapon Countdown (Bottom Right - Only for Special Weapons)
-    this.drawWeaponGauge(ctx, player);
+    // 3. Dynamic Skills & Weapons Dock (Bottom Right - Special Weapon, Speed Boost [X], Pulse Fleet [Z])
+    this.drawSkillsAndWeaponsDock(ctx, player);
 
-    // 4. UHD Boss Battle Bar (Top Center - Compact & Solid Dynamic Color)
+    // 5. UHD Boss Battle Bar (Top Center - Compact & Solid Dynamic Color)
     if (this.bossHudAlpha > 0.01 && boss) {
       this.drawBossBar(ctx, boss);
     }
 
-    // 5. Centered Announcement Banner
+    // 7. Centered Announcement Banner
     if (this.bannerLife > 0) {
       this.drawBanner(ctx);
     }
@@ -249,30 +249,66 @@ export class HUD {
     ctx.restore();
   }
 
-  drawWeaponGauge(ctx, player) {
-    // If no player or active weapon is normal Pea-Shooter -> DO NOT DISPLAY!
-    if (!player || player.activeWeapon === 'NORMAL') {
+  // ---------------------------------------------------------------------------
+  // Dynamic Skills & Weapons Dock (Bottom Right)
+  // "jika peningkat senjata normal habis dan juga pulse habis, maka label tidak ditampilkan"
+  // "pada HUD pulse... desainnya seperti deretan nyawa pesawat, tanpa kontainer dan ikon berbentuk pulse yang modern dan simpel"
+  // "saat senjata spesial aktif maka peningkat senjata normal otomatis nonaktif dan diblokir"
+  // ---------------------------------------------------------------------------
+  drawSkillsAndWeaponsDock(ctx, player) {
+    if (!player) return;
+
+    const hasSpecial = Boolean(player.activeWeapon && player.activeWeapon !== 'NORMAL');
+    const timeLeft = Math.max(0, player.speedBoostTimeLeft || 0);
+    const hasSpeedBoost = (timeLeft > 0);
+    const pulseCharges = Math.max(0, player.pulseCharges || 0);
+    const hasPulse = (pulseCharges > 0);
+
+    // Jika seluruh skill/peningkat habis dan senjata normal -> Layar bersih tanpa label
+    if (!hasSpecial && !hasSpeedBoost && !hasPulse) {
       return;
     }
 
-    const weapons = {
-      SPREAD: { tag: 'SPR', color: '#ff1744', dot: '#ff5252' },
-      LASER: { tag: 'LSR', color: '#00e5ff', dot: '#29b6f6' },
-      HOMING: { tag: 'HOM', color: '#00e676', dot: '#69f0ae' },
-      FLAK: { tag: 'FLK', color: '#ffd600', dot: '#ffb300' },
-      PLASMA: { tag: 'PLS', color: '#e040fb', dot: '#ba68c8' }
-    };
-
-    const cur = weapons[player.activeWeapon] || { tag: 'WPN', color: '#00e5ff', dot: '#29b6f6' };
-    const isExpiring = !player.infiniteWeapon && player.weaponTimeLeft <= 3.5;
-    const ratio = player.infiniteWeapon ? 1.0 : Math.max(0, Math.min(1, player.weaponTimeLeft / (player.maxWeaponTime || 15.0)));
-
-    // Position: Sisi Kanan Bawah (Bottom-Right corner)
-    const cx = 1234;
-    const cy = 674;
+    let curRightX = 1254;
+    const cy = 668;
     const gaugeR = 24;
 
     ctx.save();
+
+    // 1. Special Weapon Gauge (Hanya jika senjata aktif bukan NORMAL)
+    if (hasSpecial) {
+      const cx = curRightX - gaugeR;
+      this.renderSpecialWeaponGauge(ctx, player, cx, cy, gaugeR);
+      curRightX -= (gaugeR * 2 + 18);
+    }
+
+    // 2. Peningkat Senjata Normal [X] (Hanya jika sisa durasi > 0)
+    if (hasSpeedBoost) {
+      const cx = curRightX - gaugeR;
+      this.renderSpeedBoostGauge(ctx, player, cx, cy, gaugeR, hasSpecial, timeLeft);
+      curRightX -= (gaugeR * 2 + 20);
+    }
+
+    // 3. Pulse Fleet (Deretan pulse seperti deretan nyawa pesawat, tanpa kontainer)
+    if (hasPulse) {
+      this.renderPulseFleet(ctx, player, curRightX, pulseCharges);
+    }
+
+    ctx.restore();
+  }
+
+  renderSpecialWeaponGauge(ctx, player, cx, cy, gaugeR) {
+    const weapons = {
+      SPREAD: { color: '#ff1744', dot: '#ff5252' },
+      LASER: { color: '#00e5ff', dot: '#29b6f6' },
+      HOMING: { color: '#00e676', dot: '#69f0ae' },
+      FLAK: { color: '#ffd600', dot: '#ffb300' },
+      PLASMA: { color: '#e040fb', dot: '#ba68c8' }
+    };
+
+    const cur = weapons[player.activeWeapon] || { color: '#00e5ff', dot: '#29b6f6' };
+    const isExpiring = !player.infiniteWeapon && player.weaponTimeLeft <= 3.5;
+    const ratio = player.infiniteWeapon ? 1.0 : Math.max(0, Math.min(1, player.weaponTimeLeft / (player.maxWeaponTime || 15.0)));
 
     // Subtle ambient shadow
     ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
@@ -280,14 +316,14 @@ export class HUD {
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 3;
 
-    // 1. Circular Background Ring Track
+    // Background Ring Track
     ctx.lineWidth = 4.5;
     ctx.strokeStyle = 'rgba(20, 15, 12, 0.65)';
     ctx.beginPath();
     ctx.arc(cx, cy, gaugeR, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 2. Active Circular Countdown Arc (No numbers!)
+    // Active Circular Countdown Arc (No numbers!)
     if (ratio > 0.005) {
       const pulseAlpha = isExpiring ? 0.6 + Math.sin(this.hudTick * 14) * 0.4 : 1.0;
       ctx.globalAlpha = pulseAlpha;
@@ -298,31 +334,134 @@ export class HUD {
       ctx.shadowBlur = isExpiring ? 10 : 5;
 
       ctx.beginPath();
-      const startAngle = -Math.PI / 2; // 12 o'clock
+      const startAngle = -Math.PI / 2;
       const endAngle = startAngle + Math.PI * 2 * ratio;
       ctx.arc(cx, cy, gaugeR, startAngle, endAngle);
       ctx.stroke();
     }
 
-    // Reset shadow and alpha for emblem
+    // Reset shadow & alpha
     ctx.globalAlpha = 1.0;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 2;
 
-    // 3. Center Clay Emblem with Weapon Symbol Tag
-    ClayRenderer.drawClayBlob(ctx, cx, cy, 15, 15, cur.dot, '#1a100a');
+    // Center Clay Emblem with Weapon Icon (NO letters)
+    ClayRenderer.drawClayBlob(ctx, cx, cy, 16, 16, cur.dot, '#1a100a');
+    ClayRenderer.drawWeaponIcon(ctx, cx, cy, player.activeWeapon, 13, '#ffffff');
+  }
 
-    ctx.font = 'bold 10px "Luckiest Guy", cursive';
-    ctx.fillStyle = '#ffffff';
+  renderSpeedBoostGauge(ctx, player, cx, cy, gaugeR, isBlocked, timeLeft) {
+    const maxDuration = player.speedBoostMaxDuration || 30.0;
+    const speedRatio = Math.max(0, Math.min(1, timeLeft / maxDuration));
+    const isSpeedActive = Boolean(!isBlocked && player.speedBoostActive && timeLeft > 0);
+
+    // Subtle ambient shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+
+    // 1. Background Ring Track
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = 'rgba(20, 15, 12, 0.65)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, gaugeR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. Active Circular Duration Ring (cincin durasi berdasarkan max durasi)
+    if (speedRatio > 0.005) {
+      const ringColor = isBlocked ? '#546e7a' : (isSpeedActive ? '#ff9100' : '#ffb74d');
+      const glowBlur = isBlocked ? 2 : (isSpeedActive ? (8 + Math.sin(this.hudTick * 12) * 4) : 4);
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = 4.5;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = ringColor;
+      ctx.shadowBlur = glowBlur;
+
+      ctx.beginPath();
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + Math.PI * 2 * speedRatio;
+      ctx.arc(cx, cy, gaugeR, startAngle, endAngle);
+      ctx.stroke();
+    }
+
+    // Reset shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+
+    // 3. Center Clay Emblem
+    const speedBg = isBlocked ? '#263238' : (isSpeedActive ? '#e65100' : '#4e342e');
+    const speedBorder = isBlocked ? '#37474f' : (isSpeedActive ? '#ffb74d' : '#8d6e63');
+    ClayRenderer.drawClayBlob(ctx, cx, cy, 16, 16, speedBg, speedBorder);
+
+    // 4. Speed Booster Vector Icon
+    ctx.save();
+    if (isBlocked) ctx.globalAlpha = 0.35;
+    ClayRenderer.drawWeaponIcon(ctx, cx, cy, 'SPEED_BOOST', 12, isSpeedActive ? '#fff9c4' : '#ffffff');
+    ctx.restore();
+
+    // 5. Khusus Peningkat Senjata Normal: Diberikan Label Waktu Durasi
+    ctx.font = 'bold 11px "Luckiest Guy", cursive';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowBlur = 2;
-    ctx.fillText(cur.tag, cx, cy);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 4;
+    ctx.fillStyle = isBlocked ? '#90a4ae' : (isSpeedActive ? '#ffeb3b' : '#ffe082');
+    ctx.fillText(`${Math.ceil(timeLeft)}s`, cx, cy - 28);
+
+    // 6. Compact Hotkey Badge [X] Below (Menampilkan status KUNCI jika diblokir)
+    const pillW = isBlocked ? 44 : 34;
+    const pillH = 14;
+    const pillCol = isBlocked ? '#263238' : (isSpeedActive ? '#ff9100' : '#5d4037');
+    const pillBorder = isBlocked ? '#455a64' : (isSpeedActive ? '#ffe082' : '#8d6e63');
+    ClayRenderer.drawClayCapsule(ctx, cx, cy + 28, pillW, pillH, pillCol, pillBorder);
+    ctx.font = 'bold 9px "Luckiest Guy", cursive';
+    ctx.fillStyle = isBlocked ? '#ff5252' : (isSpeedActive ? '#ffffff' : '#ffecb3');
+    const pillText = isBlocked ? '[X] BLOK' : (isSpeedActive ? '[X] ON' : '[X]');
+    ctx.fillText(pillText, cx, cy + 28);
+  }
+
+  renderPulseFleet(ctx, player, rightX, pulseCharges) {
+    const pulseMax = Math.max(1, player.pulseMaxStock || 1);
+    const pulseCount = Math.min(10, pulseCharges);
+    const spacing = 26;
+    const badgeY = 654;
+    const startY = 688;
+
+    ctx.save();
+
+    // 1. Floating Text Header (Tanpa Kontainer - Identik dengan Floating Lives Indicator)
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+
+    ctx.font = 'bold 13px "Luckiest Guy", cursive';
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText(`⚡ PULSE: ${pulseCharges} / ${pulseMax} [Z]`, rightX, badgeY);
+
+    // 2. Pulse Tray (Deretan ikon pulse modern dan simpel, tanpa kontainer)
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    for (let i = 0; i < pulseCount; i++) {
+      const iconX = rightX - 12 - (pulseCount - 1 - i) * spacing;
+      ClayRenderer.drawModernPulseIcon(ctx, iconX, startY, 11, 1.0);
+    }
 
     ctx.restore();
   }
+
+  // Compatibility stubs
+  drawWeaponGauge(ctx, player) {}
+  drawActiveSkills(ctx, player) {}
+  drawWaveIndicator(ctx, stageInfo) {}
 
   drawBossBar(ctx, boss) {
     const cx = 640;
