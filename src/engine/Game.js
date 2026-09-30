@@ -1326,6 +1326,10 @@ export class Game {
       this.bg.update(dt * 0.4);
     }
 
+    if (this.uiHooks && this.uiHooks.onFrame) {
+      this.uiHooks.onFrame(this);
+    }
+
     this.render();
     requestAnimationFrame((t) => this.loop(t));
   }

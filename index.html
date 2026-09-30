@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <script>
     if (window.location.protocol === 'file:' && !window.location.href.includes('play.html')) {
       window.location.replace('./play.html');
@@ -16,7 +16,44 @@
   <div id="game-wrapper">
     <canvas id="game-canvas" width="1280" height="720"></canvas>
 
+    <!-- Mobile / Tablet On-Screen Virtual Action Controls -->
+    <div id="mobile-touch-controls" class="mobile-touch-controls" aria-label="Kontrol Sentuh Layar">
+      <!-- Top Bar Touch Controls: Pause & Auto-Fire -->
+      <div class="touch-top-bar">
+        <button type="button" id="btn-touch-pause" class="touch-action-btn touch-pause-btn" aria-label="Jeda Permainan" title="Jeda Permainan (Esc / ⎋)">
+          <span class="touch-icon">⏸️</span>
+          <span class="touch-label">JEDA</span>
+        </button>
+        <button type="button" id="btn-touch-autofire" class="touch-action-btn touch-autofire-btn" aria-label="Toggle Auto-Fire" title="Toggle Auto-Fire (M)">
+          <span class="touch-icon">🔄</span>
+          <span class="touch-label">AUTO</span>
+          <span id="touch-autofire-badge" class="touch-mini-badge off">OFF</span>
+        </button>
+      </div>
 
+      <!-- Bottom Right Touch Action Buttons: Speed Boost [X] & Pulse Bullet Eraser [Z] -->
+      <div class="touch-bottom-actions">
+        <button type="button" id="btn-touch-speed" class="touch-action-btn touch-speed-btn" aria-label="Aktifkan Hyper Speed" title="Hyper Speed (X / ⇧ Shift)">
+          <span class="touch-icon">🚀</span>
+          <span class="touch-label">SPEED</span>
+          <span id="touch-speed-badge" class="touch-mini-badge off">OFF</span>
+        </button>
+        <button type="button" id="btn-touch-pulse" class="touch-action-btn touch-pulse-btn" aria-label="Luncurkan Pulse Bullet Eraser" title="Pulse Bullet Eraser (Z / C / K)">
+          <span class="touch-icon">⚡</span>
+          <span class="touch-label">PULSE</span>
+          <span id="touch-pulse-badge" class="touch-mini-badge count">1</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Portrait Orientation Helper Banner -->
+    <div id="portrait-orientation-banner" class="portrait-orientation-banner">
+      <div class="orient-content">
+        <span class="orient-icon">📱</span>
+        <span class="orient-text">Putar ponsel ke <strong>Lanskap (Horizontal)</strong> untuk pengalaman arcade penuh!</span>
+        <button type="button" id="btn-close-orientation-banner" class="orient-close" aria-label="Tutup Notifikasi">✕</button>
+      </div>
+    </div>
 
     <!-- Dynamic In-Game Micro-Interaction Toast Notification (Auto-Fire, Controls) -->
     <div id="hud-toast" class="hud-toast"></div>
@@ -95,14 +132,14 @@
           </button>
         </div>
 
-        <!-- Sleek Minimalist Keyboard Tip Bar -->
-        <div class="keyboard-tip-tray">
+        <!-- Sleek Minimalist Keyboard & Mac Tip Bar -->
+        <div class="keyboard-tip-tray" id="keyboard-tip-tray">
           <span class="tip-icon">💡</span>
-          <span class="tip-segment"><kbd>ENTER</kbd> Mulai</span>
+          <span class="tip-segment"><kbd>ENTER / ⏎</kbd> Mulai</span>
           <span class="tip-divider">•</span>
           <span class="tip-segment"><kbd>◀</kbd> <kbd>▶</kbd> Tingkat</span>
           <span class="tip-divider">•</span>
-          <span class="tip-segment"><kbd>ESC</kbd> Jeda</span>
+          <span class="tip-segment"><kbd>ESC / ⎋</kbd> Jeda</span>
           <span class="tip-divider">•</span>
           <span class="tip-segment"><kbd>M</kbd> Auto-Fire</span>
         </div>
@@ -379,6 +416,20 @@
                 <div class="instruction-text">
                   <strong>Peluru Super Cepat:</strong>
                   <p>Tekan <code>X</code> untuk toggle kecepatan supersonik peluru normal. Waktu tersimpan saat dimatikan. Drop langka durasi.</p>
+                </div>
+              </div>
+              <div class="instruction-item" style="border-left-color: #29b6f6;">
+                <span class="instruction-badge" style="background:#0288d1; color:#fff;">🍏 MACOS</span>
+                <div class="instruction-text">
+                  <strong>Keyboard & Trackpad Mac:</strong>
+                  <p>Mendukung layout <code>QWERTY</code> & <code>AZERTY</code>. Tembak: <code>Spasi</code> / <code>J</code> / <code>Klik</code>. Pulse: <code>Z</code> / <code>C</code> / <code>K</code>. Speed: <code>X</code> / <code>Shift ⇧</code> / <code>L</code>. Auto-Fire: <code>M</code> / <code>Control ⌃ + Klik</code> / <code>2-Jari Trackpad</code>. Jeda: <code>Esc ⎋</code> / <code>P</code>.</p>
+                </div>
+              </div>
+              <div class="instruction-item" style="border-left-color: #66bb6a;">
+                <span class="instruction-badge" style="background:#388e3c; color:#fff;">📱 SENTUH</span>
+                <div class="instruction-text">
+                  <strong>Ponsel & Tablet Responsif:</strong>
+                  <p>Usap layar (Touch & Drag) untuk mengendalikan pesawat. Tersedia tombol mengambang di layar untuk <code>⚡ Pulse</code>, <code>🚀 Speed</code>, <code>🔄 Auto-Fire</code>, dan <code>⏸️ Jeda</code>.</p>
                 </div>
               </div>
             </div>
@@ -817,7 +868,7 @@
               <span class="btn-icon">▶️</span>
               <span class="btn-text">LANJUTKAN PERMAINAN</span>
             </span>
-            <kbd class="clay-kbd-pill">ENTER</kbd>
+            <kbd class="clay-kbd-pill">ENTER / ⏎</kbd>
           </button>
 
           <button id="btn-settings-pause" class="clay-btn amber vertical-action-btn" type="button">
@@ -841,12 +892,12 @@
               <span class="btn-icon">🏠</span>
               <span class="btn-text">KEMBALI KE MENU UTAMA</span>
             </span>
-            <kbd class="clay-kbd-pill">ESC</kbd>
+            <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
           </button>
         </div>
 
         <div class="modal-keyboard-hint">
-          <span>💡 Tekan <kbd>ENTER</kbd> lanjut • <kbd>O</kbd> pengaturan • <kbd>R</kbd> ulangi • <kbd>ESC</kbd> menu</span>
+          <span>💡 Tekan <kbd>ENTER / ⏎</kbd> lanjut • <kbd>O</kbd> pengaturan • <kbd>R</kbd> ulangi • <kbd>ESC / ⎋</kbd> menu</span>
         </div>
       </div>
     </div>
@@ -907,7 +958,7 @@
               <span class="btn-icon">🔄</span>
               <span class="btn-text">COBA LAGI</span>
             </span>
-            <kbd class="clay-kbd-pill">ENTER / R</kbd>
+            <kbd class="clay-kbd-pill">ENTER / ⏎ / R</kbd>
           </button>
 
           <button id="btn-settings-gameover" class="clay-btn amber vertical-action-btn" type="button">
@@ -923,12 +974,12 @@
               <span class="btn-icon">🏠</span>
               <span class="btn-text">KEMBALI KE MENU UTAMA</span>
             </span>
-            <kbd class="clay-kbd-pill">ESC</kbd>
+            <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
           </button>
         </div>
 
         <div class="modal-keyboard-hint">
-          <span>💡 Tekan <kbd>ENTER</kbd> atau <kbd>R</kbd> untuk coba lagi • <kbd>O</kbd> pengaturan • <kbd>ESC</kbd> menu</span>
+          <span>💡 Tekan <kbd>ENTER / ⏎</kbd> atau <kbd>R</kbd> untuk coba lagi • <kbd>O</kbd> pengaturan • <kbd>ESC / ⎋</kbd> menu</span>
         </div>
       </div>
     </div>
@@ -992,7 +1043,7 @@
               <span class="btn-icon">🌟</span>
               <span class="btn-text">MAIN LAGI DENGAN MODE INI</span>
             </span>
-            <kbd class="clay-kbd-pill">ENTER</kbd>
+            <kbd class="clay-kbd-pill">ENTER / ⏎</kbd>
           </button>
 
           <button id="btn-settings-victory" class="clay-btn amber vertical-action-btn" type="button">
@@ -1008,12 +1059,12 @@
               <span class="btn-icon">🏠</span>
               <span class="btn-text">KEMBALI KE MENU UTAMA</span>
             </span>
-            <kbd class="clay-kbd-pill">ESC</kbd>
+            <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
           </button>
         </div>
 
         <div class="modal-keyboard-hint">
-          <span>💡 Tekan <kbd>ENTER</kbd> main lagi • <kbd>O</kbd> pengaturan • <kbd>ESC</kbd> menu utama</span>
+          <span>💡 Tekan <kbd>ENTER / ⏎</kbd> main lagi • <kbd>O</kbd> pengaturan • <kbd>ESC / ⎋</kbd> menu utama</span>
         </div>
       </div>
     </div>

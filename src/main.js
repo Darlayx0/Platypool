@@ -91,6 +91,21 @@ function initGameApp() {
   // In-Game Floating Toast Notification
   const hudToast = document.getElementById('hud-toast');
 
+  // Mobile / Tablet Touch Controls & Orientation Banner DOM
+  const mobileTouchControls = document.getElementById('mobile-touch-controls');
+  const btnTouchPause = document.getElementById('btn-touch-pause');
+  const btnTouchAutoFire = document.getElementById('btn-touch-autofire');
+  const touchAutoFireBadge = document.getElementById('touch-autofire-badge');
+  const btnTouchSpeed = document.getElementById('btn-touch-speed');
+  const touchSpeedBadge = document.getElementById('touch-speed-badge');
+  const btnTouchPulse = document.getElementById('btn-touch-pulse');
+  const touchPulseBadge = document.getElementById('touch-pulse-badge');
+  const portraitBanner = document.getElementById('portrait-orientation-banner');
+  const btnCloseOrientation = document.getElementById('btn-close-orientation-banner');
+
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || window.innerWidth <= 1024;
+  const isMac = typeof navigator !== 'undefined' && (/Mac|iPhone|iPod|iPad/i.test(navigator.platform || navigator.userAgent || ''));
+
   // Cheat DOM Controls
   const btnOpenCheat = document.getElementById('btn-open-cheat');
   const cheatPillIndicator = document.getElementById('cheat-pill-indicator');
@@ -293,6 +308,9 @@ function initGameApp() {
         hudTopBar.classList.remove('hidden');
       }
     }
+    if (mobileTouchControls) {
+      mobileTouchControls.classList.remove('active');
+    }
   }
 
   function hideAllModals() {
@@ -305,6 +323,9 @@ function initGameApp() {
     });
     if (hudTopBar) {
       hudTopBar.classList.remove('hidden');
+    }
+    if (mobileTouchControls && (isTouchDevice || window.innerWidth <= 1024)) {
+      mobileTouchControls.classList.add('active');
     }
   }
 
@@ -328,6 +349,9 @@ function initGameApp() {
   // Setup Game with UI callbacks
   const game = new Game(canvas, {
     input,
+    onFrame: (gameInstance) => {
+      syncTouchControlsUI(gameInstance);
+    },
     onStageChanged: (stage, total, cfg) => {
       syncStageBadge(stage, total);
     },
@@ -486,6 +510,143 @@ function initGameApp() {
     game.goToMainMenu();
     showModal(modalStart);
   };
+
+  // ==========================================
+  // MOBILE TOUCH CONTROLS & ORIENTATION SYNC
+  // ==========================================
+  function syncTouchControlsUI(gameInstance = game) {
+    if (!mobileTouchControls) return;
+    const isPlaying = gameInstance && gameInstance.state === 1 /* PLAYING */;
+    if (!isPlaying) {
+      mobileTouchControls.classList.remove('active');
+      return;
+    }
+
+    if (isTouchDevice || window.innerWidth <= 1024) {
+      mobileTouchControls.classList.add('active');
+    }
+
+    // Auto-fire badge
+    if (touchAutoFireBadge) {
+      const af = input.autoFire;
+      touchAutoFireBadge.innerText = af ? 'ON' : 'OFF';
+      touchAutoFireBadge.className = af ? 'touch-mini-badge on' : 'touch-mini-badge off';
+    }
+
+    // Pulse badge & button state
+    const p = gameInstance.player;
+    if (touchPulseBadge && p) {
+      const pulseStock = Math.max(0, p.pulseCharges || 0);
+      touchPulseBadge.innerText = pulseStock.toString();
+      if (btnTouchPulse) {
+        if (pulseStock <= 0) {
+          btnTouchPulse.classList.add('disabled');
+        } else {
+          btnTouchPulse.classList.remove('disabled');
+        }
+      }
+    }
+
+    // Speed boost badge & button state
+    if (touchSpeedBadge && p) {
+      const hasSpecial = Boolean(p.activeWeapon && p.activeWeapon !== 'NORMAL');
+      const timeLeft = Math.max(0, p.speedBoostTimeLeft || 0);
+      const isSpeedActive = Boolean(!hasSpecial && p.speedBoostActive && timeLeft > 0);
+
+      if (hasSpecial) {
+        touchSpeedBadge.innerText = 'BLOK';
+        touchSpeedBadge.className = 'touch-mini-badge blocked';
+        if (btnTouchSpeed) btnTouchSpeed.classList.add('blocked');
+      } else if (isSpeedActive) {
+        touchSpeedBadge.innerText = `${Math.ceil(timeLeft)}s`;
+        touchSpeedBadge.className = 'touch-mini-badge on';
+        if (btnTouchSpeed) btnTouchSpeed.classList.remove('blocked');
+      } else if (timeLeft > 0) {
+        touchSpeedBadge.innerText = `${Math.ceil(timeLeft)}s`;
+        touchSpeedBadge.className = 'touch-mini-badge off';
+        if (btnTouchSpeed) btnTouchSpeed.classList.remove('blocked');
+      } else {
+        touchSpeedBadge.innerText = 'OFF';
+        touchSpeedBadge.className = 'touch-mini-badge off';
+        if (btnTouchSpeed) btnTouchSpeed.classList.remove('blocked');
+      }
+    }
+  }
+
+  function addFastTouchListener(elem, handler) {
+    if (!elem) return;
+    elem.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handler(e);
+    }, { passive: false });
+    elem.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handler(e);
+    });
+  }
+
+  addFastTouchListener(btnTouchPause, () => {
+    if (game) game.togglePause();
+  });
+
+  addFastTouchListener(btnTouchAutoFire, () => {
+    if (input) {
+      input.toggleAutoFire();
+      syncTouchControlsUI();
+    }
+  });
+
+  addFastTouchListener(btnTouchSpeed, () => {
+    if (input) {
+      input.requestSpeedBoost();
+    }
+  });
+
+  addFastTouchListener(btnTouchPulse, () => {
+    if (input) {
+      input.requestPulse();
+    }
+  });
+
+  // Orientation banner handler for mobile
+  function checkOrientation() {
+    if (!portraitBanner) return;
+    const isPortrait = window.matchMedia && window.matchMedia('(orientation: portrait)').matches && window.innerWidth <= 768;
+    if (isPortrait && !sessionStorage.getItem('platypus_orient_dismissed')) {
+      portraitBanner.classList.add('active');
+    } else {
+      portraitBanner.classList.remove('active');
+    }
+  }
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', checkOrientation);
+  checkOrientation();
+
+  if (btnCloseOrientation) {
+    btnCloseOrientation.addEventListener('click', () => {
+      if (portraitBanner) portraitBanner.classList.remove('active');
+      try { sessionStorage.setItem('platypus_orient_dismissed', 'true'); } catch (e) {}
+    });
+  }
+
+  // macOS specific keyboard tip customization
+  if (isMac) {
+    const tipTray = document.getElementById('keyboard-tip-tray');
+    if (tipTray) {
+      tipTray.innerHTML = `
+        <span class="tip-icon">🍏</span>
+        <span class="tip-segment"><kbd>RETURN ⏎</kbd> Mulai</span>
+        <span class="tip-divider">•</span>
+        <span class="tip-segment"><kbd>◀</kbd> <kbd>▶</kbd> Tingkat</span>
+        <span class="tip-divider">•</span>
+        <span class="tip-segment"><kbd>ESC ⎋</kbd> Jeda</span>
+        <span class="tip-divider">•</span>
+        <span class="tip-segment"><kbd>M</kbd> Auto-Fire</span>
+      `;
+    }
+  }
 
   // ==========================================
   // SETTINGS & AUDIO CONTROLS MANAGER
@@ -733,11 +894,21 @@ function initGameApp() {
   applySettingsToEngine();
   syncSettingsUI();
 
-  // Keyboard navigation for all screens/modals
+  // Keyboard navigation for all screens/modals with macOS keyboard compatibility
   window.addEventListener('keydown', (e) => {
+    // If typing in any input or textarea, don't trigger game modal shortcuts
+    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) {
+      return;
+    }
+
+    const keyLower = e.key ? e.key.toLowerCase() : '';
+    const isEsc = e.code === 'Escape' || keyLower === 'escape';
+    const isEnter = e.code === 'Enter' || keyLower === 'enter';
+    const isSpace = e.code === 'Space' || e.key === ' ';
+
     // If Settings Modal is active
     if (modalSettings && (modalSettings.classList.contains('active') || modalSettings.style.display === 'flex')) {
-      if (e.code === 'Escape') {
+      if (isEsc) {
         e.preventDefault();
         closeSettingsModal();
       }
@@ -746,7 +917,7 @@ function initGameApp() {
 
     // If Guide Modal is active
     if (modalGuide && (modalGuide.classList.contains('active') || modalGuide.style.display === 'flex')) {
-      if (e.code === 'Escape') {
+      if (isEsc) {
         e.preventDefault();
         closeGuideModal();
       }
@@ -755,7 +926,7 @@ function initGameApp() {
 
     // If Cheat Modal is active
     if (modalCheat && (modalCheat.classList.contains('active') || modalCheat.style.display === 'flex')) {
-      if (e.code === 'Escape') {
+      if (isEsc) {
         e.preventDefault();
         saveAndCloseCheat();
       }
@@ -764,17 +935,17 @@ function initGameApp() {
 
     // If Start Screen is active
     if (modalStart && (modalStart.classList.contains('active') || modalStart.style.display === 'flex')) {
-      if (e.code === 'Enter' || e.code === 'Space') {
+      if (isEnter || isSpace) {
         e.preventDefault();
         triggerStartGame(e);
         return;
       }
-      if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA' || keyLower === 'a' || (e.code === 'KeyQ' && keyLower === 'a')) {
         e.preventDefault();
         if (typeof cycleDifficulty === 'function') cycleDifficulty(-1);
         return;
       }
-      if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      if (e.code === 'ArrowRight' || e.code === 'KeyD' || keyLower === 'd') {
         e.preventDefault();
         if (typeof cycleDifficulty === 'function') cycleDifficulty(1);
         return;
@@ -784,20 +955,20 @@ function initGameApp() {
 
     // If Pause Screen is active: ESC returns to Main Menu, Enter/Space/P resumes, R restarts, O opens settings
     if (modalPause && (modalPause.classList.contains('active') || modalPause.style.display === 'flex')) {
-      if (e.code === 'Escape') {
+      if (isEsc) {
         e.preventDefault();
         returnToMainMenu();
-      } else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyP') {
+      } else if (isEnter || isSpace || e.code === 'KeyP' || keyLower === 'p') {
         e.preventDefault();
         game.togglePause();
-      } else if (e.code === 'KeyR') {
+      } else if (e.code === 'KeyR' || keyLower === 'r') {
         e.preventDefault();
         if (game.sound) {
           game.sound.setPauseDucking(false);
         }
         hideAllModals();
         game.restart();
-      } else if (e.code === 'KeyO') {
+      } else if (e.code === 'KeyO' || keyLower === 'o') {
         e.preventDefault();
         openSettingsModal(modalPause);
       }
@@ -806,14 +977,14 @@ function initGameApp() {
 
     // If Game Over Screen is active: Enter/Space/R restarts, ESC/M returns to Main Menu, O opens settings
     if (modalGameOver && (modalGameOver.classList.contains('active') || modalGameOver.style.display === 'flex')) {
-      if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyR') {
+      if (isEnter || isSpace || e.code === 'KeyR' || keyLower === 'r') {
         e.preventDefault();
         hideAllModals();
         game.restart();
-      } else if (e.code === 'Escape' || e.code === 'KeyM') {
+      } else if (isEsc || e.code === 'KeyM' || keyLower === 'm') {
         e.preventDefault();
         returnToMainMenu();
-      } else if (e.code === 'KeyO') {
+      } else if (e.code === 'KeyO' || keyLower === 'o') {
         e.preventDefault();
         openSettingsModal(modalGameOver);
       }
@@ -822,14 +993,14 @@ function initGameApp() {
 
     // If Victory Screen is active: Enter/Space restarts, ESC/M returns to Main Menu, O opens settings
     if (modalVictory && (modalVictory.classList.contains('active') || modalVictory.style.display === 'flex')) {
-      if (e.code === 'Enter' || e.code === 'Space') {
+      if (isEnter || isSpace) {
         e.preventDefault();
         hideAllModals();
         game.restart();
-      } else if (e.code === 'Escape' || e.code === 'KeyM') {
+      } else if (isEsc || e.code === 'KeyM' || keyLower === 'm') {
         e.preventDefault();
         returnToMainMenu();
-      } else if (e.code === 'KeyO') {
+      } else if (e.code === 'KeyO' || keyLower === 'o') {
         e.preventDefault();
         openSettingsModal(modalVictory);
       }
@@ -838,7 +1009,7 @@ function initGameApp() {
 
     // In-game shortcuts during active PLAYING state
     if (game && game.state === 1 /* PLAYING */) {
-      if (e.code === 'KeyF') {
+      if (e.code === 'KeyF' || keyLower === 'f') {
         e.preventDefault();
         if (game.sound && game.sound.initialized) game.sound.playUiClick();
         if (!document.fullscreenElement) {
@@ -849,7 +1020,7 @@ function initGameApp() {
         }
         return;
       }
-      if (e.code === 'KeyU') {
+      if (e.code === 'KeyU' || keyLower === 'u') {
         e.preventDefault();
         const newUhd = game.toggleUhd();
         settingsState.uhdEnabled = newUhd;
@@ -859,7 +1030,7 @@ function initGameApp() {
         showToast(newUhd ? '💎 UHD RETINA 4K: AKTIF' : '🖥️ RESOLUSI: STANDAR 1X', newUhd ? 'active-green' : 'active-amber');
         return;
       }
-      if (e.code === 'KeyO') {
+      if (e.code === 'KeyO' || keyLower === 'o') {
         e.preventDefault();
         game.togglePause();
         openSettingsModal(modalPause);
