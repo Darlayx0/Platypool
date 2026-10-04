@@ -1,10 +1,12 @@
 // Enemies and Wave Formations for Platypus AI
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
+import { Clay3D } from '../graphics/Clay3D.js';
 import { Bullet } from './Bullet.js';
 
 export class Enemy {
   static currentStage = 1;
   static difficultyConfig = null;
+  static hpDisplayMode = 'DYNAMIC'; // 'DYNAMIC' | 'ALWAYS' | 'MINIMAL'
 
   constructor(options) {
     this.x = options.x !== undefined ? options.x : 1320;
@@ -18,14 +20,28 @@ export class Enemy {
     this.world = Math.min(4, Math.max(1, Math.floor((this.stage - 1) / 5) + 1));
     this.bulletSpeedMult = 1.0;
     this.shootCooldownMult = 1.0;
+    this.speedMult = 1.0;
 
     this.tick = Math.random() * 50;
     this.dead = false;
     this.slowTimer = 0;
     this.spawnGraceTimer = 0.6; // Anti-blind fire grace period
+    this.invulnerableTimer = 0;
+    this.maxInvulnerableTimer = 0;
+    this.isMiniBoss = false;
+
+    this.roll = 0;
+    this.pitch = 0;
+    this.targetRoll = 0;
+    this.altitude = options.altitude || (0.85 + Math.random() * 0.3);
 
     // Type-specific setup
     this.initType(options);
+
+    // Dynamic Visual Health Bar & Damage Feedback State
+    this.hpBarTimer = 0;
+    this.lagHp = this.hp;
+    this.criticalSmokeTimer = 0;
   }
 
   initType(options = {}) {
@@ -36,7 +52,7 @@ export class Enemy {
         this.radius = 18;
         this.vx = -240;
         this.vy = 0;
-        this.scoreValue = 150;
+        this.scoreValue = 15;
         this.shootTimer = 1.0 + Math.random() * 1.5;
         this.color = '#43a047';
         this.shadowColor = '#1b5e20';
@@ -48,7 +64,7 @@ export class Enemy {
         this.radius = 36;
         this.vx = -120;
         this.vy = 0;
-        this.scoreValue = 600;
+        this.scoreValue = 60;
         this.shootTimer = 1.2;
         this.targetHoverX = 900 + Math.random() * 180;
         this.color = '#3949ab';
@@ -56,25 +72,25 @@ export class Enemy {
         break;
 
       case 'BLIMP':
-        this.maxHp = 45;
-        this.hp = 45;
+        this.maxHp = 22;
+        this.hp = 22;
         this.radius = 55;
         this.vx = -65;
         this.vy = 0;
-        this.scoreValue = 1500;
+        this.scoreValue = 150;
         this.shootTimer = 1.5;
         this.color = '#ffe082';
         this.shadowColor = '#ff8f00';
         break;
 
       case 'STINGER':
-        this.maxHp = 3;
-        this.hp = 3;
+        this.maxHp = 3.5;
+        this.hp = 3.5;
         this.radius = 16;
         this.vx = options.vx !== undefined ? options.vx : -270;
         this.vy = 0;
         this.baseVy = options.baseVy !== undefined ? options.baseVy : (Math.random() - 0.5) * 60;
-        this.scoreValue = 200;
+        this.scoreValue = 20;
         this.charging = options.charging || false;
         this.hasCharged = options.charging || false;
         this.color = '#ffb300';
@@ -82,12 +98,12 @@ export class Enemy {
         break;
 
       case 'SNIPER':
-        this.maxHp = 7;
-        this.hp = 7;
+        this.maxHp = 10;
+        this.hp = 10;
         this.radius = 22;
         this.vx = -220;
         this.vy = 0;
-        this.scoreValue = 450;
+        this.scoreValue = 45;
         this.targetX = 1060 + Math.random() * 120;
         this.aimTimer = 0;
         this.maxAimTime = 1.3;
@@ -99,51 +115,51 @@ export class Enemy {
         break;
 
       case 'BOMBER':
-        this.maxHp = 25;
-        this.hp = 25;
+        this.maxHp = 18;
+        this.hp = 18;
         this.radius = 38;
         this.vx = -110;
         this.vy = 0;
-        this.scoreValue = 800;
+        this.scoreValue = 80;
         this.bombTimer = 1.2 + Math.random();
         this.color = '#689f38';
         this.shadowColor = '#2e7d32';
         break;
 
       case 'SPINNER':
-        this.maxHp = 9;
-        this.hp = 9;
+        this.maxHp = 10;
+        this.hp = 10;
         this.radius = 24;
         this.vx = -190;
         this.vy = (Math.random() > 0.5 ? 1 : -1) * 160;
-        this.scoreValue = 350;
+        this.scoreValue = 35;
         this.sparkTimer = 1.2;
         this.color = '#e53935';
         this.shadowColor = '#b71c1c';
         break;
 
       case 'SHIELD_CRUISER':
-        this.maxHp = 22;
-        this.hp = 22;
-        this.maxShieldHp = 16;
-        this.shieldHp = 16;
+        this.maxHp = 16;
+        this.hp = 16;
+        this.maxShieldHp = 10;
+        this.shieldHp = 10;
         this.radius = 36;
         this.vx = -95;
         this.vy = 0;
         this.targetX = 920 + Math.random() * 150;
-        this.scoreValue = 900;
+        this.scoreValue = 90;
         this.shootTimer = 1.6;
         this.color = '#00acc1';
         this.shadowColor = '#006064';
         break;
 
       case 'MINE_LAYER':
-        this.maxHp = 20;
-        this.hp = 20;
+        this.maxHp = 15;
+        this.hp = 15;
         this.radius = 28;
         this.vx = -85;
         this.vy = 0;
-        this.scoreValue = 550;
+        this.scoreValue = 55;
         this.mineTimer = 1.8 + Math.random() * 0.8;
         this.color = '#d84315';
         this.shadowColor = '#bf360c';
@@ -156,7 +172,7 @@ export class Enemy {
         this.vx = -45;
         this.vy = 0;
         this.baseY = this.y;
-        this.scoreValue = 100;
+        this.scoreValue = 10;
         this.color = '#37474f';
         this.shadowColor = '#212121';
         break;
@@ -169,20 +185,20 @@ export class Enemy {
         this.vy = 0;
         this.baseY = this.y;
         this.loopPhase = 0;
-        this.scoreValue = 750;
+        this.scoreValue = 75;
         this.shootTimer = 1.0;
         this.color = '#ffca28';
         this.shadowColor = '#ff6f00';
         break;
 
       case 'INTERCEPTOR':
-        this.maxHp = 14;
-        this.hp = 14;
+        this.maxHp = 8;
+        this.hp = 8;
         this.radius = 22;
         this.vx = -300;
         this.vy = 0;
         this.baseY = this.y;
-        this.scoreValue = 750;
+        this.scoreValue = 75;
         this.phaseState = 'APPROACH';
         this.stateTimer = 0.9;
         this.hasShot = false;
@@ -191,100 +207,353 @@ export class Enemy {
         break;
 
       case 'JUGGERNAUT':
-        this.maxHp = 42;
-        this.hp = 42;
-        this.maxShieldHp = 24;
-        this.shieldHp = 24;
+        this.isMiniBoss = true;
+        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 2.0;
+        this.maxInvulnerableTimer = this.invulnerableTimer;
+        this.maxHp = 28;
+        this.hp = 28;
+        this.maxShieldHp = 14;
+        this.shieldHp = 14;
         this.radius = 48;
         this.vx = -60;
         this.vy = 0;
-        this.scoreValue = 1800;
-        this.mortarTimer = 1.8;
-        this.burstTimer = 1.4;
+        this.scoreValue = 180;
+        this.mortarTimer = 1.6;
+        this.burstTimer = 1.2;
         this.color = '#37474f';
         this.shadowColor = '#212121';
         break;
 
       case 'VORTEX_DRONE':
-        this.maxHp = 18;
-        this.hp = 18;
+        this.maxHp = 10;
+        this.hp = 10;
         this.radius = 26;
         this.vx = -110;
         this.vy = 0;
         this.baseY = this.y;
         this.orbitPhase = Math.random() * Math.PI * 2;
-        this.scoreValue = 850;
+        this.scoreValue = 85;
         this.vortexTimer = 2.2;
         this.color = '#00e5ff';
         this.shadowColor = '#006064';
         break;
 
+      case 'RETRO_BIPLANE':
+        this.fromBehind = options.fromBehind !== undefined ? options.fromBehind : (this.x < 100);
+        this.stopAtX = options.stopAtX !== undefined ? options.stopAtX : (this.fromBehind && !options.flyAcross ? 1100 : null);
+        this.flyAcross = options.flyAcross || false;
+        this.isAnchored = false;
+        this.maxHp = 5;
+        this.hp = 5;
+        this.radius = 22;
+        this.vx = options.vx !== undefined ? options.vx : (this.fromBehind ? 290 : -220);
+        this.vy = options.vy !== undefined ? options.vy : 0;
+        this.scoreValue = 30;
+        this.shootTimer = 1.2 + Math.random() * 0.8;
+        this.color = '#ff7043';
+        this.shadowColor = '#d84315';
+        break;
+
+      case 'SWING_GLIDER':
+        this.maxHp = 5;
+        this.hp = 5;
+        this.radius = 20;
+        this.vx = options.vx !== undefined ? options.vx : -160;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.baseX = this.x;
+        this.swingPhase = options.swingPhase !== undefined ? options.swingPhase : Math.random() * Math.PI * 2;
+        this.swingAmp = options.swingAmp || 110;
+        this.swingSpeed = options.swingSpeed || 2.4;
+        this.scoreValue = 28;
+        this.shootTimer = 1.4 + Math.random();
+        this.color = '#26a69a';
+        this.shadowColor = '#004d40';
+        break;
+
+      case 'CANYON_DIVER':
+        this.maxHp = 9;
+        this.hp = 9;
+        this.radius = 22;
+        this.vx = options.vx !== undefined ? options.vx : -130;
+        this.vy = options.vy !== undefined ? options.vy : 230;
+        this.diveState = 'DIVING';
+        this.scoreValue = 35;
+        this.shootTimer = 0.8;
+        this.color = '#ff9800';
+        this.shadowColor = '#e65100';
+        break;
+
+      case 'GEYSER_RUSHER':
+        this.maxHp = 9;
+        this.hp = 9;
+        this.radius = 20;
+        this.vx = options.vx !== undefined ? options.vx : -150;
+        this.vy = options.vy !== undefined ? options.vy : -280;
+        this.gravity = options.gravity !== undefined ? options.gravity : 260;
+        this.scoreValue = 32;
+        this.shootTimer = 0.9;
+        this.color = '#d84315';
+        this.shadowColor = '#bf360c';
+        break;
+
+      case 'FALCON_TRACKER':
+        this.maxHp = 12;
+        this.hp = 12;
+        this.radius = 24;
+        this.vx = -180;
+        this.vy = 0;
+        this.speed = 220;
+        this.turnSpeed = 2.0;
+        this.aimAngle = Math.PI;
+        this.scoreValue = 50;
+        this.shootTimer = 1.3;
+        this.color = '#f57c00';
+        this.shadowColor = '#b26a00';
+        break;
+
+      case 'CYBER_PHANTOM':
+        this.fromBehind = options.fromBehind !== undefined ? options.fromBehind : (this.x < 100);
+        this.stopAtX = options.stopAtX !== undefined ? options.stopAtX : (this.fromBehind && !options.flyAcross ? 1080 : null);
+        this.flyAcross = options.flyAcross || false;
+        this.isAnchored = false;
+        this.maxHp = 9;
+        this.hp = 9;
+        this.radius = 22;
+        this.vx = options.vx !== undefined ? options.vx : (this.fromBehind ? 360 : -280);
+        this.vy = 0;
+        this.scoreValue = 65;
+        this.shootTimer = 0.8;
+        this.color = '#00e5ff';
+        this.shadowColor = '#00838f';
+        break;
+
+      case 'CYBER_PENDULUM':
+        this.maxHp = 12;
+        this.hp = 12;
+        this.radius = 26;
+        this.vx = options.vx !== undefined ? options.vx : -100;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.swingPhase = options.swingPhase || 0;
+        this.swingAmp = 140;
+        this.swingSpeed = 2.8;
+        this.scoreValue = 70;
+        this.shootTimer = 1.1;
+        this.color = '#7c4dff';
+        this.shadowColor = '#4527a0';
+        break;
+
+      case 'VOID_STALKER':
+        this.maxHp = 14;
+        this.hp = 14;
+        this.radius = 24;
+        this.vx = -190;
+        this.vy = 0;
+        this.speed = 240;
+        this.turnSpeed = 2.4;
+        this.aimAngle = Math.PI;
+        this.scoreValue = 85;
+        this.shootTimer = 1.2;
+        this.color = '#b388ff';
+        this.shadowColor = '#6200ea';
+        break;
+
+      case 'METEOR_DIVER':
+        this.maxHp = 9;
+        this.hp = 9;
+        this.radius = 22;
+        this.vx = options.vx !== undefined ? options.vx : -160;
+        this.vy = options.vy !== undefined ? options.vy : 260;
+        this.scoreValue = 60;
+        this.shootTimer = 0.7;
+        this.color = '#ff5252';
+        this.shadowColor = '#c62828';
+        break;
+
+      case 'ABYSS_ASCENDER':
+        this.maxHp = 9;
+        this.hp = 9;
+        this.radius = 24;
+        this.vx = options.vx !== undefined ? options.vx : -140;
+        this.vy = options.vy !== undefined ? options.vy : -270;
+        this.scoreValue = 65;
+        this.shootTimer = 0.8;
+        this.color = '#ea80fc';
+        this.shadowColor = '#aa00ff';
+        break;
+
+      case 'WARP_FLANKER':
+        this.fromBehind = options.fromBehind !== undefined ? options.fromBehind : (this.x < 100);
+        this.stopAtX = options.stopAtX !== undefined ? options.stopAtX : (this.fromBehind && !options.flyAcross ? 1100 : null);
+        this.flyAcross = options.flyAcross || false;
+        this.isAnchored = false;
+        this.baseY = this.y;
+        this.loopPhase = Math.random() * Math.PI * 2;
+        this.maxHp = 10;
+        this.hp = 10;
+        this.radius = 24;
+        this.vx = options.vx !== undefined ? options.vx : (this.fromBehind ? 340 : -260);
+        this.vy = options.vy !== undefined ? options.vy : 0;
+        this.scoreValue = 80;
+        this.shootTimer = 1.0;
+        this.color = '#e040fb';
+        this.shadowColor = '#7b1fa2';
+        break;
+
+      case 'COSMIC_ORBITER':
+        this.maxHp = 15;
+        this.hp = 15;
+        this.radius = 30;
+        this.vx = options.vx !== undefined ? options.vx : -70;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.orbitAngle = Math.random() * Math.PI * 2;
+        this.orbitRadiusX = 90;
+        this.orbitRadiusY = 130;
+        this.orbitSpeed = 2.0;
+        this.scoreValue = 95;
+        this.shootTimer = 1.4;
+        this.color = '#64ffda';
+        this.shadowColor = '#00bfa5';
+        break;
+
+      case 'JUMBO_DREAD_CRUISER':
+        this.isJumbo = true;
+        this.isMiniBoss = true;
+        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 2.5;
+        this.maxInvulnerableTimer = this.invulnerableTimer;
+        this.maxHp = 100;
+        this.hp = 100;
+        this.radius = 62;
+        this.vx = -45;
+        this.vy = 0;
+        this.targetHoverX = 980;
+        this.scoreValue = 350;
+        this.shootTimer = 1.3;
+        this.mortarTimer = 2.2;
+        this.carrierTimer = 4.0;
+        this.color = '#455a64';
+        this.shadowColor = '#1c313a';
+        break;
+
+      case 'JUMBO_SAND_FORTRESS':
+        this.isJumbo = true;
+        this.isMiniBoss = true;
+        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 3.0;
+        this.maxInvulnerableTimer = this.invulnerableTimer;
+        this.maxHp = 180;
+        this.hp = 180;
+        this.radius = 68;
+        this.vx = -40;
+        this.vy = 0;
+        this.targetHoverX = 970;
+        this.scoreValue = 450;
+        this.mortarTimer = 1.8;
+        this.burstTimer = 1.3;
+        this.color = '#a1887f';
+        this.shadowColor = '#4e342e';
+        break;
+
+      case 'JUMBO_CYBER_GARGANTUA':
+        this.isJumbo = true;
+        this.isMiniBoss = true;
+        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 3.0;
+        this.maxInvulnerableTimer = this.invulnerableTimer;
+        this.maxHp = 200;
+        this.hp = 200;
+        this.maxShieldHp = 80;
+        this.shieldHp = 80;
+        this.radius = 72;
+        this.vx = -35;
+        this.vy = 0;
+        this.targetHoverX = 960;
+        this.scoreValue = 650;
+        this.shootTimer = 1.0;
+        this.novaTimer = 2.4;
+        this.railgunTimer = 1.8;
+        this.color = '#1a237e';
+        this.shadowColor = '#0d1338';
+        break;
+
+      case 'JUMBO_SINGULARITY_TITAN':
+        this.isJumbo = true;
+        this.isMiniBoss = true;
+        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 3.5;
+        this.maxInvulnerableTimer = this.invulnerableTimer;
+        this.maxHp = 280;
+        this.hp = 280;
+        this.maxShieldHp = 120;
+        this.shieldHp = 120;
+        this.radius = 76;
+        this.vx = -60;
+        this.vy = 0;
+        this.targetHoverX = 960;
+        this.hoverPhase = 'ENTER'; // 'ENTER', 'HOVER_STATIC', 'ADVANCE_LEFT'
+        this.hoverTimer = 12.0; // Mengayun & statis di sisi kanan terlebih dahulu (~12 detik)
+        this.scoreValue = 900;
+        this.vortexTimer = 2.0;
+        this.starNovaTimer = 1.5;
+        this.homingPodTimer = 2.6;
+        this.color = '#311b92';
+        this.shadowColor = '#12005e';
+        break;
+
+      case 'FRUIT_CARRIER':
+        this.maxHp = 2.0;
+        this.hp = 2.0;
+        this.radius = 28;
+        this.vx = options.vx !== undefined ? options.vx : -150;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.waveFreq = options.waveFreq !== undefined ? options.waveFreq : 0.03;
+        this.waveAmp = options.waveAmp !== undefined ? options.waveAmp : 28;
+        this.scoreValue = 60;
+        this.shootTimer = 999999;
+        this.color = '#ffb300';
+        this.shadowColor = '#e65100';
+        break;
+
       case 'SCOUT':
       default:
-        this.maxHp = 1.5;
-        this.hp = 1.5;
+        this.maxHp = 2.0;
+        this.hp = 2.0;
         this.radius = 16;
         this.vx = -210;
         this.vy = 0;
         this.baseY = this.y;
         this.waveFreq = 0.05;
         this.waveAmp = 55;
-        this.scoreValue = 100;
+        this.scoreValue = 10;
         this.shootTimer = 2.0 + Math.random() * 2.0;
         this.color = '#e91e63';
         this.shadowColor = '#880e4f';
         break;
     }
 
-    // World Difficulty Multipliers: Enemy movement speed locked to 1.0x across all worlds
-    // Shoot cooldown delay is made shorter (jeda sedikit & lebih sulit seiring meningkatnya world)
-    let hpMult = 1.0;
-    let spdMult = 1.0; // Strictly 1.0x across ALL worlds as requested
-    let bSpdMult = 1.0;
-    let cdMult = 0.88; // World 1: tighter firing interval
-
-    if (this.world === 2) {
-      hpMult = 1.40;
-      spdMult = 1.0; // 1x in World 2
-      bSpdMult = 1.25;
-      cdMult = 0.70; // Shorter pause between shots (harder than before)
-    } else if (this.world === 3) {
-      hpMult = 1.80;
-      spdMult = 1.0; // 1x in World 3
-      bSpdMult = 1.50;
-      cdMult = 0.52; // Even shorter pause between shots
-    } else if (this.world === 4) {
-      hpMult = 2.50;
-      spdMult = 1.0; // 1x in World 4
-      bSpdMult = 1.80;
-      cdMult = 0.36; // Highly aggressive firing rhythm
-    }
-
-    // Difficulty Multipliers:
-    // HP Mult: Beginner 0.75x, Extreme 1.5x, others 1.0x
-    // Bullet Speed & Shoot Delay from Difficulty
+    // Standar 1.0x antar world: Tidak ada multiplier pengganda HP, jeda peluru, atau kecepatan peluru per world/stage.
+    // Karakteristik musuh konsisten dan perbedaan kesulitan murni berasal dari jenis arketipe
+    // khusus tiap world (pola gerakan, taktik serangan, sudut spawn unik).
     const diff = this.difficultyConfig || Enemy.difficultyConfig || {};
     const diffHp = diff.hpMult !== undefined ? diff.hpMult : 1.0;
     const diffBulletSpeed = diff.bulletSpeedMult !== undefined ? diff.bulletSpeedMult : 1.0;
     const diffShootCd = diff.shootCooldownMult !== undefined ? diff.shootCooldownMult : 1.0;
 
-    this.bulletSpeedMult = bSpdMult * diffBulletSpeed;
-    this.shootCooldownMult = cdMult * diffShootCd;
-    this.speedMult = spdMult;
+    this.bulletSpeedMult = diffBulletSpeed;
+    this.shootCooldownMult = diffShootCd;
+    this.speedMult = 1.0;
 
     if (options && options.hp !== undefined) {
       this.maxHp = Math.round(options.hp * diffHp * 10) / 10;
       this.hp = this.maxHp;
     } else {
-      this.maxHp = Math.round(this.maxHp * hpMult * diffHp * 10) / 10;
+      this.maxHp = Math.round(this.maxHp * diffHp * 10) / 10;
       this.hp = this.maxHp;
     }
     if (this.maxShieldHp) {
-      this.maxShieldHp = Math.round(this.maxShieldHp * hpMult * diffHp * 10) / 10;
+      this.maxShieldHp = Math.round(this.maxShieldHp * diffHp * 10) / 10;
       this.shieldHp = this.maxShieldHp;
     }
-    this.vx *= spdMult;
-    if (this.vy) this.vy *= spdMult;
 
     // World score multiplier: 1x, 2x, 3x, 4x
     let scoreWorldMult = this.world;
@@ -292,16 +561,55 @@ export class Enemy {
     if (this.shootTimer) this.shootTimer *= this.shootCooldownMult;
   }
 
-  update(dt, player, bullets, sound, extraEnemies = []) {
-    this.tick++;
+  update(dt, player, bullets, sound, extraEnemies = [], particles = null) {
+    const prevX = this.x;
+    const prevY = this.y;
+    this.tick += (this.slowTimer > 0 ? 0.5 : 1.0);
 
     if (this.spawnGraceTimer > 0) {
       this.spawnGraceTimer -= dt;
     }
 
+    if (this.invulnerableTimer > 0) {
+      this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
+    }
+
     if (this.slowTimer > 0) {
       this.slowTimer -= dt;
-      dt *= 0.65; // Electro-disruption: 35% speed penalty to movement and fire
+      dt *= 0.50; // Electro-paralysis: 50% speed penalty to movement and fire
+      this.shootCooldownMult = 2.0; // Jeda peluru musuh menjadi lebih lambat
+      this.speedMult = 0.50;
+      this.bulletSpeedMult = 0.70;
+      if (particles && Math.random() < 0.25) {
+        particles.createElectricSpark(this.x, this.y, 2, '#ea80fc', '#aa00ff');
+      }
+    } else {
+      this.shootCooldownMult = 1.0;
+      this.speedMult = 1.0;
+      this.bulletSpeedMult = 1.0;
+    }
+
+    // Dynamic HP bar timer & White-loss damage lag interpolation
+    if (this.hpBarTimer > 0) {
+      this.hpBarTimer = Math.max(0, this.hpBarTimer - dt);
+    }
+    if (this.lagHp > this.hp) {
+      this.lagHp += (this.hp - this.lagHp) * Math.min(1, dt * 7.5);
+    } else {
+      this.lagHp = this.hp;
+    }
+
+    // Diegetic damage feedback: subtle clay friction smoke puffs when critically damaged (HP <= 30%)
+    if (!this.dead && this.maxHp >= 6 && (this.hp / this.maxHp) <= 0.30) {
+      this.criticalSmokeTimer -= dt;
+      if (this.criticalSmokeTimer <= 0) {
+        this.criticalSmokeTimer = 0.22 + Math.random() * 0.12;
+        if (particles && typeof particles.createSmokePuff === 'function') {
+          const offX = (Math.random() - 0.5) * (this.radius * 0.5);
+          const offY = (Math.random() - 0.5) * (this.radius * 0.5);
+          particles.createSmokePuff(this.x + offX, this.y + offY, 1, Math.min(10, this.radius * 0.45));
+        }
+      }
     }
 
     switch (this.type) {
@@ -404,7 +712,7 @@ export class Enemy {
         if (this.x > this.targetX || this.spawnGraceTimer > 0) {
           this.x += this.vx * dt;
         } else {
-          // Hover in place and aim laser at player (aims faster in higher worlds)
+          // Hover in place and aim laser at player
           this.aimAngle = Math.atan2(player.y - this.y, player.x - this.x);
           this.isAiming = true;
           this.aimTimer += dt * (1 / this.shootCooldownMult);
@@ -667,21 +975,594 @@ export class Enemy {
           sound.playShoot('HOMING');
         }
         break;
+
+      case 'RETRO_BIPLANE':
+        if (this.fromBehind) {
+          if (this.stopAtX && !this.isAnchored && this.x >= this.stopAtX) {
+            this.isAnchored = true;
+            this.vx = 0;
+          }
+          if (this.isAnchored) {
+            this.y += Math.sin(this.tick * 0.05) * 45 * dt;
+          } else {
+            this.x += this.vx * dt;
+          }
+        } else {
+          this.x += this.vx * dt;
+        }
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1240) {
+          this.shootTimer = 1.3 * this.shootCooldownMult;
+          const bulletDir = (this.fromBehind && this.isAnchored) ? -1 : (this.fromBehind ? 1 : -1);
+          bullets.push(new Bullet({
+            x: this.x + bulletDir * 20,
+            y: this.y - 7,
+            vx: bulletDir * 360 * this.bulletSpeedMult,
+            vy: 0,
+            radius: 6,
+            isEnemy: true
+          }));
+          bullets.push(new Bullet({
+            x: this.x + bulletDir * 20,
+            y: this.y + 7,
+            vx: bulletDir * 360 * this.bulletSpeedMult,
+            vy: 0,
+            radius: 6,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'SWING_GLIDER':
+        this.x += this.vx * dt;
+        this.swingPhase += this.swingSpeed * dt * this.speedMult;
+        this.y = this.baseY + Math.sin(this.swingPhase) * this.swingAmp;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1180 && this.x > player.x + 60) {
+          this.shootTimer = 1.5 * this.shootCooldownMult;
+          const ang = Math.atan2(player.y - this.y, player.x - this.x);
+          bullets.push(new Bullet({
+            x: this.x - 16,
+            y: this.y,
+            vx: Math.cos(ang) * 350 * this.bulletSpeedMult,
+            vy: Math.sin(ang) * 350 * this.bulletSpeedMult,
+            radius: 6,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'CANYON_DIVER':
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        if (this.y > 480) {
+          this.vy -= 280 * dt;
+          this.vx -= 50 * dt;
+        }
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.y > 80 && this.y < 640 && this.x > 100 && this.x < 1200) {
+          this.shootTimer = 0.9 * this.shootCooldownMult;
+          const a = Math.atan2(player.y - this.y, player.x - this.x);
+          bullets.push(new Bullet({
+            x: this.x,
+            y: this.y + 12,
+            vx: Math.cos(a) * 360 * this.bulletSpeedMult,
+            vy: Math.sin(a) * 360 * this.bulletSpeedMult,
+            radius: 6,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'GEYSER_RUSHER':
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += this.gravity * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.y < 620 && this.y > 60 && this.x > 100 && this.x < 1200) {
+          this.shootTimer = 1.0 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x - 15,
+            y: this.y,
+            vx: -320 * this.bulletSpeedMult,
+            vy: -40,
+            radius: 6,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'FALCON_TRACKER': {
+        const targetAng = Math.atan2(player.y - this.y, player.x - this.x);
+        let diff = targetAng - this.aimAngle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), this.turnSpeed * dt);
+        this.vx = Math.cos(this.aimAngle) * this.speed * this.speedMult;
+        this.vy = Math.sin(this.aimAngle) * this.speed * this.speedMult;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1220) {
+          this.shootTimer = 1.3 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x + Math.cos(this.aimAngle) * 18,
+            y: this.y + Math.sin(this.aimAngle) * 18,
+            vx: Math.cos(this.aimAngle) * 420 * this.bulletSpeedMult,
+            vy: Math.sin(this.aimAngle) * 420 * this.bulletSpeedMult,
+            radius: 6,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+      }
+
+      case 'CYBER_PHANTOM':
+        if (!this.isAnchored) {
+          this.x += this.vx * dt;
+          if (this.stopAtX && this.x >= this.stopAtX) {
+            this.isAnchored = true;
+            this.vx = 0;
+          }
+        } else {
+          this.y += Math.sin(this.tick * 0.06) * 55 * dt;
+        }
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.isAnchored) {
+          this.shootTimer = 1.1 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x - 22,
+            y: this.y - 10,
+            vx: -420 * this.bulletSpeedMult,
+            vy: -25,
+            radius: 7,
+            type: 'ENEMY_SNIPER',
+            isEnemy: true
+          }));
+          bullets.push(new Bullet({
+            x: this.x - 22,
+            y: this.y + 10,
+            vx: -420 * this.bulletSpeedMult,
+            vy: 25,
+            radius: 7,
+            type: 'ENEMY_SNIPER',
+            isEnemy: true
+          }));
+          sound.playShoot('LASER');
+        }
+        break;
+
+      case 'CYBER_PENDULUM':
+        this.x += this.vx * dt;
+        this.swingPhase += this.swingSpeed * dt * this.speedMult;
+        this.y = this.baseY + Math.sin(this.swingPhase) * this.swingAmp;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1180 && this.x > player.x + 80) {
+          this.shootTimer = 1.2 * this.shootCooldownMult;
+          const a = Math.atan2(player.y - this.y, player.x - this.x);
+          bullets.push(new Bullet({
+            x: this.x - 18,
+            y: this.y,
+            vx: Math.cos(a) * 400 * this.bulletSpeedMult,
+            vy: Math.sin(a) * 400 * this.bulletSpeedMult,
+            radius: 7,
+            type: 'ENEMY_SNIPER',
+            isEnemy: true
+          }));
+          sound.playShoot('LASER');
+        }
+        break;
+
+      case 'VOID_STALKER': {
+        const targetAng = Math.atan2(player.y - this.y, player.x - this.x);
+        let diff = targetAng - this.aimAngle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), this.turnSpeed * dt);
+        this.vx = Math.cos(this.aimAngle) * this.speed * this.speedMult;
+        this.vy = Math.sin(this.aimAngle) * this.speed * this.speedMult;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1220) {
+          this.shootTimer = 1.1 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x + Math.cos(this.aimAngle) * 20,
+            y: this.y + Math.sin(this.aimAngle) * 20,
+            vx: Math.cos(this.aimAngle) * 460 * this.bulletSpeedMult,
+            vy: Math.sin(this.aimAngle) * 460 * this.bulletSpeedMult,
+            radius: 6,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+      }
+
+      case 'METEOR_DIVER':
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.y > 60 && this.y < 660 && this.x > 100 && this.x < 1200) {
+          this.shootTimer = 0.8 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x,
+            y: this.y,
+            vx: -180 * this.bulletSpeedMult,
+            vy: 140 * this.bulletSpeedMult,
+            radius: 7,
+            isEnemy: true
+          }));
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'ABYSS_ASCENDER':
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.y > 60 && this.y < 660 && this.x > 100 && this.x < 1200) {
+          this.shootTimer = 0.8 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x - 16,
+            y: this.y,
+            vx: -340 * this.bulletSpeedMult,
+            vy: -70 * this.bulletSpeedMult,
+            radius: 7,
+            isEnemy: true
+          }));
+          sound.playShoot('LASER');
+        }
+        break;
+
+      case 'WARP_FLANKER':
+        if (!this.isAnchored) {
+          this.x += this.vx * dt;
+          if (this.stopAtX && this.x >= this.stopAtX) {
+            this.x = this.stopAtX;
+            this.isAnchored = true;
+            this.vx = 0;
+            this.baseY = this.y;
+          }
+        } else {
+          this.loopPhase = (this.loopPhase || 0) + 2.2 * dt;
+          this.y = this.baseY + Math.sin(this.loopPhase) * 45;
+        }
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1240) {
+          this.shootTimer = 1.0 * this.shootCooldownMult;
+          const dir = this.isAnchored ? -1 : 1;
+          bullets.push(new Bullet({
+            x: this.x + dir * 22,
+            y: this.y,
+            vx: dir * 450 * this.bulletSpeedMult,
+            vy: 0,
+            radius: 6,
+            type: 'ENEMY_SNIPER',
+            isEnemy: true
+          }));
+          sound.playShoot('LASER');
+        }
+        break;
+
+      case 'COSMIC_ORBITER':
+        this.x += this.vx * dt;
+        this.orbitAngle += this.orbitSpeed * dt * this.speedMult;
+        this.y = this.baseY + Math.sin(this.orbitAngle) * this.orbitRadiusY;
+        this.x += Math.cos(this.orbitAngle) * 35 * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 120 && this.x < 1180) {
+          this.shootTimer = 1.4 * this.shootCooldownMult;
+          for (let a = 0; a < 4; a++) {
+            const ang = this.orbitAngle + (a * Math.PI) / 2;
+            bullets.push(new Bullet({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(ang) * 320 * this.bulletSpeedMult,
+              vy: Math.sin(ang) * 320 * this.bulletSpeedMult,
+              radius: 6,
+              isEnemy: true
+            }));
+          }
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'FRUIT_CARRIER':
+        this.x += this.vx * dt;
+        this.y = this.baseY + Math.sin(this.tick * this.waveFreq) * this.waveAmp;
+        if (this.x < -70) return false;
+        break;
+
+      case 'JUMBO_DREAD_CRUISER':
+        if (this.x > this.targetHoverX) {
+          this.x += this.vx * dt;
+        } else {
+          this.y += Math.sin(this.tick * 0.02) * 35 * dt;
+        }
+
+        // 1. Triple Gun Turret Salvo
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220 && this.x > player.x + 80) {
+          this.shootTimer = 1.4 * this.shootCooldownMult;
+          const a = Math.atan2(player.y - this.y, player.x - this.x);
+          [-0.22, 0, 0.22].forEach(off => {
+            bullets.push(new Bullet({
+              x: this.x - 50,
+              y: this.y,
+              vx: Math.cos(a + off) * 380 * this.bulletSpeedMult,
+              vy: Math.sin(a + off) * 380 * this.bulletSpeedMult,
+              radius: 8,
+              isEnemy: true
+            }));
+          });
+          sound.playEnemyShoot();
+        }
+
+        // 2. Heavy Steam Mortar
+        this.mortarTimer -= dt;
+        if (this.mortarTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200) {
+          this.mortarTimer = 2.5 * this.shootCooldownMult;
+          bullets.push(new Bullet({
+            x: this.x - 20,
+            y: this.y - 25,
+            vx: -240 * this.bulletSpeedMult,
+            vy: -140,
+            gravity: 210,
+            radius: 9,
+            type: 'ENEMY_MORTAR',
+            isEnemy: true
+          }));
+          sound.playShoot('FLAK');
+        }
+
+        // 3. Mini carrier deployment
+        this.carrierTimer -= dt;
+        if (this.carrierTimer <= 0 && this.x < 1150) {
+          this.carrierTimer = 5.0;
+          extraEnemies.push(new Enemy({
+            type: 'SCOUT',
+            x: this.x + 20,
+            y: this.y - 30,
+            stage: this.stage
+          }));
+          extraEnemies.push(new Enemy({
+            type: 'SCOUT',
+            x: this.x + 20,
+            y: this.y + 30,
+            stage: this.stage
+          }));
+        }
+        break;
+
+      case 'JUMBO_SAND_FORTRESS':
+        if (this.x > this.targetHoverX) {
+          this.x += this.vx * dt;
+        } else {
+          this.y += Math.sin(this.tick * 0.02) * 40 * dt;
+        }
+
+        // Twin heavy mortar shells
+        this.mortarTimer -= dt;
+        if (this.mortarTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220) {
+          this.mortarTimer = 2.0 * this.shootCooldownMult;
+          [-24, 24].forEach(yOff => {
+            bullets.push(new Bullet({
+              x: this.x - 45,
+              y: this.y + yOff,
+              vx: -260 * this.bulletSpeedMult,
+              vy: -130 + yOff * 0.5,
+              gravity: 220,
+              radius: 9,
+              type: 'ENEMY_MORTAR',
+              isEnemy: true
+            }));
+          });
+          sound.playShoot('FLAK');
+        }
+
+        // Sandstorm 5-way spread
+        this.burstTimer -= dt;
+        if (this.burstTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200 && this.x > player.x + 70) {
+          this.burstTimer = 1.5 * this.shootCooldownMult;
+          const a = Math.atan2(player.y - this.y, player.x - this.x);
+          [-0.35, -0.18, 0, 0.18, 0.35].forEach(off => {
+            bullets.push(new Bullet({
+              x: this.x - 40,
+              y: this.y,
+              vx: Math.cos(a + off) * 400 * this.bulletSpeedMult,
+              vy: Math.sin(a + off) * 400 * this.bulletSpeedMult,
+              radius: 7,
+              isEnemy: true
+            }));
+          });
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'JUMBO_CYBER_GARGANTUA':
+        if (this.x > this.targetHoverX) {
+          this.x += this.vx * dt;
+        } else {
+          this.y += Math.sin(this.tick * 0.025) * 45 * dt;
+        }
+
+        // Twin railguns
+        this.railgunTimer -= dt;
+        if (this.railgunTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220 && this.x > player.x + 60) {
+          this.railgunTimer = 2.0 * this.shootCooldownMult;
+          [-22, 22].forEach(yOff => {
+            const a = Math.atan2(player.y - (this.y + yOff), player.x - (this.x - 55));
+            bullets.push(new Bullet({
+              x: this.x - 55,
+              y: this.y + yOff,
+              vx: Math.cos(a) * 620 * this.bulletSpeedMult,
+              vy: Math.sin(a) * 620 * this.bulletSpeedMult,
+              radius: 7,
+              type: 'ENEMY_SNIPER',
+              isEnemy: true
+            }));
+          });
+          sound.playShoot('LASER');
+        }
+
+        // EMP Nova ring
+        this.novaTimer -= dt;
+        if (this.novaTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200) {
+          this.novaTimer = 2.8 * this.shootCooldownMult;
+          const count = 10;
+          for (let k = 0; k < count; k++) {
+            const ang = (k * Math.PI * 2) / count + this.tick * 0.05;
+            bullets.push(new Bullet({
+              x: this.x - 10,
+              y: this.y,
+              vx: Math.cos(ang) * 340 * this.bulletSpeedMult,
+              vy: Math.sin(ang) * 340 * this.bulletSpeedMult,
+              radius: 7,
+              isEnemy: true
+            }));
+          }
+          sound.playEnemyShoot();
+        }
+        break;
+
+      case 'JUMBO_SINGULARITY_TITAN':
+        if (!this.hoverPhase) {
+          this.hoverPhase = (this.x > this.targetHoverX) ? 'ENTER' : 'HOVER_STATIC';
+          this.hoverTimer = 12.0;
+        }
+
+        if (this.hoverPhase === 'ENTER') {
+          this.x += (this.vx || -60) * dt * this.speedMult;
+          if (this.x <= this.targetHoverX) {
+            this.x = this.targetHoverX;
+            this.hoverPhase = 'HOVER_STATIC';
+            this.hoverTimer = 12.0;
+          }
+        } else if (this.hoverPhase === 'HOVER_STATIC') {
+          // Mengayun dan statis di sisi kanan layar terlebih dahulu (~12 detik)
+          this.y += Math.sin(this.tick * 0.03) * 55 * dt * this.speedMult;
+          this.hoverTimer -= dt;
+          if (this.hoverTimer <= 0) {
+            this.hoverPhase = 'ADVANCE_LEFT';
+            if (particles && typeof particles.createFloatingText === 'function') {
+              particles.createFloatingText(this.x, this.y - 70, '⚠️ TITAN MENYERBU KE DEPAN!', '#e040fb');
+            }
+          }
+        } else if (this.hoverPhase === 'ADVANCE_LEFT') {
+          // Jika lama lalu bergerak ke depan ujung kiri layar
+          this.x -= 75 * dt * this.speedMult;
+          this.y += Math.sin(this.tick * 0.03) * 50 * dt * this.speedMult;
+        }
+
+        // 1. Gravity Vortex Homing Missiles
+        this.vortexTimer -= dt;
+        if (this.vortexTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220) {
+          this.vortexTimer = 2.6 * this.shootCooldownMult;
+          [-24, 24].forEach(yOff => {
+            bullets.push(new Bullet({
+              x: this.x - 30,
+              y: this.y + yOff,
+              vx: -240,
+              vy: yOff * 3.5,
+              radius: 9,
+              type: 'ENEMY_HOMING',
+              life: 5.0,
+              isEnemy: true
+            }));
+          });
+          sound.playShoot('HOMING');
+        }
+
+        // 2. Star Nova 12-Way Burst
+        this.starNovaTimer -= dt;
+        if (this.starNovaTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200) {
+          this.starNovaTimer = 2.0 * this.shootCooldownMult;
+          const count = 12;
+          for (let k = 0; k < count; k++) {
+            const ang = (k * Math.PI * 2) / count + this.tick * 0.08;
+            bullets.push(new Bullet({
+              x: this.x - 15,
+              y: this.y,
+              vx: Math.cos(ang) * 360 * this.bulletSpeedMult,
+              vy: Math.sin(ang) * 360 * this.bulletSpeedMult,
+              radius: 7,
+              isEnemy: true
+            }));
+          }
+          sound.playShoot('SPREAD');
+        }
+
+        // 3. Heavy frontal railgun spires
+        this.homingPodTimer -= dt;
+        if (this.homingPodTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220 && this.x > player.x + 80) {
+          this.homingPodTimer = 2.4 * this.shootCooldownMult;
+          const a = Math.atan2(player.y - this.y, player.x - this.x);
+          [-0.15, 0.15].forEach(off => {
+            bullets.push(new Bullet({
+              x: this.x - 60,
+              y: this.y,
+              vx: Math.cos(a + off) * 600 * this.bulletSpeedMult,
+              vy: Math.sin(a + off) * 600 * this.bulletSpeedMult,
+              radius: 7,
+              type: 'ENEMY_SNIPER',
+              isEnemy: true
+            }));
+          });
+          sound.playShoot('LASER');
+        }
+        break;
     }
 
-    return this.x > -140 && this.y > -100 && this.y < 820;
+    // Dynamic 3D Flight Kinematics & Aerodynamic Banking
+    const dX = this.x - prevX;
+    const dY = this.y - prevY;
+    const targetRoll = Math.max(-0.65, Math.min(0.65, (dY / Math.max(0.001, dt * 260)) * 0.55));
+    this.roll = (this.roll || 0) + (targetRoll - (this.roll || 0)) * Math.min(1.0, 10 * dt);
+    this.pitch = Math.max(-0.25, Math.min(0.25, (dX / Math.max(0.001, dt * 320)) * 0.15));
+
+    return this.x > -180 && this.x < 1460 && this.y > -140 && this.y < 860;
+  }
+
+  applyPlasmaSlow(duration = 1.5) {
+    this.slowTimer = Math.max(this.slowTimer || 0, duration);
   }
 
   takeDamage(amount, bulletX = 0, piercing = false, bulletType = 'NORMAL') {
-    // Shield Cruiser & Juggernaut energy barrier mechanic
-    if ((this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT') && this.shieldHp > 0 && bulletX > this.x - 20) {
+    if (this.invulnerableTimer > 0) {
+      return false; // Kebal sementara saat baru muncul
+    }
+
+    if (bulletType === 'PLASMA' || bulletType === 'PLASMA_ZAP') {
+      this.applyPlasmaSlow(bulletType === 'PLASMA' ? 1.5 : 1.2);
+    }
+
+    // Shield Cruiser, Juggernaut, & Jumbo Shield mechanics
+    if ((this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT' || this.type === 'JUMBO_CYBER_GARGANTUA' || this.type === 'JUMBO_SINGULARITY_TITAN') && this.shieldHp > 0 && bulletX > this.x - 25) {
       if (bulletType === 'FLAK') {
         // Tier A+ Flak Demolition: instantly shatters heavy energy shield in 1 blast!
         this.shieldHp = 0;
         this.hp -= amount;
       } else if (bulletType === 'LASER') {
-        // Tier A+ Thermal Laser: 2.0x bonus shield melting damage!
-        this.shieldHp -= amount * 2.0;
+        // Tier A+ Thermal Laser: 3.0x bonus shield melting damage!
+        this.shieldHp -= amount * 3.0;
         if (this.shieldHp < 0) {
           this.hp += this.shieldHp * 0.5;
           this.shieldHp = 0;
@@ -700,6 +1581,10 @@ export class Enemy {
       this.hp -= amount;
     }
 
+    if (amount > 0) {
+      this.hpBarTimer = 1.6;
+    }
+
     if (this.hp <= 0) {
       this.dead = true;
       return true; // killed
@@ -707,21 +1592,71 @@ export class Enemy {
     return false;
   }
 
+  drawShadow(ctx) {
+    if (!this.dead && this.x > -160 && this.x < 1440 && this.y > -120 && this.y < 840) {
+      const rx = this.radius * 0.95;
+      const ry = this.radius * 0.45;
+      Clay3D.draw3DGroundShadow(ctx, this.x, this.y, this.altitude || 0.9, rx, ry);
+    }
+  }
+
+  /** 2D attack telegraphs that stay readable on top of the 3D models' underlay */
+  drawTelegraphs(ctx) {
+    if (this.type === 'STINGER' && this.charging) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 179, 0, 0.40)';
+      ctx.beginPath();
+      ctx.ellipse(this.x + 18, this.y, 18, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (this.type === 'SNIPER' && this.isAiming) {
+      ctx.save();
+      const aimRatio = Math.min(1.0, this.aimTimer / this.maxAimTime);
+      const startX = this.x - 30;
+      const startY = this.y;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(startX + Math.cos(this.aimAngle) * 1200, startY + Math.sin(this.aimAngle) * 1200);
+      if (aimRatio < 0.6) {
+        ctx.strokeStyle = `rgba(255, 235, 59, ${0.30 + aimRatio * 0.40})`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 6]);
+      } else {
+        ctx.strokeStyle = `rgba(255, 23, 68, ${0.75 + (aimRatio - 0.6) * 0.60})`;
+        ctx.lineWidth = 2.5 + (aimRatio - 0.6) * 3.5;
+        ctx.setLineDash([12, 4]);
+        ctx.shadowColor = '#ff1744';
+        ctx.shadowBlur = 8;
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   draw(ctx) {
+    if (ClayRenderer.use3D) {
+      this.drawTelegraphs(ctx);
+      return;
+    }
     const hpRatio = Math.max(0, this.hp / this.maxHp);
+    const r = this.roll || 0;
+    const p = this.pitch || 0;
 
     switch (this.type) {
+      case 'FRUIT_CARRIER':
+        ClayRenderer.drawFruitCarrier(ctx, this.x, this.y, this.tick, this.color, this.shadowColor, r, p);
+        break;
       case 'SCOUT':
-        ClayRenderer.drawScout(ctx, this.x, this.y, this.tick);
+        ClayRenderer.drawScout(ctx, this.x, this.y, this.tick, r, p);
         break;
       case 'DRONE':
-        ClayRenderer.drawDrone(ctx, this.x, this.y, this.tick);
+        ClayRenderer.drawDrone(ctx, this.x, this.y, this.tick, r, p);
         break;
       case 'GUNSHIP':
-        ClayRenderer.drawGunship(ctx, this.x, this.y, hpRatio, this.tick);
+        ClayRenderer.drawGunship(ctx, this.x, this.y, hpRatio, this.tick, r, p);
         break;
       case 'BLIMP':
-        ClayRenderer.drawBlimp(ctx, this.x, this.y, hpRatio, this.tick);
+        ClayRenderer.drawBlimp(ctx, this.x, this.y, hpRatio, this.tick, r, p);
         break;
       case 'STINGER':
         if (this.charging) {
@@ -732,7 +1667,7 @@ export class Enemy {
           ctx.fill();
           ctx.restore();
         }
-        ClayRenderer.drawStinger(ctx, this.x, this.y, this.tick);
+        ClayRenderer.drawStinger(ctx, this.x, this.y, this.tick, r, p);
         break;
       case 'SNIPER':
         // Draw 3-stage telegraph targeting laser line when aiming
@@ -764,43 +1699,322 @@ export class Enemy {
           ctx.stroke();
           ctx.restore();
         }
-        ClayRenderer.drawSniper(ctx, this.x, this.y, this.isAiming, this.aimTimer / this.maxAimTime, this.tick);
+        ClayRenderer.drawSniper(ctx, this.x, this.y, this.isAiming, this.aimTimer / this.maxAimTime, this.tick, r, p);
         break;
       case 'BOMBER':
-        ClayRenderer.drawBomber(ctx, this.x, this.y, hpRatio, this.tick);
+        ClayRenderer.drawBomber(ctx, this.x, this.y, hpRatio, this.tick, r, p);
         break;
       case 'SPINNER':
-        ClayRenderer.drawSpinner(ctx, this.x, this.y, this.tick);
+        ClayRenderer.drawSpinner(ctx, this.x, this.y, this.tick, r, p);
         break;
       case 'SHIELD_CRUISER': {
         const shieldRatio = Math.max(0, this.shieldHp / this.maxShieldHp);
-        ClayRenderer.drawShieldCruiser(ctx, this.x, this.y, shieldRatio, hpRatio, this.tick);
+        ClayRenderer.drawShieldCruiser(ctx, this.x, this.y, shieldRatio, hpRatio, this.tick, r, p);
         break;
       }
       case 'MINE_LAYER':
-        ClayRenderer.drawMineLayer(ctx, this.x, this.y, hpRatio, this.tick);
+        ClayRenderer.drawMineLayer(ctx, this.x, this.y, hpRatio, this.tick, r, p);
         break;
       case 'MINE':
-        ClayRenderer.drawMine(ctx, this.x, this.y, this.tick);
+        ClayRenderer.drawMine(ctx, this.x, this.y, this.tick, r, p);
         break;
       case 'ACE': {
         const tilt = Math.cos(this.loopPhase);
-        ClayRenderer.drawAce(ctx, this.x, this.y, tilt, hpRatio, this.tick);
+        ClayRenderer.drawAce(ctx, this.x, this.y, tilt, hpRatio, this.tick, r, p);
         break;
       }
       case 'INTERCEPTOR': {
         const isAiming = this.phaseState === 'BRAKE_SHOOT' && !this.hasShot;
-        ClayRenderer.drawInterceptor(ctx, this.x, this.y, hpRatio, this.tick, isAiming, this.aimAngle || Math.PI);
+        ClayRenderer.drawInterceptor(ctx, this.x, this.y, hpRatio, this.tick, isAiming, this.aimAngle || Math.PI, r, p);
         break;
       }
       case 'JUGGERNAUT': {
         const jShield = Math.max(0, this.shieldHp / this.maxShieldHp);
-        ClayRenderer.drawJuggernaut(ctx, this.x, this.y, jShield, hpRatio, this.tick);
+        ClayRenderer.drawJuggernaut(ctx, this.x, this.y, jShield, hpRatio, this.tick, r, p);
         break;
       }
       case 'VORTEX_DRONE':
-        ClayRenderer.drawVortexDrone(ctx, this.x, this.y, hpRatio, this.tick);
+        ClayRenderer.drawVortexDrone(ctx, this.x, this.y, hpRatio, this.tick, r, p);
         break;
+      case 'RETRO_BIPLANE': {
+        const facingLeft = (this.fromBehind && this.isAnchored) || !this.fromBehind;
+        ClayRenderer.drawRetroBiplane(ctx, this.x, this.y, this.tick, hpRatio, this.isAnchored, facingLeft, r, p);
+        break;
+      }
+      case 'SWING_GLIDER':
+        ClayRenderer.drawSwingGlider(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'CANYON_DIVER':
+        ClayRenderer.drawCanyonDiver(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'GEYSER_RUSHER':
+        ClayRenderer.drawGeyserRusher(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'FALCON_TRACKER':
+        ClayRenderer.drawFalconTracker(ctx, this.x, this.y, this.aimAngle || Math.PI, this.tick, hpRatio, r, p);
+        break;
+      case 'CYBER_PHANTOM':
+        ClayRenderer.drawCyberPhantom(ctx, this.x, this.y, this.tick, hpRatio, this.isAnchored, r, p);
+        break;
+      case 'CYBER_PENDULUM':
+        ClayRenderer.drawCyberPendulum(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'VOID_STALKER':
+        ClayRenderer.drawVoidStalker(ctx, this.x, this.y, this.aimAngle || Math.PI, this.tick, hpRatio, r, p);
+        break;
+      case 'METEOR_DIVER':
+        ClayRenderer.drawMeteorDiver(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'ABYSS_ASCENDER':
+        ClayRenderer.drawAbyssAscender(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'WARP_FLANKER':
+        ClayRenderer.drawWarpFlanker(ctx, this.x, this.y, this.tick, hpRatio, this.isAnchored, r, p);
+        break;
+      case 'COSMIC_ORBITER':
+        ClayRenderer.drawCosmicOrbiter(ctx, this.x, this.y, this.tick, hpRatio, r, p);
+        break;
+      case 'JUMBO_DREAD_CRUISER':
+        ClayRenderer.drawJumboDreadCruiser(ctx, this.x, this.y, hpRatio, this.tick, r, p);
+        break;
+      case 'JUMBO_SAND_FORTRESS':
+        ClayRenderer.drawJumboSandFortress(ctx, this.x, this.y, hpRatio, this.tick, r, p);
+        break;
+      case 'JUMBO_CYBER_GARGANTUA': {
+        const jShield = this.maxShieldHp ? Math.max(0, this.shieldHp / this.maxShieldHp) : 0;
+        ClayRenderer.drawJumboCyberGargantua(ctx, this.x, this.y, jShield, hpRatio, this.tick, r, p);
+        break;
+      }
+      case 'JUMBO_SINGULARITY_TITAN': {
+        const jShield = this.maxShieldHp ? Math.max(0, this.shieldHp / this.maxShieldHp) : 0;
+        ClayRenderer.drawJumboSingularityTitan(ctx, this.x, this.y, jShield, hpRatio, this.tick, r, p);
+        break;
+      }
     }
   }
+
+  /** HP bar / invulnerability badge for enemies (rendered above 3D layer at step 6.5) */
+  drawOverlay(ctx) {
+    if (this.dead) return;
+
+    // 1. Invulnerability Energy Shield & Badge (Always render if active)
+    if (this.invulnerableTimer > 0) {
+      ctx.save();
+      const pulseR = this.radius + 12 + Math.sin(this.tick * 0.35) * 4;
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.5 + Math.sin(this.tick * 0.4) * 0.35})`;
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, pulseR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, pulseR - 5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowBlur = 6;
+      ctx.fillText(`🛡️ KEBAL ${this.invulnerableTimer.toFixed(1)}s`, this.x, this.y - this.radius - 18);
+      ctx.restore();
+    }
+
+    // 2. Health Bar Display Logic
+    const mode = Enemy.hpDisplayMode || 'DYNAMIC';
+    const isJumboOrMini = Boolean(this.isJumbo || this.isMiniBoss);
+    const isArmored = this.maxHp > 4;
+
+    // In 'MINIMAL' mode: only Jumbo/Mini-boss gets health bars; regular armored enemies don't
+    if (mode === 'MINIMAL' && !isJumboOrMini) return;
+
+    // If maxHp <= 4 (kroco: Scout, Drone, Stinger, etc.), never show health bar to prevent screen clutter
+    if (!isArmored && !isJumboOrMini) return;
+
+    // In 'DYNAMIC' mode: armored enemies only show bar when hpBarTimer > 0
+    if (!isJumboOrMini && mode === 'DYNAMIC' && this.hpBarTimer <= 0) return;
+
+    const hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
+    const lagRatio = Math.max(0, Math.min(1, (this.lagHp !== undefined ? this.lagHp : this.hp) / this.maxHp));
+
+    // Calculate alpha (fade-out in dynamic mode)
+    let alpha = 1.0;
+    if (!isJumboOrMini && mode === 'DYNAMIC' && this.hpBarTimer < 0.35) {
+      alpha = Math.max(0, this.hpBarTimer / 0.35);
+    }
+    if (alpha <= 0.01) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (isJumboOrMini) {
+      // -------------------------------------------------------------------------
+      // Jumbo & Mini-Boss Bar (UHD Clay Container)
+      // -------------------------------------------------------------------------
+      const barW = Math.max(50, this.radius * 1.5);
+      const barH = 7;
+      const barX = this.x - barW / 2;
+      const barY = this.y - this.radius - 14;
+
+      // Drop shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillRect(barX - 1.5, barY - 1.5, barW + 3, barH + 3);
+
+      // Background trough
+      ctx.fillStyle = '#1e272e';
+      ctx.fillRect(barX, barY, barW, barH);
+
+      // White/Yellow Damage Lag Bar (Chunk loss animation)
+      if (lagRatio > hpRatio) {
+        ctx.fillStyle = '#fff59d';
+        ctx.fillRect(barX, barY, barW * lagRatio, barH);
+      }
+
+      // HP Bar Fill (Smooth Green -> Orange -> Red)
+      ctx.fillStyle = hpRatio > 0.5 ? '#66bb6a' : (hpRatio > 0.25 ? '#ffa726' : '#ef5350');
+      ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+      // Shield Bar layer if applicable
+      if (this.maxShieldHp && this.shieldHp > 0) {
+        const sRatio = Math.max(0, Math.min(1, this.shieldHp / this.maxShieldHp));
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.95)';
+        ctx.fillRect(barX, barY - 4, barW * sRatio, 3);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(barX, barY - 4, barW, 3);
+      }
+
+      // Border frame
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+    } else {
+      // -------------------------------------------------------------------------
+      // Medium / Heavy Armored Enemy Micro-Bar (Ultra-clean & sleek)
+      // -------------------------------------------------------------------------
+      const barW = Math.max(26, Math.min(56, this.radius * 1.35));
+      const barH = 3.5;
+      const barX = this.x - barW / 2;
+      const barY = this.y - this.radius - 8;
+
+      // Soft drop shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillRect(barX - 1, barY - 0.5, barW + 2, barH + 1.5);
+
+      // Dark clay background trough
+      ctx.fillStyle = 'rgba(20, 26, 31, 0.88)';
+      ctx.fillRect(barX, barY, barW, barH);
+
+      // Damage lag ghost bar (cream/yellow)
+      if (lagRatio > hpRatio) {
+        ctx.fillStyle = '#fff9c4';
+        ctx.fillRect(barX, barY, barW * lagRatio, barH);
+      }
+
+      // Main HP fill (Green -> Amber -> Crimson)
+      ctx.fillStyle = hpRatio > 0.5 ? '#4caf50' : (hpRatio > 0.25 ? '#ff9800' : '#f44336');
+      ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+      // Energy Shield sub-bar if present
+      if (this.maxShieldHp && this.shieldHp > 0) {
+        const sRatio = Math.max(0, Math.min(1, this.shieldHp / this.maxShieldHp));
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.95)';
+        ctx.fillRect(barX, barY - 3, barW * sRatio, 2);
+      }
+
+      // Subtle border outline
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 0.75;
+      ctx.strokeRect(barX, barY, barW, barH);
+    }
+
+    ctx.restore();
+  }
+
+  serialize() {
+    return {
+      x: this.x,
+      y: this.y,
+      type: this.type,
+      formationId: this.formationId,
+      isLastInFormation: Boolean(this.isLastInFormation),
+      hpBarTimer: this.hpBarTimer || 0,
+      lagHp: this.lagHp || this.hp,
+      stage: this.stage,
+      world: this.world,
+      bulletSpeedMult: this.bulletSpeedMult,
+      shootCooldownMult: this.shootCooldownMult,
+      tick: this.tick,
+      dead: Boolean(this.dead),
+      slowTimer: this.slowTimer,
+      spawnGraceTimer: this.spawnGraceTimer,
+      invulnerableTimer: this.invulnerableTimer,
+      maxInvulnerableTimer: this.maxInvulnerableTimer,
+      isMiniBoss: Boolean(this.isMiniBoss),
+      maxHp: this.maxHp,
+      hp: this.hp,
+      maxShieldHp: this.maxShieldHp,
+      shieldHp: this.shieldHp,
+      radius: this.radius,
+      vx: this.vx,
+      vy: this.vy,
+      baseVy: this.baseVy,
+      baseY: this.baseY,
+      scoreValue: this.scoreValue,
+      shootTimer: this.shootTimer,
+      targetHoverX: this.targetHoverX,
+      charging: Boolean(this.charging),
+      hasCharged: Boolean(this.hasCharged),
+      targetX: this.targetX,
+      aimTimer: this.aimTimer,
+      maxAimTime: this.maxAimTime,
+      isAiming: Boolean(this.isAiming),
+      aimAngle: this.aimAngle,
+      shootCooldown: this.shootCooldown,
+      bombTimer: this.bombTimer,
+      sparkTimer: this.sparkTimer,
+      mineTimer: this.mineTimer,
+      loopPhase: this.loopPhase,
+      phaseState: this.phaseState,
+      stateTimer: this.stateTimer,
+      hasShot: Boolean(this.hasShot),
+      mortarTimer: this.mortarTimer,
+      burstTimer: this.burstTimer,
+      orbitPhase: this.orbitPhase,
+      vortexTimer: this.vortexTimer,
+      waveFreq: this.waveFreq,
+      waveAmp: this.waveAmp,
+      isJumbo: Boolean(this.isJumbo),
+      fromBehind: Boolean(this.fromBehind),
+      stopAtX: this.stopAtX,
+      isAnchored: Boolean(this.isAnchored),
+      swingPhase: this.swingPhase,
+      orbitAngle: this.orbitAngle,
+      hoverPhase: this.hoverPhase,
+      hoverTimer: this.hoverTimer
+    };
+  }
+
+  static deserialize(data, difficultyConfig = null) {
+    if (!data) return null;
+    const enemy = new Enemy({
+      x: data.x,
+      y: data.y,
+      type: data.type,
+      formationId: data.formationId,
+      isLastInFormation: data.isLastInFormation,
+      stage: data.stage,
+      difficultyConfig: difficultyConfig || Enemy.difficultyConfig
+    });
+    for (const key of Object.keys(data)) {
+      if (data[key] !== undefined) {
+        enemy[key] = data[key];
+      }
+    }
+    return enemy;
+  }
 }
+

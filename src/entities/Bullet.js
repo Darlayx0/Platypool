@@ -2,7 +2,57 @@
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
 
 export class Bullet {
+  static pool = [];
+  static plasmaGradCache = new Map();
+
+  static getPlasmaGrad(ctx, radius) {
+    let grad = Bullet.plasmaGradCache.get(radius);
+    if (!grad) {
+      grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, radius);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.25, '#ea80fc');
+      grad.addColorStop(0.7, '#ab47bc');
+      grad.addColorStop(1, '#4a148c');
+      Bullet.plasmaGradCache.set(radius, grad);
+    }
+    return grad;
+  }
+
+  static acquire(options) {
+    if (Bullet.pool.length > 0) {
+      const b = Bullet.pool.pop();
+      b.init(options);
+      return b;
+    }
+    return new Bullet(options);
+  }
+
+  static release(bullet) {
+    if (!bullet) return;
+    bullet.dead = true;
+    bullet.target = null;
+    if (bullet.activeArcs) bullet.activeArcs.length = 0;
+    if (Bullet.pool.length < 600) {
+      Bullet.pool.push(bullet);
+    }
+  }
+
   constructor(options) {
+    // Transparently recycle from pool if available
+    if (Bullet.pool.length > 0) {
+      const b = Bullet.pool.pop();
+      b.init(options);
+      return b;
+    }
+    this.activeArcs = [];
+    this._arcSlot1 = { x: 0, y: 0 };
+    this._arcSlot2 = { x: 0, y: 0 };
+    this._arcSlot3 = { x: 0, y: 0 };
+    this._arcSlot4 = { x: 0, y: 0 };
+    this.init(options);
+  }
+
+  init(options) {
     this.x = options.x;
     this.y = options.y;
     this.vx = options.vx || 0;
@@ -16,13 +66,21 @@ export class Bullet {
     this.life = options.life || 3.0; // seconds before despawn
     this.maxLife = this.life;
     this.target = options.target || null;
+    this.targetSector = options.targetSector || null;
     this.trailTimer = 0;
     this.tick = 0;
     this.gravity = options.gravity || 0;
     this.arcTimer = options.arcTimer || 0;
-    this.activeArcs = [];
+    if (!this.activeArcs) this.activeArcs = [];
+    else this.activeArcs.length = 0;
+    if (!this._arcSlot1) this._arcSlot1 = { x: 0, y: 0 };
+    if (!this._arcSlot2) this._arcSlot2 = { x: 0, y: 0 };
+    if (!this._arcSlot3) this._arcSlot3 = { x: 0, y: 0 };
+    if (!this._arcSlot4) this._arcSlot4 = { x: 0, y: 0 };
     this.startX = options.startX !== undefined ? options.startX : this.x;
     this.boosted = options.boosted || false;
+    this.color = options.color || null;
+    this.glowColor = options.glowColor || null;
     this.dead = false;
   }
 
@@ -35,33 +93,85 @@ export class Bullet {
       this.vy += this.gravity * dt;
     }
 
-    // Player SPREAD shotgun range falloff: Full punch close-range, gentle decay past 360px
+    // Player SPREAD full-screen sweeper: Arming phase close to nose (<180px: 0.30 dmg), scales up to 1.45 at long-range (>=360px)
     if (this.type === 'SPREAD' && !this.isEnemy) {
       const distTraveled = this.x - this.startX;
-      if (distTraveled > 360) {
-        this.damage = Math.max(0.38, 1.0 - (distTraveled - 360) * 0.0018);
+      if (distTraveled < 180) {
+        this.damage = 0.30;
+        this.radius = 6.0;
+      } else if (distTraveled < 360) {
+        this.damage = 1.10;
+        this.radius = 8.0;
+      } else {
+        this.damage = 1.45;
+        this.radius = 10.0;
       }
     }
 
-    // Player Homing rocket logic: find and track nearest living enemy or boss
+    // Player FLAK Proximity Airburst Fuze: if within 42px of any enemy, trigger airburst!
+    if (this.type === 'FLAK' && !this.isEnemy && !this.dead) {
+      const airburstR = 42;
+      const airburstRSq = airburstR * airburstR;
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (e.dead) continue;
+        const dx = e.x - this.x;
+        if (dx < -airburstR || dx > airburstR) continue;
+        const dy = e.y - this.y;
+        if (dy < -airburstR || dy > airburstR) continue;
+        if (dx * dx + dy * dy <= airburstRSq) {
+          if (game && typeof game.detonateFlak === 'function') {
+            game.detonateFlak(this);
+          }
+          this.dead = true;
+          return false;
+        }
+      }
+    }
+
+    // Player Homing rocket logic: Smart Divergence (Sector split) & rapid 15.0 rad/s turn
     if (this.type === 'HOMING' && !this.isEnemy) {
       if (!this.target || this.target.dead || (this.target.x < this.x - 60)) {
         let closestDistSq = Infinity;
         let bestTarget = null;
         const bx = this.x;
         const by = this.y;
-        for (let i = 0; i < enemies.length; i++) {
-          const e = enemies[i];
-          if (!e.dead && e.x > bx - 50) {
-            const dx = e.x - bx;
-            const dy = e.y - by;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-              closestDistSq = distSq;
-              bestTarget = e;
+
+        // Pass 1: Try finding closest enemy in preferred sector
+        if (this.targetSector) {
+          for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            if (!e.dead && e.x > bx - 50) {
+              const inSector = (this.targetSector === 'UPPER' ? e.y < 360 : e.y >= 360);
+              if (inSector) {
+                const dx = e.x - bx;
+                const dy = e.y - by;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < closestDistSq) {
+                  closestDistSq = distSq;
+                  bestTarget = e;
+                }
+              }
             }
           }
         }
+
+        // Pass 2: Fallback to any closest enemy if none found in preferred sector
+        if (!bestTarget) {
+          for (let i = 0; i < enemies.length; i++) {
+            const e = enemies[i];
+            if (!e.dead && e.x > bx - 50) {
+              const dx = e.x - bx;
+              const dy = e.y - by;
+              const distSq = dx * dx + dy * dy;
+              if (distSq < closestDistSq) {
+                closestDistSq = distSq;
+                bestTarget = e;
+              }
+            }
+          }
+        }
+
         // Also target boss if no minor enemy or boss is closer
         if (!bestTarget && boss && !boss.dead && boss.x > this.x - 80) {
           bestTarget = boss;
@@ -77,9 +187,9 @@ export class Bullet {
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
 
-        const turnSpeed = 12.0 * dt;
+        const turnSpeed = 15.0 * dt; // [🟢 BUFF] Rapid 15.0 rad/s turn
         const newAngle = currentAngle + Math.sign(diff) * Math.min(Math.abs(diff), turnSpeed);
-        const speed = 780;
+        const speed = 760;
         this.vx = Math.cos(newAngle) * speed;
         this.vy = Math.sin(newAngle) * speed;
       }
@@ -89,16 +199,18 @@ export class Bullet {
       }
     }
 
-    // Player Plasma Orb logic: emit Tesla electrical arcs to nearby enemies/boss
+    // Player Plasma Orb logic: emit Tesla electrical arcs to up to 4 nearby enemies/boss (190px radius)
     if (this.type === 'PLASMA' && !this.isEnemy) {
       this.arcTimer -= dt;
-      this.activeArcs = [];
+      this.activeArcs.length = 0;
 
-      const arcRadius = 155;
-      let target1 = null, distSq1 = Infinity;
-      let target2 = null, distSq2 = Infinity;
+      const arcRadius = 190;
+      let target1 = null, distSq1 = Infinity, t1X = 0, t1Y = 0, t1IsBoss = false;
+      let target2 = null, distSq2 = Infinity, t2X = 0, t2Y = 0, t2IsBoss = false;
+      let target3 = null, distSq3 = Infinity, t3X = 0, t3Y = 0, t3IsBoss = false;
+      let target4 = null, distSq4 = Infinity, t4X = 0, t4Y = 0, t4IsBoss = false;
 
-      // Fast O(N) scan without array allocations or sorting
+      // Fast O(N) scan for up to 4 nearest targets without array allocations
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
         if (e.dead) continue;
@@ -111,13 +223,19 @@ export class Bullet {
         const maxRange = arcRadius + e.radius;
         if (dSq < maxRange * maxRange) {
           if (dSq < distSq1) {
-            target2 = target1;
-            distSq2 = distSq1;
-            target1 = { target: e, x: e.x, y: e.y, isBoss: false };
-            distSq1 = dSq;
+            target4 = target3; t4X = t3X; t4Y = t3Y; t4IsBoss = t3IsBoss; distSq4 = distSq3;
+            target3 = target2; t3X = t2X; t3Y = t2Y; t3IsBoss = t2IsBoss; distSq3 = distSq2;
+            target2 = target1; t2X = t1X; t2Y = t1Y; t2IsBoss = t1IsBoss; distSq2 = distSq1;
+            target1 = e; t1X = e.x; t1Y = e.y; t1IsBoss = false; distSq1 = dSq;
           } else if (dSq < distSq2) {
-            target2 = { target: e, x: e.x, y: e.y, isBoss: false };
-            distSq2 = dSq;
+            target4 = target3; t4X = t3X; t4Y = t3Y; t4IsBoss = t3IsBoss; distSq4 = distSq3;
+            target3 = target2; t3X = t2X; t3Y = t2Y; t3IsBoss = t2IsBoss; distSq3 = distSq2;
+            target2 = e; t2X = e.x; t2Y = e.y; t2IsBoss = false; distSq2 = dSq;
+          } else if (dSq < distSq3) {
+            target4 = target3; t4X = t3X; t4Y = t3Y; t4IsBoss = t3IsBoss; distSq4 = distSq3;
+            target3 = e; t3X = e.x; t3Y = e.y; t3IsBoss = false; distSq3 = dSq;
+          } else if (dSq < distSq4) {
+            target4 = e; t4X = e.x; t4Y = e.y; t4IsBoss = false; distSq4 = dSq;
           }
         }
       }
@@ -130,41 +248,59 @@ export class Bullet {
           const bDistSq = bdx * bdx + bdy * bdy;
           if (bDistSq < bRange * bRange) {
             if (bDistSq < distSq1) {
-              target2 = target1;
-              target1 = { target: boss, x: boss.x, y: boss.y, isBoss: true };
+              target4 = target3; t4X = t3X; t4Y = t3Y; t4IsBoss = t3IsBoss;
+              target3 = target2; t3X = t2X; t3Y = t2Y; t3IsBoss = t2IsBoss;
+              target2 = target1; t2X = t1X; t2Y = t1Y; t2IsBoss = t1IsBoss;
+              target1 = boss; t1X = boss.x; t1Y = boss.y; t1IsBoss = true;
             } else if (bDistSq < distSq2) {
-              target2 = { target: boss, x: boss.x, y: boss.y, isBoss: true };
+              target4 = target3; t4X = t3X; t4Y = t3Y; t4IsBoss = t3IsBoss;
+              target3 = target2; t3X = t2X; t3Y = t2Y; t3IsBoss = t2IsBoss;
+              target2 = boss; t2X = boss.x; t2Y = boss.y; t2IsBoss = true;
+            } else if (bDistSq < distSq3) {
+              target4 = target3; t4X = t3X; t4Y = t3Y; t4IsBoss = t3IsBoss;
+              target3 = boss; t3X = boss.x; t3Y = boss.y; t3IsBoss = true;
+            } else if (bDistSq < distSq4) {
+              target4 = boss; t4X = boss.x; t4Y = boss.y; t4IsBoss = true;
             }
           }
         }
       }
 
-      if (target1) this.activeArcs.push({ x: target1.x, y: target1.y });
-      if (target2) this.activeArcs.push({ x: target2.x, y: target2.y });
+      if (target1) { this._arcSlot1.x = t1X; this._arcSlot1.y = t1Y; this.activeArcs.push(this._arcSlot1); }
+      if (target2) { this._arcSlot2.x = t2X; this._arcSlot2.y = t2Y; this.activeArcs.push(this._arcSlot2); }
+      if (target3) { this._arcSlot3.x = t3X; this._arcSlot3.y = t3Y; this.activeArcs.push(this._arcSlot3); }
+      if (target4) { this._arcSlot4.x = t4X; this._arcSlot4.y = t4Y; this.activeArcs.push(this._arcSlot4); }
 
       if (this.arcTimer <= 0) {
-        this.arcTimer = 0.08; // zap interval
+        this.arcTimer = 0.09; // zap interval
 
-        if (target1) {
-          if (target1.isBoss) {
-            target1.target.takeDamage(0.25, target1.y, particles, null, 'PLASMA_ZAP');
-          } else {
-            const killed = target1.target.takeDamage(0.5, this.x, false, 'PLASMA_ZAP');
-            target1.target.slowTimer = 0.5; // Electro-disruption micro-slow (35% speed reduction)
-            if (killed && game) game.handleEnemyDeath(target1.target);
-          }
-          if (particles) particles.createElectricSpark(target1.x, target1.y, 2, '#ea80fc', '#aa00ff');
-        }
+        const targets = [
+          { t: target1, x: t1X, y: t1Y, isBoss: t1IsBoss },
+          { t: target2, x: t2X, y: t2Y, isBoss: t2IsBoss },
+          { t: target3, x: t3X, y: t3Y, isBoss: t3IsBoss },
+          { t: target4, x: t4X, y: t4Y, isBoss: t4IsBoss }
+        ];
 
-        if (target2) {
-          if (target2.isBoss) {
-            target2.target.takeDamage(0.25, target2.y, particles, null, 'PLASMA_ZAP');
+        for (let ti = 0; ti < targets.length; ti++) {
+          const item = targets[ti];
+          if (!item.t) continue;
+          if (item.isBoss) {
+            item.t.takeDamage(0.12, item.y, particles, null, 'PLASMA_ZAP');
+            if (typeof item.t.applyPlasmaSlow === 'function') {
+              item.t.applyPlasmaSlow(1.0);
+            } else {
+              item.t.slowTimer = Math.max(item.t.slowTimer || 0, 1.0);
+            }
           } else {
-            const killed = target2.target.takeDamage(0.5, this.x, false, 'PLASMA_ZAP');
-            target2.target.slowTimer = 0.5; // Electro-disruption micro-slow (35% speed reduction)
-            if (killed && game) game.handleEnemyDeath(target2.target);
+            const killed = item.t.takeDamage(0.45, this.x, false, 'PLASMA_ZAP');
+            if (typeof item.t.applyPlasmaSlow === 'function') {
+              item.t.applyPlasmaSlow(1.2);
+            } else {
+              item.t.slowTimer = Math.max(item.t.slowTimer || 0, 1.2);
+            }
+            if (killed && game) game.handleEnemyDeath(item.t);
           }
-          if (particles) particles.createElectricSpark(target2.x, target2.y, 2, '#ea80fc', '#aa00ff');
+          if (particles) particles.createElectricSpark(item.x, item.y, 2, '#ea80fc', '#aa00ff');
         }
       }
 
@@ -201,6 +337,29 @@ export class Bullet {
   }
 
   draw(ctx) {
+    if (ClayRenderer.use3D) {
+      if (this.type === 'PLASMA' && !this.isEnemy && this.activeArcs && this.activeArcs.length > 0) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        for (const [col, w] of [['#e040fb', 2.5], ['#ffffff', 1.0]]) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = w;
+          ctx.beginPath();
+          for (const arc of this.activeArcs) {
+            ctx.moveTo(this.x, this.y);
+            const dx = (arc.x - this.x) / 4;
+            const dy = (arc.y - this.y) / 4;
+            for (let s = 1; s < 4; s++) {
+              ctx.lineTo(this.x + dx * s + Math.sin(this.tick + s * 1.5) * 8, this.y + dy * s + Math.cos(this.tick + s * 1.5) * 8);
+            }
+            ctx.lineTo(arc.x, arc.y);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      return;
+    }
     if (this.isEnemy) {
       if (this.type === 'ENEMY_SNIPER') {
         // High velocity glowing needle
@@ -344,12 +503,8 @@ export class Bullet {
         ctx.fillStyle = 'rgba(171, 71, 188, 0.35)';
         ctx.fill();
 
-        // 2. Main Shaded Plasma Clay Blob
-        const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, this.radius);
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.25, '#ea80fc');
-        grad.addColorStop(0.7, '#ab47bc');
-        grad.addColorStop(1, '#4a148c');
+        // 2. Main Shaded Plasma Clay Blob (Cached flyweight gradient)
+        const grad = Bullet.getPlasmaGrad(ctx, this.radius);
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = grad;
@@ -387,4 +542,59 @@ export class Bullet {
         break;
     }
   }
+
+  serialize() {
+    return {
+      x: this.x,
+      y: this.y,
+      vx: this.vx,
+      vy: this.vy,
+      radius: this.radius,
+      damage: this.damage,
+      isEnemy: Boolean(this.isEnemy),
+      type: this.type,
+      piercing: Boolean(this.piercing),
+      hitsLeft: this.hitsLeft,
+      life: this.life,
+      maxLife: this.maxLife,
+      tick: this.tick,
+      gravity: this.gravity,
+      arcTimer: this.arcTimer,
+      startX: this.startX,
+      targetSector: this.targetSector,
+      boosted: Boolean(this.boosted),
+      color: this.color,
+      glowColor: this.glowColor,
+      dead: Boolean(this.dead)
+    };
+  }
+
+  static deserialize(data) {
+    if (!data) return null;
+    const bullet = Bullet.acquire({
+      x: data.x,
+      y: data.y,
+      vx: data.vx,
+      vy: data.vy,
+      radius: data.radius,
+      damage: data.damage,
+      isEnemy: data.isEnemy,
+      type: data.type,
+      targetSector: data.targetSector,
+      piercing: data.piercing,
+      hitsLeft: data.hitsLeft,
+      life: data.life,
+      gravity: data.gravity,
+      arcTimer: data.arcTimer,
+      startX: data.startX,
+      boosted: data.boosted,
+      color: data.color,
+      glowColor: data.glowColor
+    });
+    bullet.maxLife = data.maxLife !== undefined ? data.maxLife : bullet.maxLife;
+    bullet.tick = data.tick !== undefined ? data.tick : bullet.tick;
+    bullet.dead = Boolean(data.dead);
+    return bullet;
+  }
 }
+

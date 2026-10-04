@@ -1,5 +1,6 @@
 // Collectibles: Weapon Cycling Capsule and Fruit Drops with Realistic Physics
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
+import { Clay3D } from '../graphics/Clay3D.js';
 
 export const WEAPON_TYPES = ['SPREAD', 'LASER', 'HOMING', 'FLAK', 'PLASMA'];
 
@@ -9,7 +10,7 @@ export const FRUIT_CONFIGS = {
     id: 'CHERRY',
     name: 'Ceri',
     label: '🍒 CERI',
-    baseValue: 2000,
+    baseValue: 600,
     weight: 40,
     tier: 'COMMON',
     color: '#d32f2f'
@@ -18,7 +19,7 @@ export const FRUIT_CONFIGS = {
     id: 'BANANA',
     name: 'Pisang',
     label: '🍌 PISANG',
-    baseValue: 5000,
+    baseValue: 1500,
     weight: 25,
     tier: 'COMMON',
     color: '#fdd835'
@@ -27,7 +28,7 @@ export const FRUIT_CONFIGS = {
     id: 'APPLE',
     name: 'Apel',
     label: '🍎 APEL',
-    baseValue: 12000,
+    baseValue: 3600,
     weight: 18,
     tier: 'STANDARD',
     color: '#e53935'
@@ -36,7 +37,7 @@ export const FRUIT_CONFIGS = {
     id: 'WATERMELON',
     name: 'Semangka',
     label: '🍉 SEMANGKA',
-    baseValue: 25000,
+    baseValue: 7500,
     weight: 10,
     tier: 'RARE',
     color: '#00e676'
@@ -45,7 +46,7 @@ export const FRUIT_CONFIGS = {
     id: 'DRAGONFRUIT',
     name: 'Buah Naga',
     label: '🐉 BUAH NAGA',
-    baseValue: 42000,
+    baseValue: 12600,
     weight: 5,
     tier: 'VERY_RARE',
     color: '#e040fb'
@@ -54,7 +55,7 @@ export const FRUIT_CONFIGS = {
     id: 'GOLDEN_FRUIT',
     name: 'Buah Bintang Emas',
     label: '⭐ BUAH EMAS SPESIAL',
-    baseValue: 60000,
+    baseValue: 18000,
     weight: 2,
     tier: 'SPECIAL',
     color: '#ffd700'
@@ -166,7 +167,31 @@ export class PowerUpCapsule {
   }
 
   draw(ctx) {
+    if (ClayRenderer.use3D) return; // rendered by Scene3D
     ClayRenderer.drawPowerUpCapsule(ctx, this.x, this.y, this.weaponType, this.tick);
+  }
+
+  drawShadow(ctx) {
+    if (!this.dead && this.x > -40 && this.x < 1350) {
+      Clay3D.draw3DGroundShadow(ctx, this.x, this.y, 0.7, 24, 12);
+    }
+  }
+
+  serialize() {
+    return {
+      collectibleType: 'CAPSULE',
+      x: this.x,
+      y: this.y,
+      vx: this.vx,
+      vy: this.vy,
+      radius: this.radius,
+      weaponType: this.weaponType,
+      weaponIndex: this.weaponIndex,
+      tick: this.tick,
+      hitCooldown: this.hitCooldown,
+      dead: Boolean(this.dead),
+      wobble: this.wobble
+    };
   }
 }
 
@@ -268,75 +293,51 @@ export class FruitDrop {
   }
 
   draw(ctx) {
+    if (ClayRenderer.use3D) return; // rendered by Scene3D
     // Blinking effect when life is about to expire
     if (this.life < 2.5 && Math.sin(this.life * 14) < 0) {
       return;
     }
     ClayRenderer.drawFruit(ctx, this.x, this.y, this.type, this.tick, this.rotation);
   }
-}
 
-export class PulseDrop {
-  constructor(x, y, options = {}) {
-    this.x = x;
-    // Keep spawn height in safe mid-air play zone
-    this.y = Math.max(130, Math.min(590, y));
-    this.baseY = this.y;
-    this.vx = options.vx !== undefined ? options.vx : -78;
-    this.vy = options.vy !== undefined ? options.vy : 0;
-    this.radius = 22;
-    this.rotation = 0;
-    this.vRot = (Math.random() - 0.5) * 2.5;
-    this.tick = Math.random() * 50;
-    this.dead = false;
-    this.life = options.life !== undefined ? options.life : 20.0;
-    this.maxLife = this.life;
-  }
-
-  update(dt, player = null) {
-    this.tick++;
-    if (this.life > 0) this.life -= dt;
-    if (this.life <= 0) return false;
-
-    // Generous magnetic attraction when player is nearby
-    if (player && !player.dead) {
-      const magnetRange = 240;
-      const dx = player.x - this.x;
-      if (dx > -magnetRange && dx < magnetRange) {
-        const dy = player.y - this.y;
-        if (dy > -magnetRange && dy < magnetRange) {
-          const distSq = dx * dx + dy * dy;
-          if (distSq < magnetRange * magnetRange && distSq > 1) {
-            const dist = Math.sqrt(distSq);
-            const pullFactor = (1 - dist / magnetRange) * 540;
-            const invDist = 1 / dist;
-            this.vx += dx * invDist * pullFactor * dt;
-            this.vy += dy * invDist * pullFactor * dt;
-          }
-        }
-      }
+  drawShadow(ctx) {
+    if (!this.dead && this.x > -40 && this.x < 1350) {
+      Clay3D.draw3DGroundShadow(ctx, this.x, this.y, 0.6, 18, 9);
     }
-
-    // Aerodynamic horizontal cruising with gentle sinusoidal floating wave
-    this.x += this.vx * dt;
-    this.y += this.vy * dt + Math.sin(this.tick * 0.055) * 32 * dt;
-    this.rotation += this.vRot * dt;
-
-    // Soft drag on vertical acceleration from magnetic drift
-    this.vy *= Math.pow(0.94, dt * 60);
-
-    // Keep smoothly within visible screen bounds
-    this.y = Math.max(90, Math.min(620, this.y));
-
-    return this.x > -50;
   }
 
-  draw(ctx) {
-    // Blinking flash warning during last 3.5 seconds of existence
-    if (this.life < 3.5 && Math.sin(this.life * 14) < 0) return;
-    ClayRenderer.drawPulseDrop(ctx, this.x, this.y, this.tick, this.rotation);
+  serialize() {
+    return {
+      collectibleType: 'FRUIT',
+      x: this.x,
+      y: this.y,
+      type: this.type,
+      stage: this.stage,
+      world: this.world,
+      worldMultiplier: this.worldMultiplier,
+      basePoints: this.basePoints,
+      points: this.points,
+      label: this.label,
+      isBossDrop: Boolean(this.isBossDrop),
+      vx: this.vx,
+      vy: this.vy,
+      gravity: this.gravity,
+      bounce: this.bounce,
+      friction: this.friction,
+      groundFriction: this.groundFriction,
+      radius: this.radius,
+      rotation: this.rotation,
+      vRot: this.vRot,
+      tick: this.tick,
+      dead: Boolean(this.dead),
+      life: this.life,
+      maxLife: this.maxLife,
+      groundY: this.groundY
+    };
   }
 }
+
 
 export class SpeedBoostDrop {
   constructor(x, y, options = {}) {
@@ -394,9 +395,87 @@ export class SpeedBoostDrop {
   }
 
   draw(ctx) {
+    if (ClayRenderer.use3D) return; // rendered by Scene3D
     // Blinking flash warning during last 3.5 seconds of existence
     if (this.life < 3.5 && Math.sin(this.life * 14) < 0) return;
     ClayRenderer.drawSpeedBoostDrop(ctx, this.x, this.y, this.tick, this.rotation);
   }
+
+  drawShadow(ctx) {
+    if (!this.dead && this.x > -40 && this.x < 1350) {
+      Clay3D.draw3DGroundShadow(ctx, this.x, this.y, 0.65, 20, 10);
+    }
+  }
+
+  serialize() {
+    return {
+      collectibleType: 'SPEED_BOOST',
+      x: this.x,
+      y: this.y,
+      baseY: this.baseY,
+      vx: this.vx,
+      vy: this.vy,
+      radius: this.radius,
+      rotation: this.rotation,
+      vRot: this.vRot,
+      tick: this.tick,
+      dead: Boolean(this.dead),
+      life: this.life,
+      maxLife: this.maxLife
+    };
+  }
 }
+
+export function deserializeCollectible(data) {
+  if (!data) return null;
+  switch (data.collectibleType) {
+    case 'CAPSULE': {
+      const item = new PowerUpCapsule(data.x, data.y, data.weaponType);
+      item.vx = data.vx !== undefined ? data.vx : item.vx;
+      item.vy = data.vy !== undefined ? data.vy : item.vy;
+      item.radius = data.radius !== undefined ? data.radius : item.radius;
+      item.tick = data.tick !== undefined ? data.tick : item.tick;
+      item.hitCooldown = data.hitCooldown !== undefined ? data.hitCooldown : item.hitCooldown;
+      item.dead = Boolean(data.dead);
+      item.wobble = data.wobble !== undefined ? data.wobble : item.wobble;
+      return item;
+    }
+    case 'FRUIT': {
+      const item = new FruitDrop(data.x, data.y, data.type, data.stage || 1, {
+        isBossDrop: data.isBossDrop,
+        vx: data.vx,
+        vy: data.vy,
+        gravity: data.gravity,
+        bounce: data.bounce,
+        friction: data.friction,
+        groundFriction: data.groundFriction,
+        rotation: data.rotation,
+        vRot: data.vRot,
+        life: data.life
+      });
+      item.maxLife = data.maxLife !== undefined ? data.maxLife : item.maxLife;
+      item.tick = data.tick !== undefined ? data.tick : item.tick;
+      item.dead = Boolean(data.dead);
+      item.groundY = data.groundY !== undefined ? data.groundY : item.groundY;
+      return item;
+    }
+    case 'SPEED_BOOST': {
+      const item = new SpeedBoostDrop(data.x, data.y, {
+        vx: data.vx,
+        vy: data.vy,
+        life: data.life
+      });
+      item.baseY = data.baseY !== undefined ? data.baseY : item.baseY;
+      item.rotation = data.rotation !== undefined ? data.rotation : item.rotation;
+      item.vRot = data.vRot !== undefined ? data.vRot : item.vRot;
+      item.tick = data.tick !== undefined ? data.tick : item.tick;
+      item.dead = Boolean(data.dead);
+      item.maxLife = data.maxLife !== undefined ? data.maxLife : item.maxLife;
+      return item;
+    }
+    default:
+      return null;
+  }
+}
+
 

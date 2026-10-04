@@ -28,6 +28,14 @@ class ParticleObject {
   }
 }
 
+// Floating text typography (kept identical to the original live-drawn style)
+const TEXT_FONT = 'bold 22px Luckiest Guy, cursive';
+const TEXT_STROKE = '#3e2723';
+const TEXT_STROKE_W = 4;
+// Generous margin: miter joins on a 4px stroke can overshoot a sharp glyph corner by several px.
+const TEXT_PAD = 14;
+const TEXT_LINE_H = 22 * 1.6;
+
 class FloatingTextObject {
   constructor() {
     this.active = false;
@@ -38,11 +46,21 @@ class FloatingTextObject {
     this.vy = -55;
     this.life = 0;
     this.maxLife = 0.9;
+
+    // Pre-rasterised sprite (lazily created, then reused for the lifetime of the slot)
+    this.canvas = null;
+    this.sctx = null;
+    this.hasSprite = false;
+    this.pxW = 0;
+    this.pxH = 0;
+    this.logW = 0;
+    this.logH = 0;
   }
 
   reset() {
     this.active = false;
     this.text = '';
+    this.hasSprite = false;
   }
 }
 
@@ -61,6 +79,103 @@ export class ParticleSystem {
     for (let i = 0; i < this.maxTexts; i++) {
       this.textPool[i] = new FloatingTextObject();
     }
+
+    // Device-pixel density used to rasterise text sprites crisply (mirrors Game.dpr)
+    this.resolutionScale = 1;
+    this._measureCtx = null;
+  }
+
+  setResolutionScale(scale) {
+    this.resolutionScale = Math.max(1, Number(scale) || 1);
+  }
+
+  _getMeasureCtx() {
+    if (!this._measureCtx && typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 640;
+      c.height = 96;
+      this._measureCtx = c.getContext('2d');
+    }
+    return this._measureCtx;
+  }
+
+  /**
+   * Rasterise a floating text once into the slot's own offscreen canvas (stroke + fill, identical
+   * style to the legacy live draw). Per-frame cost drops from 2 text-shaping/raster passes to a
+   * single drawImage, and the emoji/web-font glyph work happens exactly once per pickup.
+   */
+  _renderTextSprite(t) {
+    const mctx = this._getMeasureCtx();
+    if (!mctx) { t.hasSprite = false; return; }
+
+    mctx.font = TEXT_FONT;
+    const textW = mctx.measureText(t.text).width;
+    const s = this.resolutionScale;
+
+    const logW = Math.ceil(textW + TEXT_PAD * 2);
+    const logH = Math.ceil(TEXT_LINE_H + TEXT_PAD * 2);
+    const pxW = Math.ceil(logW * s);
+    const pxH = Math.ceil(logH * s);
+
+    if (!t.canvas) {
+      t.canvas = document.createElement('canvas');
+      t.sctx = t.canvas.getContext('2d');
+    }
+    // Grow-only backing store: resizing a canvas reallocates, so only do it when really needed.
+    if (t.canvas.width < pxW || t.canvas.height < pxH) {
+      t.canvas.width = Math.max(t.canvas.width, pxW);
+      t.canvas.height = Math.max(t.canvas.height, pxH);
+    }
+
+    const g = t.sctx;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, t.canvas.width, t.canvas.height);
+    g.setTransform(s, 0, 0, s, 0, 0);
+    g.font = TEXT_FONT;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.strokeStyle = TEXT_STROKE;
+    g.lineWidth = TEXT_STROKE_W;
+    g.fillStyle = t.color;
+    // Anchor on the exact pixel-grid centre so the sprite lines up 1:1 with the old centred text
+    const cx = pxW / s / 2;
+    const cy = pxH / s / 2;
+    g.strokeText(t.text, cx, cy);
+    g.fillText(t.text, cx, cy);
+
+    t.pxW = pxW;
+    t.pxH = pxH;
+    t.logW = pxW / s;
+    t.logH = pxH / s;
+    t.hasSprite = true;
+  }
+
+  /**
+   * Pre-warm glyph caches (web font + colour-emoji fallback) so the first real pickup label
+   * does not stall the frame while the browser rasterises those glyphs for the first time.
+   */
+  prewarmText(strings) {
+    if (typeof document === 'undefined' || !strings || strings.length === 0) return;
+    const run = () => {
+      const g = this._getMeasureCtx();
+      if (!g) return;
+      g.font = TEXT_FONT;
+      g.lineWidth = TEXT_STROKE_W;
+      g.textAlign = 'left';
+      g.textBaseline = 'middle';
+      for (const str of strings) {
+        g.clearRect(0, 0, 640, 96);
+        g.measureText(str);
+        g.strokeText(str, 8, 48);
+        g.fillText(str, 8, 48);
+      }
+    };
+    const fonts = document.fonts;
+    if (fonts && typeof fonts.load === 'function') {
+      fonts.load(TEXT_FONT, strings.join('')).then(run, run);
+    } else {
+      run();
+    }
   }
 
   _allocParticle() {
@@ -68,12 +183,8 @@ export class ParticleSystem {
     if (this.activeCount < this.maxParticles) {
       p = this.pool[this.activeCount++];
     } else {
-      // Recycle oldest particle at index 0 (swap to active end)
+      // O(1) in-place recycling: reuse oldest particle at index 0 without array-shifting
       p = this.pool[0];
-      for (let k = 0; k < this.activeCount - 1; k++) {
-        this.pool[k] = this.pool[k + 1];
-      }
-      this.pool[this.activeCount - 1] = p;
     }
     p.reset();
     return p;
@@ -103,73 +214,6 @@ export class ParticleSystem {
     }
   }
 
-  // High-Quality Multi-Layered EMP Shockwave for Pulse weapon
-  createPulseShockwave(x, y) {
-    // 1. Radial Soft EMP Bloom
-    const bloom = this._allocParticle();
-    bloom.active = true;
-    bloom.type = 'PULSE_BLOOM';
-    bloom.x = x;
-    bloom.y = y;
-    bloom.vx = 0;
-    bloom.vy = 0;
-    bloom.size = 15;
-    bloom.growth = 1200;
-    bloom.color = '#00e5ff';
-    bloom.life = 0.40;
-    bloom.maxLife = 0.40;
-
-    // 2. Primary Shockwave (High-Energy Cyan + White Core + Filaments)
-    const p1 = this._allocParticle();
-    p1.active = true;
-    p1.type = 'PULSE_RING';
-    p1.x = x;
-    p1.y = y;
-    p1.vx = 0;
-    p1.vy = 0;
-    p1.size = 20;
-    p1.growth = 2100;
-    p1.color = '#00e5ff';
-    p1.shadowColor = '#0097a7';
-    p1.life = 0.62;
-    p1.maxLife = 0.62;
-
-    // 3. Secondary Resonance Wave (Trailing Deep Azure Ring)
-    const p2 = this._allocParticle();
-    p2.active = true;
-    p2.type = 'PULSE_RESONANCE';
-    p2.x = x;
-    p2.y = y;
-    p2.vx = 0;
-    p2.vy = 0;
-    p2.size = 6;
-    p2.growth = 1750;
-    p2.color = '#00b0ff';
-    p2.shadowColor = '#0288d1';
-    p2.life = 0.58;
-    p2.maxLife = 0.58;
-
-    // Center electric ionization burst
-    this.createElectricSpark(x, y, 22, '#00e5ff', '#ffffff');
-  }
-
-  // Vaporization flash when an enemy bullet is disintegrated by Pulse
-  createPulseBulletVaporization(x, y) {
-    const v = this._allocParticle();
-    v.active = true;
-    v.type = 'PULSE_VAPOR';
-    v.x = x;
-    v.y = y;
-    v.vx = (Math.random() - 0.5) * 20;
-    v.vy = (Math.random() - 0.5) * 20;
-    v.size = 5;
-    v.growth = 95;
-    v.color = '#00e5ff';
-    v.life = 0.24;
-    v.maxLife = 0.24;
-
-    this.createElectricSpark(x, y, 4, '#00e5ff', '#ffffff');
-  }
 
   // Spawn bursting chunks of clay (Classic Platypus death splat)
   createClaySplat(x, y, count = 12, color = '#e53935', shadowColor = '#b71c1c') {
@@ -179,17 +223,7 @@ export class ParticleSystem {
     }
 
     for (let i = 0; i < count; i++) {
-      let p;
-      if (this.activeCount < this.maxParticles) {
-        p = this.pool[this.activeCount++];
-      } else {
-        p = this.pool[0];
-        for (let k = 0; k < this.activeCount - 1; k++) {
-          this.pool[k] = this.pool[k + 1];
-        }
-        this.pool[this.activeCount - 1] = p;
-      }
-
+      const p = this._allocParticle();
       p.active = true;
       p.type = 'CLAY_CHUNK';
       p.x = x;
@@ -216,17 +250,7 @@ export class ParticleSystem {
   // Engine or explosion smoke puffs
   createSmokePuff(x, y, count = 1, baseSize = 14) {
     for (let i = 0; i < count; i++) {
-      let p;
-      if (this.activeCount < this.maxParticles) {
-        p = this.pool[this.activeCount++];
-      } else {
-        p = this.pool[0];
-        for (let k = 0; k < this.activeCount - 1; k++) {
-          this.pool[k] = this.pool[k + 1];
-        }
-        this.pool[this.activeCount - 1] = p;
-      }
-
+      const p = this._allocParticle();
       p.active = true;
       p.type = 'SMOKE';
       p.x = x + (Math.random() - 0.5) * 12;
@@ -251,12 +275,10 @@ export class ParticleSystem {
     if (this.activeTextCount < this.maxTexts) {
       t = this.textPool[this.activeTextCount++];
     } else {
+      // O(1) in-place recycling of oldest text slot
       t = this.textPool[0];
-      for (let k = 0; k < this.activeTextCount - 1; k++) {
-        this.textPool[k] = this.textPool[k + 1];
-      }
-      this.textPool[this.activeTextCount - 1] = t;
     }
+    t.reset();
 
     t.active = true;
     t.x = x;
@@ -266,6 +288,9 @@ export class ParticleSystem {
     t.vy = -55;
     t.life = 0.9;
     t.maxLife = 0.9;
+
+    // Rasterise once; draw() then only blits the sprite
+    this._renderTextSprite(t);
   }
 
   update(dt) {
@@ -323,11 +348,13 @@ export class ParticleSystem {
   }
 
   draw(ctx) {
-    // 1. Draw active particles
+    if (this.activeCount === 0 && this.activeTextCount === 0) return;
+
+    // 1. Draw active particles with batched canvas state
+    ctx.save();
     for (let i = 0; i < this.activeCount; i++) {
       const p = this.pool[i];
       const alpha = Math.max(0, p.life / p.maxLife);
-      ctx.save();
       ctx.globalAlpha = alpha;
 
       if (p.type === 'CLAY_CHUNK') {
@@ -347,109 +374,41 @@ export class ParticleSystem {
 
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
-      } else if (p.type === 'PULSE_RING') {
-        const rad = Math.max(1, p.size);
-
-        // 1. Soft glowing outer shockwave aura
-        ctx.save();
-        ctx.shadowColor = '#00e5ff';
-        ctx.shadowBlur = Math.min(22, 14 * alpha);
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = Math.max(2.2, 9.5 * alpha);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 2. High-contrast brilliant white energetic core
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = Math.max(1.2, 3.2 * alpha);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        // 3. Dynamic crackling electric filaments dancing along shockwave perimeter
-        if (alpha > 0.12 && rad > 25) {
-          ctx.save();
-          ctx.strokeStyle = '#e0f7fa';
-          ctx.lineWidth = Math.max(1, 2 * alpha);
-          ctx.beginPath();
-          const segments = 12;
-          const arcStep = (Math.PI * 2) / segments;
-          for (let s = 0; s < segments; s++) {
-            if ((s + Math.floor(rad * 0.08)) % 2 === 0) continue;
-            const baseAng = s * arcStep;
-            const midAng = baseAng + arcStep * 0.5;
-            const endAng = baseAng + arcStep;
-            const jitterR = (Math.sin(s * 7 + rad * 0.18) * 8) * alpha;
-            const x1 = p.x + Math.cos(baseAng) * rad;
-            const y1 = p.y + Math.sin(baseAng) * rad;
-            const xm = p.x + Math.cos(midAng) * (rad + jitterR);
-            const ym = p.y + Math.sin(midAng) * (rad + jitterR);
-            const x2 = p.x + Math.cos(endAng) * rad;
-            const y2 = p.y + Math.sin(endAng) * rad;
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(xm, ym);
-            ctx.lineTo(x2, y2);
-          }
-          ctx.stroke();
-          ctx.restore();
-        }
-      } else if (p.type === 'PULSE_RESONANCE') {
-        // Trailing deep azure resonance ring
-        const rad = Math.max(1, p.size);
-        ctx.strokeStyle = p.color || '#00b0ff';
-        ctx.lineWidth = Math.max(1.4, 4.8 * alpha);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (p.type === 'PULSE_BLOOM') {
-        // Translucent radial EMP bloom
-        const rad = Math.max(1, p.size);
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
-        grad.addColorStop(0, 'rgba(0, 229, 255, 0.40)');
-        grad.addColorStop(0.35, 'rgba(0, 176, 255, 0.18)');
-        grad.addColorStop(1, 'rgba(0, 176, 255, 0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (p.type === 'PULSE_VAPOR') {
-        // Bullet vaporization plasma ring
-        const rad = Math.max(1, p.size);
-        ctx.strokeStyle = '#00e5ff';
-        ctx.lineWidth = Math.max(1, 3.2 * alpha);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, Math.max(1, 3.0 * alpha), 0, Math.PI * 2);
-        ctx.fill();
       }
-
-      ctx.restore();
     }
+    ctx.restore();
 
-    // 2. Draw active floating score texts
+    // 2. Draw active floating score texts (pre-rasterised sprites: 1 drawImage each)
     if (this.activeTextCount > 0) {
       ctx.save();
-      ctx.font = 'bold 22px Luckiest Guy, cursive';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.strokeStyle = '#3e2723';
-      ctx.lineWidth = 4;
+      let liveStyleReady = false;
 
       for (let i = 0; i < this.activeTextCount; i++) {
         const t = this.textPool[i];
         const alpha = Math.max(0, t.life / t.maxLife);
-        ctx.save();
         ctx.globalAlpha = alpha;
+
+        if (t.hasSprite) {
+          ctx.drawImage(
+            t.canvas,
+            0, 0, t.pxW, t.pxH,
+            t.x - t.logW * 0.5, t.y - t.logH * 0.5, t.logW, t.logH
+          );
+          continue;
+        }
+
+        // Fallback (no offscreen canvas available): original live text rendering
+        if (!liveStyleReady) {
+          ctx.font = TEXT_FONT;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.strokeStyle = TEXT_STROKE;
+          ctx.lineWidth = TEXT_STROKE_W;
+          liveStyleReady = true;
+        }
         ctx.fillStyle = t.color;
         ctx.strokeText(t.text, t.x, t.y);
         ctx.fillText(t.text, t.x, t.y);
-        ctx.restore();
       }
       ctx.restore();
     }

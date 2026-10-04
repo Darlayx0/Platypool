@@ -1,5 +1,6 @@
 // Player Aircraft Entity (Novocastrian style)
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
+import { Clay3D } from '../graphics/Clay3D.js';
 import { Bullet } from './Bullet.js';
 
 export class Player {
@@ -16,7 +17,7 @@ export class Player {
     }
     const diff = this.difficultyConfig || {
       maxLives: 10,
-      scoreIntervalForLife: 2000000,
+      scoreIntervalForLife: 200000,
       weaponDuration: 15,
       keepWeaponOnDeath: false
     };
@@ -29,15 +30,20 @@ export class Player {
     this.radius = 22;
     this.speed = 460;
     this.tilt = 0;
+    this.roll = 0;
+    this.pitch = 0;
+    this.targetRoll = 0;
+    this.targetPitch = 0;
+    this.altitude = 1.0;
 
     // Handle Invulnerability Duration
     this.invulnerableDuration = diff.invulnerableDuration || 2.2;
 
-    // 1. Max Lives Cap:
+    // 1. Max Lives Cap (Uncapped by default - no maximum life limit):
     if (cheats.overrideMaxLives && cheats.maxLives !== undefined) {
       this.maxLives = Math.max(1, cheats.maxLives);
     } else {
-      this.maxLives = diff.maxLives !== undefined ? diff.maxLives : 10;
+      this.maxLives = Infinity;
     }
 
     // 2. Starting Lives & Infinite Lives (Godmode):
@@ -48,22 +54,18 @@ export class Player {
     } else if (cheats.overrideStartingLives && cheats.startingLives !== undefined) {
       this.infiniteLives = false;
       this.lives = Math.max(1, cheats.startingLives);
-      // Ensure maxLives is at least startingLives
-      if (this.maxLives < this.lives) {
-        this.maxLives = this.lives;
-      }
     } else {
       this.infiniteLives = false;
-      this.lives = Math.min(diff.startingLives || 3, this.maxLives);
+      this.lives = diff.startingLives || 3;
     }
 
     this.score = 0;
 
     // 3. Score Interval for +1 Extra Life:
     if (cheats.overrideScoreInterval && cheats.scoreIntervalForLife) {
-      this.scoreIntervalForLife = Math.max(10000, cheats.scoreIntervalForLife);
+      this.scoreIntervalForLife = Math.max(1000, cheats.scoreIntervalForLife);
     } else {
-      this.scoreIntervalForLife = diff.scoreIntervalForLife || 2000000;
+      this.scoreIntervalForLife = diff.scoreIntervalForLife || 200000;
     }
     this.nextLifeScore = this.scoreIntervalForLife;
 
@@ -84,11 +86,9 @@ export class Player {
     this.keepWeaponOnDeath = Boolean(diff.keepWeaponOnDeath) || Boolean(this.infiniteWeapon);
     this.shootTimer = 0;
 
-    // 5. Active Skills: Pulse (Z) & Speed Boost (X)
-    this.pulseMaxStock = diff.pulseMaxStock !== undefined ? diff.pulseMaxStock : 1;
-    this.pulseCharges = diff.pulseStartingStock !== undefined ? Math.min(this.pulseMaxStock, diff.pulseStartingStock) : 1;
-    this.speedBoostMaxDuration = diff.speedBoostMaxDuration !== undefined ? diff.speedBoostMaxDuration : 30.0;
-    this.speedBoostDurationPerDrop = diff.speedBoostDurationPerDrop !== undefined ? diff.speedBoostDurationPerDrop : 10.0;
+    // 5. Active Skills: Speed Boost Overdrive (X)
+    this.speedBoostMaxDuration = diff.speedBoostMaxDuration !== undefined ? diff.speedBoostMaxDuration : 15.0;
+    this.speedBoostDurationPerDrop = diff.speedBoostDurationPerDrop !== undefined ? diff.speedBoostDurationPerDrop : 15.0;
     this.speedBoostTimeLeft = 0;
     this.speedBoostActive = false;
     this.speedBoostVx = diff.speedBoostVx || 2100;
@@ -114,19 +114,13 @@ export class Player {
   setWeapon(type) {
     this.activeWeapon = type;
     this.weaponTimeLeft = this.infiniteWeapon ? Infinity : this.maxWeaponTime;
-    // Saat senjata spesial aktif, peningkat senjata normal otomatis nonaktif dan diblokir
-    if (this.activeWeapon !== 'NORMAL') {
-      this.speedBoostActive = false;
-    }
   }
 
   update(dt, input, particles) {
     this.engineTick++;
 
-    // Speed Boost countdown saat aktif (diblokir dan otomatis mati jika senjata bukan NORMAL)
-    if (this.activeWeapon !== 'NORMAL') {
-      this.speedBoostActive = false;
-    } else if (this.speedBoostActive && this.speedBoostTimeLeft > 0) {
+    // Speed Boost countdown saat aktif (berlaku untuk semua senjata)
+    if (this.speedBoostActive && this.speedBoostTimeLeft > 0) {
       this.speedBoostTimeLeft -= dt;
       if (this.speedBoostTimeLeft <= 0) {
         this.speedBoostTimeLeft = 0;
@@ -156,32 +150,48 @@ export class Player {
       this.shootTimer -= dt;
     }
 
-    // Movement control
+    // Unified Movement Control: Supports Mouse, Touchpad, Touch, WASD, and Keyboard Arrows simultaneously
     let targetTilt = 0;
+    const move = input.getMovementVector();
+    const isKeyboardMoving = (move.dx !== 0 || move.dy !== 0);
 
-    if (input.controlMode === 'MOUSE' && input.mouse.active) {
-      // Smooth lerp to mouse position
+    if (isKeyboardMoving) {
+      // 1. Keyboard steering actively drives the ship
+      this.x += move.dx * this.speed * dt;
+      this.y += move.dy * this.speed * dt;
+      targetTilt = move.dy;
+
+      // Harmonize mouse virtual position to match current ship coordinates so future mouse moves transition seamlessly
+      input.mouse.x = this.x;
+      input.mouse.y = this.y;
+      input.mouseSteeringActive = false;
+    } else if (input.mouseSteeringActive && input.mouse.active) {
+      // 2. Mouse / Touchpad / Touch steering smoothly glides the ship to pointer position
       const targetX = Math.max(50, Math.min(this.canvasWidth - 80, input.mouse.x));
       const targetY = Math.max(50, Math.min(this.canvasHeight - 50, input.mouse.y));
 
       const dx = targetX - this.x;
       const dy = targetY - this.y;
 
-      this.x += dx * Math.min(1.0, 14 * dt);
-      this.y += dy * Math.min(1.0, 14 * dt);
+      this.x += dx * Math.min(1.0, 15 * dt);
+      this.y += dy * Math.min(1.0, 15 * dt);
 
       targetTilt = Math.max(-1, Math.min(1, dy * 0.08));
-    } else {
-      // Keyboard WASD / Arrows
-      const move = input.getMovementVector();
-      this.x += move.dx * this.speed * dt;
-      this.y += move.dy * this.speed * dt;
-
-      targetTilt = move.dy;
     }
 
     // Smooth tilt interpolation
     this.tilt += (targetTilt - this.tilt) * 12 * dt;
+
+    // 3D Aerodynamic Roll Banking & Pitch Kinematics (Plasticine Elasticity)
+    this.targetRoll = targetTilt * 0.72; // Bank up to ~41 degrees into the turn
+    const moveX = isKeyboardMoving ? move.dx : Math.max(-1, Math.min(1, ((input.mouse && input.mouse.x || this.x) - this.x) * 0.05));
+    this.targetPitch = -moveX * 0.16 + (this.speedBoostActive ? -0.25 : 0);
+
+    // Spring-damper plasticine elasticity interpolation with micro engine-hum wobble
+    const clayWobble = Math.sin(this.engineTick * 0.35) * 0.015;
+    this.roll += (this.targetRoll - this.roll) * 14 * dt + clayWobble;
+    this.pitch += (this.targetPitch - this.pitch) * 12 * dt;
+    this.altitude = 1.0 + Math.sin(this.engineTick * 0.06) * 0.15;
 
     // Boundary constraints
     this.x = Math.max(45, Math.min(this.canvasWidth - 55, this.x));
@@ -201,117 +211,131 @@ export class Player {
     const wingTopY = this.y - 10;
     const wingBottomY = this.y + 10;
 
+    const isBoosted = Boolean(this.speedBoostActive && this.speedBoostTimeLeft > 0);
+    const rateMult = isBoosted ? (1 / 1.5) : 1.0;
+    const spdMult = isBoosted ? 1.5 : 1.0;
+
     switch (this.activeWeapon) {
       case 'SPREAD':
-        // Tier A+ CQB Shotgun & Defensive Eraser: 7-way spread, 1.0 dmg per pellet (~38.9 DPS point blank), range falloff, bullet-eraser
-        this.shootTimer = 0.18;
+        // Tier A+ Long-Range Full-Screen Carpet Sweeper & Distant Eraser (Arming phase in close-range)
+        this.shootTimer = 0.21 * rateMult;
         sound.playShoot('SPREAD');
-        const angles = [-0.30, -0.20, -0.10, 0, 0.10, 0.20, 0.30];
+        const angles = [-0.32, -0.21, -0.11, 0, 0.11, 0.21, 0.32];
+        const spd = 880 * spdMult;
         for (const ang of angles) {
-          const spd = 900;
           bullets.push(new Bullet({
             x: noseX,
             y: this.y,
             vx: Math.cos(ang) * spd,
             vy: Math.sin(ang) * spd,
-            damage: 1.0,
+            damage: 0.30, // Arming damage <180px, unfurls up to 1.45 at long-range
             type: 'SPREAD',
-            radius: 7,
+            radius: 7.5,
             startX: noseX,
-            life: 1.5
+            life: 1.8,
+            boosted: isBoosted
           }));
         }
         break;
 
       case 'LASER':
-        // Tier A+ Thermal Sniper: 2.0 damage each (~30.8 DPS pure melt), 4 pierces, hitscan velocity, 2x shield melting
-        this.shootTimer = 0.13;
+        // Tier A+ Thermal Sniper: 2.0 damage, 3 pierces with dissipation, 1650 px/s hitscan velocity, 3.0x shield melting
+        this.shootTimer = 0.16 * rateMult;
         sound.playShoot('LASER');
         bullets.push(new Bullet({
           x: noseX,
           y: wingTopY,
-          vx: 1300,
+          vx: 1650 * spdMult,
           vy: 0,
           damage: 2.0,
           type: 'LASER',
           piercing: true,
-          hitsLeft: 4,
-          radius: 9
+          hitsLeft: 3,
+          radius: 9,
+          boosted: isBoosted
         }));
         bullets.push(new Bullet({
           x: noseX,
           y: wingBottomY,
-          vx: 1300,
+          vx: 1650 * spdMult,
           vy: 0,
           damage: 2.0,
           type: 'LASER',
           piercing: true,
-          hitsLeft: 4,
-          radius: 9
+          hitsLeft: 3,
+          radius: 9,
+          boosted: isBoosted
         }));
         break;
 
       case 'HOMING':
-        // Tier A+ Agile Harasser: 2.0 damage each (~20.0 DPS), 100% smart lock & turn speed for dodging in bullet hell
-        this.shootTimer = 0.20;
+        // Tier A+ Omnidirectional Agile Seeker: 1.4 damage, 15 rad/s turn, Smart Divergence (Upper/Lower Split)
+        this.shootTimer = 0.19 * rateMult;
         sound.playShoot('HOMING');
         bullets.push(new Bullet({
           x: noseX - 5,
           y: wingTopY - 6,
-          vx: 650,
-          vy: -180,
-          damage: 2.0,
+          vx: 600 * spdMult,
+          vy: -180 * spdMult,
+          damage: 1.4,
           type: 'HOMING',
-          radius: 8
+          targetSector: 'UPPER',
+          radius: 8,
+          boosted: isBoosted
         }));
         bullets.push(new Bullet({
           x: noseX - 5,
           y: wingBottomY + 6,
-          vx: 650,
-          vy: 180,
-          damage: 2.0,
+          vx: 600 * spdMult,
+          vy: 180 * spdMult,
+          damage: 1.4,
           type: 'HOMING',
-          radius: 8
+          targetSector: 'LOWER',
+          radius: 8,
+          boosted: isBoosted
         }));
         break;
 
       case 'FLAK':
-        // Tier A+ Siege Demolition: 3.8 direct damage, instant shield shatter, expanded 8 shrapnel burst (0.65s life)
-        this.shootTimer = 0.28;
+        // Tier A+ Heavy Siege Artillery: 5.2 direct (2x dmg), 1.5x cooldown (0.54s), 10-shrapnel airburst, 22px recoil kickback
+        this.shootTimer = 0.54 * rateMult;
+        this.x = Math.max(45, this.x - 22); // Heavy muzzle kickback recoil!
         sound.playShoot('FLAK');
         bullets.push(new Bullet({
           x: noseX,
           y: this.y,
-          vx: 820,
+          vx: 860 * spdMult,
           vy: 0,
-          damage: 3.8,
+          damage: 5.2,
           type: 'FLAK',
-          radius: 13
+          radius: 14,
+          boosted: isBoosted
         }));
         break;
 
       case 'PLASMA':
-        // Tier A+ Crowd Disrupter: 2.4 direct damage, pierce decay, Tesla arc micro-slow/stun on swarms, 50% vs Boss armor
-        this.shootTimer = 0.22;
+        // Tier A+ Creeping Electro-Disrupter: 1.2 direct, 420 px/s crawl, 3.2s life, 50% electro-paralysis, 4 Tesla targets
+        this.shootTimer = 0.28 * rateMult;
         sound.playShoot('PLASMA');
         bullets.push(new Bullet({
           x: noseX,
           y: this.y,
-          vx: 640,
+          vx: 420 * spdMult,
           vy: 0,
-          damage: 2.4,
+          damage: 1.2,
           type: 'PLASMA',
           piercing: true,
           hitsLeft: 3,
-          radius: 12
+          radius: 13,
+          life: 3.2,
+          boosted: isBoosted
         }));
         break;
 
       case 'NORMAL':
       default:
         // Balanced pea-shooter: boosted from 0.80 to 1.00 dmg each (~16.7 DPS)
-        this.shootTimer = 0.12;
-        const isBoosted = Boolean(this.speedBoostActive && this.speedBoostTimeLeft > 0);
+        this.shootTimer = 0.12 * rateMult;
         const bulletSpeed = isBoosted ? this.speedBoostVx : 1050;
         sound.playShoot(isBoosted ? 'NORMAL_BOOSTED' : 'NORMAL');
         bullets.push(new Bullet({
@@ -351,7 +375,7 @@ export class Player {
     let livesAwarded = 0;
     while (this.score >= this.nextLifeScore) {
       this.nextLifeScore += this.scoreIntervalForLife;
-      if (!this.infiniteLives && this.lives < this.maxLives) {
+      if (!this.infiniteLives) {
         this.lives++;
         livesAwarded++;
       }
@@ -378,7 +402,88 @@ export class Player {
       this.tilt,
       this.invulnerableTimer > 0,
       this.engineTick,
-      this.activeWeapon
+      this.activeWeapon,
+      this.roll,
+      this.pitch,
+      Boolean(this.speedBoostActive && this.speedBoostTimeLeft > 0)
     );
   }
+
+  drawShadow(ctx) {
+    if (this.lives > 0) {
+      Clay3D.draw3DGroundShadow(ctx, this.x, this.y, this.altitude || 1.0, 36, 15);
+    }
+  }
+
+  serialize() {
+    return {
+      x: this.x,
+      y: this.y,
+      radius: this.radius,
+      speed: this.speed,
+      tilt: this.tilt,
+      roll: this.roll,
+      pitch: this.pitch,
+      altitude: this.altitude,
+      invulnerableDuration: this.invulnerableDuration,
+      invulnerableTimer: this.invulnerableTimer,
+      maxLives: this.maxLives === Infinity ? 'Infinity' : this.maxLives,
+      infiniteLives: Boolean(this.infiniteLives),
+      lives: this.lives === Infinity ? 'Infinity' : this.lives,
+      score: this.score,
+      scoreIntervalForLife: this.scoreIntervalForLife,
+      nextLifeScore: this.nextLifeScore,
+      activeWeapon: this.activeWeapon,
+      weaponTimeLeft: this.weaponTimeLeft === Infinity ? 'Infinity' : this.weaponTimeLeft,
+      infiniteWeapon: Boolean(this.infiniteWeapon),
+      maxWeaponTime: this.maxWeaponTime === Infinity ? 'Infinity' : this.maxWeaponTime,
+      keepWeaponOnDeath: Boolean(this.keepWeaponOnDeath),
+      shootTimer: this.shootTimer,
+      speedBoostMaxDuration: this.speedBoostMaxDuration,
+      speedBoostDurationPerDrop: this.speedBoostDurationPerDrop,
+      speedBoostTimeLeft: this.speedBoostTimeLeft,
+      speedBoostActive: Boolean(this.speedBoostActive),
+      speedBoostVx: this.speedBoostVx,
+      engineTick: this.engineTick,
+      dead: Boolean(this.dead),
+      difficultyConfig: this.difficultyConfig,
+      cheatOverrides: this.cheatOverrides
+    };
+  }
+
+  deserialize(data) {
+    if (!data) return;
+    if (data.difficultyConfig) this.difficultyConfig = data.difficultyConfig;
+    if (data.cheatOverrides) this.cheatOverrides = data.cheatOverrides;
+    this.x = data.x !== undefined ? data.x : this.x;
+    this.y = data.y !== undefined ? data.y : this.y;
+    this.radius = data.radius !== undefined ? data.radius : this.radius;
+    this.speed = data.speed !== undefined ? data.speed : this.speed;
+    this.tilt = data.tilt !== undefined ? data.tilt : this.tilt;
+    this.roll = data.roll !== undefined ? data.roll : (this.tilt * 0.45);
+    this.pitch = data.pitch !== undefined ? data.pitch : 0;
+    this.altitude = data.altitude !== undefined ? data.altitude : 1.0;
+    this.invulnerableDuration = data.invulnerableDuration !== undefined ? data.invulnerableDuration : this.invulnerableDuration;
+    this.invulnerableTimer = data.invulnerableTimer !== undefined ? data.invulnerableTimer : this.invulnerableTimer;
+    this.maxLives = data.maxLives === 'Infinity' ? Infinity : (data.maxLives !== undefined ? data.maxLives : this.maxLives);
+    this.infiniteLives = Boolean(data.infiniteLives);
+    this.lives = data.lives === 'Infinity' ? Infinity : (data.lives !== undefined ? data.lives : this.lives);
+    this.score = data.score !== undefined ? data.score : this.score;
+    this.scoreIntervalForLife = data.scoreIntervalForLife !== undefined ? data.scoreIntervalForLife : this.scoreIntervalForLife;
+    this.nextLifeScore = data.nextLifeScore !== undefined ? data.nextLifeScore : this.nextLifeScore;
+    this.activeWeapon = data.activeWeapon || this.activeWeapon;
+    this.weaponTimeLeft = data.weaponTimeLeft === 'Infinity' ? Infinity : (data.weaponTimeLeft !== undefined ? data.weaponTimeLeft : this.weaponTimeLeft);
+    this.infiniteWeapon = Boolean(data.infiniteWeapon);
+    this.maxWeaponTime = data.maxWeaponTime === 'Infinity' ? Infinity : (data.maxWeaponTime !== undefined ? data.maxWeaponTime : this.maxWeaponTime);
+    this.keepWeaponOnDeath = Boolean(data.keepWeaponOnDeath);
+    this.shootTimer = data.shootTimer !== undefined ? data.shootTimer : this.shootTimer;
+    this.speedBoostMaxDuration = data.speedBoostMaxDuration !== undefined ? data.speedBoostMaxDuration : this.speedBoostMaxDuration;
+    this.speedBoostDurationPerDrop = data.speedBoostDurationPerDrop !== undefined ? data.speedBoostDurationPerDrop : this.speedBoostDurationPerDrop;
+    this.speedBoostTimeLeft = data.speedBoostTimeLeft !== undefined ? data.speedBoostTimeLeft : this.speedBoostTimeLeft;
+    this.speedBoostActive = Boolean(data.speedBoostActive);
+    this.speedBoostVx = data.speedBoostVx !== undefined ? data.speedBoostVx : this.speedBoostVx;
+    this.engineTick = data.engineTick !== undefined ? data.engineTick : this.engineTick;
+    this.dead = Boolean(data.dead);
+  }
 }
+

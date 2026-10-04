@@ -21,27 +21,17 @@
       <!-- Top Bar Touch Controls: Pause & Auto-Fire -->
       <div class="touch-top-bar">
         <button type="button" id="btn-touch-pause" class="touch-action-btn touch-pause-btn" aria-label="Jeda Permainan" title="Jeda Permainan (Esc / ⎋)">
-          <span class="touch-icon">⏸️</span>
+          <span class="touch-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"></rect><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"></rect></svg>
+          </span>
           <span class="touch-label">JEDA</span>
         </button>
         <button type="button" id="btn-touch-autofire" class="touch-action-btn touch-autofire-btn" aria-label="Toggle Auto-Fire" title="Toggle Auto-Fire (M)">
-          <span class="touch-icon">🔄</span>
+          <span class="touch-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+          </span>
           <span class="touch-label">AUTO</span>
           <span id="touch-autofire-badge" class="touch-mini-badge off">OFF</span>
-        </button>
-      </div>
-
-      <!-- Bottom Right Touch Action Buttons: Speed Boost [X] & Pulse Bullet Eraser [Z] -->
-      <div class="touch-bottom-actions">
-        <button type="button" id="btn-touch-speed" class="touch-action-btn touch-speed-btn" aria-label="Aktifkan Hyper Speed" title="Hyper Speed (X / ⇧ Shift)">
-          <span class="touch-icon">🚀</span>
-          <span class="touch-label">SPEED</span>
-          <span id="touch-speed-badge" class="touch-mini-badge off">OFF</span>
-        </button>
-        <button type="button" id="btn-touch-pulse" class="touch-action-btn touch-pulse-btn" aria-label="Luncurkan Pulse Bullet Eraser" title="Pulse Bullet Eraser (Z / C / K)">
-          <span class="touch-icon">⚡</span>
-          <span class="touch-label">PULSE</span>
-          <span id="touch-pulse-badge" class="touch-mini-badge count">1</span>
         </button>
       </div>
     </div>
@@ -49,14 +39,18 @@
     <!-- Mobile Portrait Orientation Helper Banner -->
     <div id="portrait-orientation-banner" class="portrait-orientation-banner">
       <div class="orient-content">
-        <span class="orient-icon">📱</span>
+        <span class="orient-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+        </span>
         <span class="orient-text">Putar ponsel ke <strong>Lanskap (Horizontal)</strong> untuk pengalaman arcade penuh!</span>
-        <button type="button" id="btn-close-orientation-banner" class="orient-close" aria-label="Tutup Notifikasi">✕</button>
+        <button type="button" id="btn-close-orientation-banner" class="orient-close" aria-label="Tutup Notifikasi">
+          <svg class="ui-icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
     </div>
 
     <!-- Dynamic In-Game Micro-Interaction Toast Notification (Auto-Fire, Controls) -->
-    <div id="hud-toast" class="hud-toast"></div>
+    <div id="hud-toast" class="hud-toast" style="display: none;"></div>
 
     <!-- Start / Main Menu Modal (Clean, Minimal, To The Point) -->
     <div id="modal-start" class="modal-screen active">
@@ -72,7 +66,9 @@
         <!-- Elegant Minimalist Difficulty Stepper (Arrow Navigation & Color Feedback) -->
         <div class="difficulty-stepper-section" id="difficulty-stepper-section">
           <div class="difficulty-stepper-header">
-            <span class="difficulty-label-icon">⚡</span>
+            <span class="difficulty-label-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+            </span>
             <span class="difficulty-label-title">TINGKAT KESULITAN</span>
           </div>
 
@@ -107,42 +103,284 @@
           </div>
         </div>
 
-        <!-- Launch CTA Button -->
-        <div class="menu-action-area">
-          <button id="btn-play-game" class="clay-btn primary-launch">
-            <span class="btn-icon">🚀</span>
+        <!-- Saved Game Actions (Shown when progress exists) -->
+        <div id="saved-game-panel" class="saved-game-panel" style="display: none;">
+          <div class="saved-game-card">
+            <!-- Header: Pulse Indicator, Title & Dual Badges -->
+            <div class="saved-card-header">
+              <div class="saved-header-left">
+                <span class="saved-pulse-indicator" aria-hidden="true">
+                  <span class="pulse-ring"></span>
+                  <span class="pulse-core"></span>
+                </span>
+                <span class="saved-meta-badge-text">MISI AKTIF BERJALAN</span>
+              </div>
+              <div class="saved-header-right">
+                <span id="saved-stage-badge" class="saved-stage-pill">STAGE 1</span>
+                <span id="saved-diff-badge" class="saved-diff-pill">NORMAL</span>
+              </div>
+            </div>
+
+            <!-- Full-Width Mission Hero Showcase -->
+            <div class="saved-mission-hero">
+              <span class="saved-mission-icon">
+                <svg class="ui-icon ui-icon-sm filled" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </span>
+              <strong id="saved-stage-text" class="saved-mission-title">LEMBAH TANAH LIAT</strong>
+            </div>
+
+            <!-- Symmetrical 3-Column Metrics Grid -->
+            <div class="saved-stat-matrix">
+              <!-- Gelombang -->
+              <div class="saved-matrix-tile" title="Gelombang Musuh">
+                <svg class="ui-icon ui-icon-sm wave-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <div class="matrix-tile-content">
+                  <span class="matrix-tile-label">GELOMBANG</span>
+                  <strong id="saved-wave-text" class="matrix-tile-val">Gelombang 1</strong>
+                </div>
+              </div>
+
+              <!-- Skor Sementara -->
+              <div class="saved-matrix-tile" title="Skor Terkumpul">
+                <svg class="ui-icon ui-icon-sm filled gold-svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <div class="matrix-tile-content">
+                  <span class="matrix-tile-label">SKOR SEMENTARA</span>
+                  <strong id="saved-score-text" class="matrix-tile-val gold-val">0</strong>
+                </div>
+              </div>
+
+              <!-- Sisa Nyawa Armada -->
+              <div class="saved-matrix-tile" title="Sisa Nyawa Armada">
+                <svg class="ui-icon ui-icon-sm filled red-svg" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                <div class="matrix-tile-content">
+                  <span class="matrix-tile-label">ARMADA</span>
+                  <strong id="saved-lives-text" class="matrix-tile-val red-val">3 Nyawa</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="saved-buttons-group">
+            <button id="btn-resume-game" class="clay-btn green resume-launch-btn" type="button">
+              <span class="btn-icon">
+                <svg class="ui-icon filled" width="22" height="22" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </span>
+              <span>LANJUTKAN PERMAINAN</span>
+            </button>
+            <button id="btn-new-game-saved" class="clay-btn secondary new-game-launch-btn" type="button" title="Mulai petualangan baru dari awal">
+              <span class="btn-icon">
+                <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </span>
+              <span>MULAI GAME BARU</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Launch CTA Button (when NO saved game exists) -->
+        <div id="default-launch-panel" class="menu-action-area">
+          <button id="btn-play-game" class="clay-btn primary-launch" type="button">
+            <span class="btn-icon">
+              <svg class="ui-icon filled" width="20" height="20" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </span>
             <span>MULAI PERTEMPURAN (20 STAGE)</span>
           </button>
         </div>
 
         <!-- Sleek Secondary Navigation Buttons -->
         <div class="menu-nav-actions">
-          <button type="button" id="btn-open-settings" class="clay-nav-btn" title="Pengaturan Audio & Kontrol">
-            <span class="nav-btn-icon">⚙️</span>
+          <button type="button" id="btn-open-settings" class="clay-nav-btn" title="Pengaturan Audio & Tampilan">
+            <span class="nav-btn-icon">
+              <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </span>
             <span class="nav-btn-text">PENGATURAN</span>
           </button>
           <button type="button" id="btn-open-guide" class="clay-nav-btn" title="Panduan Kontrol & Arsenal Senjata">
-            <span class="nav-btn-icon">📖</span>
+            <span class="nav-btn-icon">
+              <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            </span>
             <span class="nav-btn-text">PANDUAN & INFO</span>
           </button>
           <button type="button" id="btn-open-cheat" class="clay-nav-btn subtle-cheat" title="Konfigurasi Curang">
-            <span class="nav-btn-icon">🛠️</span>
+            <span class="nav-btn-icon">
+              <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+            </span>
             <span class="nav-btn-text">CURANG</span>
             <span id="cheat-pill-indicator" class="cheat-pill-status off">OFF</span>
           </button>
         </div>
+      </div>
 
-        <!-- Sleek Minimalist Keyboard & Mac Tip Bar -->
-        <div class="keyboard-tip-tray" id="keyboard-tip-tray">
-          <span class="tip-icon">💡</span>
-          <span class="tip-segment"><kbd>ENTER / ⏎</kbd> Mulai</span>
-          <span class="tip-divider">•</span>
-          <span class="tip-segment"><kbd>◀</kbd> <kbd>▶</kbd> Tingkat</span>
-          <span class="tip-divider">•</span>
-          <span class="tip-segment"><kbd>ESC / ⎋</kbd> Jeda</span>
-          <span class="tip-divider">•</span>
-          <span class="tip-segment"><kbd>M</kbd> Auto-Fire</span>
+      <!-- Elongated Bottom Guidance Dock Bar for Main Menu Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ENTER / ⏎</kbd> <span id="tip-enter-label">Mulai</span></span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>◀</kbd> <kbd>▶</kbd> Mode Kesulitan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>O</kbd> Pengaturan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>H</kbd> Panduan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>C</kbd> Curang</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>M</kbd> Auto-Fire</span>
+      </div>
+    </div>
+
+    <!-- Confirm New Game Modal (Warn before overwriting saved progress) -->
+    <div id="modal-confirm-new-game" class="modal-screen">
+      <div class="clay-card confirm-modal-card">
+        <div class="modal-pill-tag tag-warning">
+          <span class="tag-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </span>
+          <span>PERINGATAN PROGRES AKTIF</span>
         </div>
+
+        <h2 class="game-title modal-clay-title confirm-title">MULAI GAME BARU?</h2>
+        <p class="game-subtitle">Progres misi yang sedang berlangsung akan ditimpa dan Anda akan memulai kembali dari awal.</p>
+
+        <!-- Sunken Clay Plaque Data Showcase -->
+        <div class="confirm-sunken-preview" id="confirm-saved-preview">
+          <!-- Full-Width Mission Hero Bar -->
+          <div class="confirm-stage-hero">
+            <div class="confirm-stage-pill">
+              <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <span id="confirm-stage-badge" class="confirm-stage-badge-text">STAGE 1</span>
+            </div>
+            <div class="confirm-stage-meta">
+              <span class="confirm-stage-sublabel">TAHAPAN MISI AKTIF</span>
+              <strong id="confirm-preview-stage" class="confirm-stage-name">Stage 1</strong>
+            </div>
+          </div>
+
+          <!-- Symmetrical 3-Column Stats Row -->
+          <div class="confirm-stats-row">
+            <div class="confirm-preview-tile">
+              <div class="confirm-tile-header">
+                <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span class="confirm-tile-label">GELOMBANG</span>
+              </div>
+              <strong id="confirm-preview-wave" class="confirm-tile-val">Gelombang 1</strong>
+            </div>
+            <div class="confirm-preview-tile">
+              <div class="confirm-tile-header">
+                <svg class="ui-icon ui-icon-sm filled gold-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <span class="confirm-tile-label">SKOR SEMENTARA</span>
+              </div>
+              <strong id="confirm-preview-score" class="confirm-tile-val gold-val">0</strong>
+            </div>
+            <div class="confirm-preview-tile">
+              <div class="confirm-tile-header">
+                <svg class="ui-icon ui-icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <span class="confirm-tile-label">KESULITAN</span>
+              </div>
+              <strong id="confirm-preview-diff" class="confirm-tile-val">NORMAL</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="confirm-security-notice">
+          <svg class="ui-icon ui-icon-sm alert-warn-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span class="confirm-notice-text">Data checkpoint di atas akan digantikan sepenuhnya jika Anda memulai baru.</span>
+        </div>
+
+        <div class="modal-vertical-actions">
+          <button id="btn-cancel-confirm-new" class="clay-btn green vertical-action-btn primary-action" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">
+                <svg class="ui-icon filled" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </span>
+              <span class="btn-text">BATAL / TETAPKAN PROGRES</span>
+            </span>
+            <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
+          </button>
+
+          <button id="btn-confirm-start-new" class="clay-btn red vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </span>
+              <span class="btn-text">YA, HAPUS & MULAI BARU</span>
+            </span>
+            <kbd class="clay-kbd-pill">ENTER / ⏎</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- Elongated Bottom Guidance Dock Bar for Confirm New Game Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Batal (Pertahankan Progres)</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>ENTER / ⏎</kbd> Hapus & Mulai Baru</span>
+      </div>
+    </div>
+
+    <!-- Confirm Reset High Score Modal -->
+    <div id="modal-confirm-reset-score" class="modal-screen">
+      <div class="clay-card confirm-modal-card">
+        <div class="modal-pill-tag tag-warning">
+          <span class="tag-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </span>
+          <span>KONFIRMASI RESET REKOR</span>
+        </div>
+
+        <h2 class="game-title modal-clay-title confirm-title">RESET REKOR TERTINGGI?</h2>
+        <p class="game-subtitle">Seluruh riwayat skor tertinggi yang tersimpan di perangkat akan dihapus secara permanen dan dikembalikan ke 0.</p>
+
+        <div class="confirm-sunken-preview confirm-preview-2col">
+          <div class="confirm-preview-tile">
+            <span class="confirm-tile-label">REKOR SAAT INI</span>
+            <strong id="confirm-score-current-val" class="confirm-tile-val gold-val">0 PTS</strong>
+          </div>
+          <div class="confirm-preview-tile">
+            <span class="confirm-tile-label">STATUS SETELAH RESET</span>
+            <strong class="confirm-tile-val" style="color: #ef5350;">0 PTS (KOSONG)</strong>
+          </div>
+        </div>
+
+        <div class="confirm-security-notice">
+          <svg class="ui-icon ui-icon-sm alert-warn-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span class="confirm-notice-text">Tindakan ini tidak dapat dibatalkan. Riwayat rekor akan langsung terhapus.</span>
+        </div>
+
+        <div class="modal-vertical-actions">
+          <button id="btn-cancel-reset-score" class="clay-btn green vertical-action-btn primary-action" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+              <span class="btn-text">BATAL / KEMBALI</span>
+            </span>
+            <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
+          </button>
+
+          <button id="btn-confirm-reset-score" class="clay-btn red vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              </span>
+              <span class="btn-text">YA, HAPUS SEMUA REKOR</span>
+            </span>
+            <kbd class="clay-kbd-pill">ENTER / ⏎</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- Elongated Bottom Guidance Dock Bar for Confirm Reset Score Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Batal Kembali</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>ENTER / ⏎</kbd> Hapus Semua Rekor</span>
       </div>
     </div>
 
@@ -150,24 +388,28 @@
     <div id="modal-settings" class="modal-screen">
       <div class="clay-card settings-modal-card">
         <div class="menu-pill-badge">
-          <span>⚙️ PREFERENSI & KONTROL</span>
+          <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>PREFERENSI & AUDIO</span>
         </div>
 
         <h2 class="game-title modal-title">PENGATURAN</h2>
-        <p class="game-subtitle">Sesuaikan audio, volume, dan kendali permainan</p>
+        <p class="game-subtitle">Sesuaikan tampilan visual, audio musik, dan otomasi permainan</p>
 
         <div class="settings-content-scroll">
           <!-- Section 1: UHD & Display Quality -->
           <div class="settings-section">
             <div class="settings-section-title">
-              <span>💎 TAMPILAN & KUALITAS UHD</span>
+              <svg class="ui-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <span>TAMPILAN & KUALITAS UHD</span>
             </div>
 
             <!-- UHD Hi-DPI Sharpness Setting -->
             <div class="settings-card-item">
               <div class="settings-row-header">
                 <div class="settings-label-wrap">
-                  <span class="settings-icon">💎</span>
+                  <span class="settings-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  </span>
                   <div>
                     <strong class="settings-name">Resolusi Ultra High Definition (UHD)</strong>
                     <span class="settings-subdesc">Rendering tajam vektor tanah liat pada layar Hi-DPI, Retina, 1440p, dan 4K</span>
@@ -184,16 +426,39 @@
             <div class="settings-card-item">
               <div class="settings-row-header">
                 <div class="settings-label-wrap">
-                  <span class="settings-icon">⛶</span>
+                  <span class="settings-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                  </span>
                   <div>
                     <strong class="settings-name">Mode Layar Penuh (Fullscreen)</strong>
                     <span class="settings-subdesc">Mainkan game memenuhi seluruh layar monitor Anda tanpa gangguan</span>
                   </div>
                 </div>
                 <button type="button" id="btn-setting-fullscreen" class="clay-opt-toggle">
-                  <span class="opt-icon">⛶</span>
+                  <span class="opt-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                  </span>
                   <span id="setting-fs-btn-label">AKTIFKAN LAYAR PENUH</span>
                 </button>
+              </div>
+            </div>
+            <!-- Enemy HP Display Setting -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  </span>
+                  <div>
+                    <strong class="settings-name">Indikator HP Musuh</strong>
+                    <span class="settings-subdesc">Tampilan sisa nyawa musuh tangguh & elit saat pertempuran</span>
+                  </div>
+                </div>
+                <div class="clay-segmented-control" id="enemy-hp-segmented">
+                  <button type="button" class="clay-segment-btn active" data-mode="DYNAMIC" title="Muncul 1.5 detik hanya saat tertembak (Rekomendasi)">DINAMIS</button>
+                  <button type="button" class="clay-segment-btn" data-mode="ALWAYS" title="Selalu tampil pada semua musuh tangguh">SELALU</button>
+                  <button type="button" class="clay-segment-btn" data-mode="MINIMAL" title="Hanya efek fisik asap tanah liat (Bebas bar)">MINIMAL</button>
+                </div>
               </div>
             </div>
           </div>
@@ -201,14 +466,17 @@
           <!-- Section 2: Audio Settings -->
           <div class="settings-section">
             <div class="settings-section-title">
-              <span>🎵 TATA SUARA & SOUNDTRACK</span>
+              <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              <span>TATA SUARA & SOUNDTRACK</span>
             </div>
 
             <!-- Sound Effects (SFX) Setting -->
             <div class="settings-card-item">
               <div class="settings-row-header">
                 <div class="settings-label-wrap">
-                  <span class="settings-icon">🔊</span>
+                  <span class="settings-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                  </span>
                   <div>
                     <strong class="settings-name">Efek Suara (SFX)</strong>
                     <span class="settings-subdesc">Suara letupan peluru, ledakan tanah liat, dan dampak benturan</span>
@@ -234,7 +502,9 @@
             <div class="settings-card-item">
               <div class="settings-row-header">
                 <div class="settings-label-wrap">
-                  <span class="settings-icon">🎼</span>
+                  <span class="settings-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                  </span>
                   <div>
                     <strong class="settings-name">Soundtrack & BGM</strong>
                     <span class="settings-subdesc">Musik dinamis retro 4 dunia pertempuran dan tema boss</span>
@@ -257,36 +527,20 @@
             </div>
           </div>
 
-          <!-- Section 2: Mode Kontrol & Auto Fire -->
+          <!-- Section 3: Otomasi Gameplay -->
           <div class="settings-section">
             <div class="settings-section-title">
-              <span>🎮 KENDALI & AUTO-FIRE</span>
-            </div>
-
-            <div class="settings-card-item">
-              <div class="settings-field-label">
-                <strong class="settings-name">Mode Kemudi Pesawat:</strong>
-              </div>
-              <div class="mode-segmented-bar">
-                <button type="button" id="btn-mode-mouse" class="mode-seg-btn active">
-                  <span class="seg-icon">🖱️</span>
-                  <span class="seg-title">MODE MOUSE</span>
-                </button>
-                <button type="button" id="btn-mode-keyboard" class="mode-seg-btn">
-                  <span class="seg-icon">⌨️</span>
-                  <span class="seg-title">KEYBOARD (WASD)</span>
-                </button>
-              </div>
-              <div id="control-mode-desc" class="control-mode-desc">
-                Pesawat mengikuti kursor mouse di dalam arena dengan respon instan dan akurat.
-              </div>
+              <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+              <span>OTOMASI & FITUR GAMEPLAY</span>
             </div>
 
             <!-- Auto-Fire Default Setting -->
             <div class="settings-card-item">
               <div class="settings-row-header">
                 <div class="settings-label-wrap">
-                  <span class="settings-icon">⚡</span>
+                  <span class="settings-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+                  </span>
                   <div>
                     <strong class="settings-name">Auto-Fire Otomatis</strong>
                     <span class="settings-subdesc">Menembak otomatis tanpa perlu menahan tombol (Bisa di-toggle via <kbd>M</kbd> atau <kbd>Klik Kanan</kbd>)</span>
@@ -300,35 +554,38 @@
             </div>
           </div>
 
-          <!-- Section 3: Keyboard Shortcuts Quick Reference -->
+          <!-- Section 4: Rekor Tertinggi & Reset Data -->
           <div class="settings-section">
             <div class="settings-section-title">
-              <span>⌨️ DAFTAR PINTASAN TOMBOL KEYBOARD</span>
+              <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <span>REKOR TERTINGGI & PENYIMPANAN DATA</span>
             </div>
-            <div class="shortcuts-grid">
-              <div class="shortcut-pill">
-                <kbd>ESC</kbd>
-                <span>Jeda Game (In-Game) / Menu Utama (saat Pause)</span>
+
+            <!-- Current High Score Card & Reset Button -->
+            <div class="settings-card-item">
+              <div class="settings-row-header">
+                <div class="settings-label-wrap">
+                  <span class="settings-icon record-icon">
+                    <svg class="ui-icon filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  </span>
+                  <div>
+                    <strong class="settings-name">Rekor Tertinggi Saat Ini</strong>
+                    <span class="settings-subdesc">Skor tertinggi yang tersimpan di memori perangkat lokal</span>
+                  </div>
+                </div>
+                <div class="setting-highscore-display">
+                  <span id="setting-current-highscore" class="setting-score-badge">0 PTS</span>
+                </div>
               </div>
-              <div class="shortcut-pill">
-                <kbd>M</kbd> / <kbd>Klik Kanan</kbd>
-                <span>Toggle Auto-Fire (Otomatis Menembak)</span>
-              </div>
-              <div class="shortcut-pill">
-                <kbd>Klik Kiri</kbd> / <kbd>Spasi</kbd>
-                <span>Tembakan Utama Meriam</span>
-              </div>
-              <div class="shortcut-pill">
-                <kbd>WASD</kbd> / <kbd>Panah</kbd>
-                <span>Kemudi Pesawat (Mode Keyboard)</span>
-              </div>
-              <div class="shortcut-pill">
-                <kbd>R</kbd>
-                <span>Ulangi Permainan (Restart)</span>
-              </div>
-              <div class="shortcut-pill">
-                <kbd>ENTER</kbd>
-                <span>Mulai Permainan / Lanjutkan Jeda</span>
+
+              <div class="setting-reset-action-row">
+                <button type="button" id="btn-reset-highscore" class="clay-btn red reset-score-btn" title="Hapus semua catatan rekor tertinggi">
+                  <span class="btn-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                  </span>
+                  <span>RESET REKOR TERTINGGI</span>
+                </button>
+                <span class="setting-reset-warning-text">Tindakan ini akan mengosongkan riwayat skor seluruh mode difficulty.</span>
               </div>
             </div>
           </div>
@@ -337,12 +594,30 @@
         <!-- Footer Actions -->
         <div class="settings-footer-actions">
           <button type="button" id="btn-settings-reset" class="clay-btn secondary">
-            <span>🔄 RESET DEFAULT</span>
+            <span class="btn-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            </span>
+            <span>RESET DEFAULT</span>
           </button>
           <button type="button" id="btn-settings-close" class="clay-btn green">
-            <span>✅ SIMPAN & TUTUP (ESC)</span>
+            <span class="btn-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span>SIMPAN & TUTUP (ESC)</span>
           </button>
         </div>
+      </div>
+
+      <!-- Elongated Bottom Guidance Dock Bar for Settings Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Simpan & Tutup</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>TAB</kbd> Navigasi Opsi</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>KLIK</kbd> Ubah Pengaturan</span>
       </div>
     </div>
 
@@ -350,25 +625,38 @@
     <div id="modal-guide" class="modal-screen">
       <div class="clay-card guide-modal-card">
         <div class="menu-pill-badge">
-          <span>📖 ENSIKLOPEDIA & PANDUAN</span>
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>ENSIKLOPEDIA & PANDUAN</span>
         </div>
 
         <h2 class="game-title modal-title">PANDUAN & INFORMASI</h2>
-        <p class="game-subtitle">Mekanik permainan, 5 tipe senjata spesial, dan 4 dunia pertempuran</p>
+        <p class="game-subtitle">Mekanik arcade, 5 arsenal spesial, matriks komparasi 4 dunia & boss, dan matriks kesulitan</p>
 
         <!-- Segmented Tab Navigation -->
         <div class="clay-tab-bar">
           <button type="button" class="clay-tab-btn active" data-tab="tab-control">
-            <span class="tab-icon">🎮</span> KONTROL
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="6"></rect></svg>
+            </span>
+            <span>KONTROL</span>
           </button>
           <button type="button" class="clay-tab-btn" data-tab="tab-weapons">
-            <span class="tab-icon">⚡</span> SENJATA (15S)
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+            </span>
+            <span id="tab-weapons-label">SENJATA (15S)</span>
           </button>
           <button type="button" class="clay-tab-btn" data-tab="tab-worlds">
-            <span class="tab-icon">🏆</span> 4 DUNIA & BOSS
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            </span>
+            <span>MATRIKS WORLD & BOSS</span>
           </button>
           <button type="button" class="clay-tab-btn" data-tab="tab-matrix">
-            <span class="tab-icon">📊</span> MATRIKS KESULITAN
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </span>
+            <span>MATRIKS KESULITAN</span>
           </button>
         </div>
 
@@ -379,8 +667,8 @@
               <div class="instruction-item">
                 <span class="instruction-badge">KONTROL</span>
                 <div class="instruction-text">
-                  <strong>Gerakan Fleksibel:</strong>
-                  <p>Gunakan <code>Mouse</code> (mengikuti kursor) atau <code>W, A, S, D</code> / <code>Tombol Panah</code>.</p>
+                  <strong>Gerakan Fleksibel (Unified):</strong>
+                  <p>Gunakan <code>Mouse</code>, <code>Touchpad</code>, atau <code>W, A, S, D</code> / <code>Tombol Panah</code> kapan saja tanpa bug dan tanpa perlu switch mode!</p>
                 </div>
               </div>
               <div class="instruction-item">
@@ -405,31 +693,24 @@
                 </div>
               </div>
               <div class="instruction-item">
-                <span class="instruction-badge" style="background:#00838f; color:#e0f7fa;">SKILL [Z]</span>
+                <span class="instruction-badge" style="background:#e65100; color:#fff3e0;">OVERDRIVE</span>
                 <div class="instruction-text">
-                  <strong>Pulse Bullet Eraser:</strong>
-                  <p>Tekan <code>Z</code> (atau tombol HUD) untuk melenyapkan seluruh peluru musuh di layar seketika! Drop langka dari musuh.</p>
-                </div>
-              </div>
-              <div class="instruction-item">
-                <span class="instruction-badge" style="background:#e65100; color:#fff3e0;">SKILL [X]</span>
-                <div class="instruction-text">
-                  <strong>Peluru Super Cepat:</strong>
-                  <p>Tekan <code>X</code> untuk toggle kecepatan supersonik peluru normal. Waktu tersimpan saat dimatikan. Drop langka durasi.</p>
+                  <strong>Kecepatan Senjata 1.5x:</strong>
+                  <p>Peningkat kecepatan 1.5x lipat (cadence & laju peluru) untuk seluruh senjata! Langsung aktif otomatis seketika saat drop item diambil.</p>
                 </div>
               </div>
               <div class="instruction-item" style="border-left-color: #29b6f6;">
                 <span class="instruction-badge" style="background:#0288d1; color:#fff;">🍏 MACOS</span>
                 <div class="instruction-text">
                   <strong>Keyboard & Trackpad Mac:</strong>
-                  <p>Mendukung layout <code>QWERTY</code> & <code>AZERTY</code>. Tembak: <code>Spasi</code> / <code>J</code> / <code>Klik</code>. Pulse: <code>Z</code> / <code>C</code> / <code>K</code>. Speed: <code>X</code> / <code>Shift ⇧</code> / <code>L</code>. Auto-Fire: <code>M</code> / <code>Control ⌃ + Klik</code> / <code>2-Jari Trackpad</code>. Jeda: <code>Esc ⎋</code> / <code>P</code>.</p>
+                  <p>Mendukung layout <code>QWERTY</code> & <code>AZERTY</code>. Tembak: <code>Spasi</code> / <code>J</code> / <code>Klik</code>. Auto-Fire: <code>M</code> / <code>Control ⌃ + Klik</code> / <code>2-Jari Trackpad</code>. Jeda: <code>Esc ⎋</code> / <code>P</code>.</p>
                 </div>
               </div>
               <div class="instruction-item" style="border-left-color: #66bb6a;">
                 <span class="instruction-badge" style="background:#388e3c; color:#fff;">📱 SENTUH</span>
                 <div class="instruction-text">
                   <strong>Ponsel & Tablet Responsif:</strong>
-                  <p>Usap layar (Touch & Drag) untuk mengendalikan pesawat. Tersedia tombol mengambang di layar untuk <code>⚡ Pulse</code>, <code>🚀 Speed</code>, <code>🔄 Auto-Fire</code>, dan <code>⏸️ Jeda</code>.</p>
+                  <p>Usap layar (Touch & Drag) untuk mengendalikan pesawat. Tersedia tombol mengambang di layar untuk <code>🔄 Auto-Fire</code> dan <code>⏸️ Jeda</code>.</p>
                 </div>
               </div>
             </div>
@@ -498,61 +779,500 @@
               </div>
             </div>
 
-            <div class="weapon-notice-banner" style="background:#e0f7fa80; border-color:#00acc1; margin-top:14px;">
-              <span>⚡ <strong>2 SENJATA & KEMAMPUAN AKTIF (Z & X)</strong></span>
+            <div class="weapon-notice-banner" style="background:#fff3e080; border-color:#e65100; margin-top:14px;">
+              <span>🚀 <strong>KEMAMPUAN AUTO SPEED OVERDRIVE (1.5X)</strong></span>
             </div>
             <div class="arsenal-grid">
-              <div class="weapon-card" style="border-color:#00acc1;">
-                <div class="weapon-card-header">
-                  <span class="weapon-chip" style="background:#00838f;">Z</span>
-                  <span class="weapon-card-name">PULSE EMP BULLET ERASER</span>
-                </div>
-                <p class="weapon-card-desc">Lenyapkan seluruh peluru musuh di layar secara instan dengan gelombang kejut tanah liat. Diperoleh dari drop musuh yang langka (stok maks 1 di Normal, disediakan di awal game).</p>
-                <span class="weapon-stat">Aktif: Tombol Z • Penghapus Peluru Instan</span>
-              </div>
               <div class="weapon-card" style="border-color:#f57c00;">
                 <div class="weapon-card-header">
-                  <span class="weapon-chip" style="background:#e65100;">X</span>
-                  <span class="weapon-card-name">HYPER VELOCITY OVERDRIVE (PELURU CEPAT)</span>
+                  <span class="weapon-chip" style="background:#e65100;">SPD</span>
+                  <span class="weapon-card-name">HYPER VELOCITY OVERDRIVE (KECEPATAN SENJATA 1.5X)</span>
                 </div>
-                <p class="weapon-card-desc">Tingkatkan kecepatan peluru senjata normal hingga 2x lipat (2100 px/s) berjejak sonik. Dapat dihidupkan dan dimatikan bebas kapan saja; durasi bertambah +10s per drop hingga maks 30s (Normal).</p>
-                <span class="weapon-stat">Aktif: Tombol X (Toggle ON/OFF) • Kecepatan Supersonik</span>
+                <p class="weapon-card-desc">Tingkatkan kecepatan tembak (fire rate) dan laju peluru 1.5x lipat untuk SELURUH senjata! Aktif otomatis seketika saat drop item diambil (Normal).</p>
+                <span class="weapon-stat">Aktif: Otomatis saat Diambil • Universal Semua Senjata</span>
               </div>
             </div>
           </div>
 
-          <!-- Tab 3: Ekspedisi 4 Dunia & Boss -->
+          <!-- Tab 3: Matriks Komparasi 4 World & Boss (Terpisah: World & Boss) -->
           <div id="tab-worlds" class="tab-pane">
-            <div class="worlds-timeline">
-              <div class="world-item">
-                <span class="world-badge badge-valley">WORLD 1</span>
-                <div class="world-info">
-                  <strong>Lembah Tanah Liat (Stage 1–5)</strong>
-                  <p>Boss Stage 5: <em>The Iron Clay Dreadnought</em></p>
-                </div>
-              </div>
-              <div class="world-item">
-                <span class="world-badge badge-canyon">WORLD 2</span>
-                <div class="world-info">
-                  <strong>Ngarai Senja Sandstone (Stage 6–10)</strong>
-                  <p>Boss Stage 10: <em>The Clay Goliath Zeppelin</em></p>
-                </div>
-              </div>
-              <div class="world-item">
-                <span class="world-badge badge-cyber">WORLD 3</span>
-                <div class="world-info">
-                  <strong>Malam Siber Sintesis (Stage 11–15)</strong>
-                  <p>Boss Stage 15: <em>The Ultimate Clay Leviathan</em></p>
-                </div>
-              </div>
-              <div class="world-item">
-                <span class="world-badge badge-cosmic">WORLD 4</span>
-                <div class="world-info">
-                  <strong>Singularitas Kosmis (Stage 16–20)</strong>
-                  <p>Boss Stage 20: <em>The Omega Clay Colossus</em></p>
-                </div>
+            <div class="matrix-hero-banner world-hero-banner">
+              <div class="matrix-hero-icon">🪐</div>
+              <div class="matrix-hero-text">
+                <h4>SPESIFIKASI TEKNIS: MATRIKS 4 WORLD & BOSS</h4>
+                <ul class="matrix-card-param-list" style="margin-top:2px;">
+                  <li>• <strong>Struktur Komparasi</strong>: 2 Matriks Terpisah (Tabel 1: Regulasi Armada Musuh, Tabel 2: Spesifikasi Boss Multi-Modul)</li>
+                  <li>• <strong>Penskalaan Kampanye</strong>: 20 Stage Penuh • Multiplier Skor World: 1.0x (World 1) s/d 4.0x (World 4)</li>
+                </ul>
               </div>
             </div>
+
+            <!-- MATRIKS 1: ARMADA MUSUH & ATRIBUT WORLD SECARA UMUM -->
+            <div class="matrix-table-card">
+              <div class="matrix-table-title-row">
+                <span class="matrix-table-title">🗺️ TABEL 1: MATRIKS REGULASI WORLD & ARMADA MUSUH</span>
+                <span class="matrix-table-subtag">Geser horizontal bila di layar sempit ↔️</span>
+              </div>
+              <div class="matrix-scroll-wrap">
+                <table class="diff-matrix-table world-matrix-table">
+                  <thead>
+                    <tr>
+                      <th class="col-param">PARAMETER MUSUH / WORLD</th>
+                      <th class="col-world col-world-1">
+                        <span class="th-icon">🌄</span>
+                        <span class="th-name">WORLD 1</span>
+                        <span class="th-sub">Clay Valley</span>
+                      </th>
+                      <th class="col-world col-world-2">
+                        <span class="th-icon">🏜️</span>
+                        <span class="th-name">WORLD 2</span>
+                        <span class="th-sub">Sunset Canyon</span>
+                      </th>
+                      <th class="col-world col-world-3">
+                        <span class="th-icon">🌌</span>
+                        <span class="th-name">WORLD 3</span>
+                        <span class="th-sub">Midnight Cyber</span>
+                      </th>
+                      <th class="col-world col-world-4">
+                        <span class="th-icon">🪐</span>
+                        <span class="th-name">WORLD 4</span>
+                        <span class="th-sub">Cosmic Void</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🚩</span>
+                        <strong>Cakupan Stage</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">Stage 1 – 5</span> (5 Stage)</td>
+                      <td class="cell-val"><span class="matrix-pill">Stage 6 – 10</span> (5 Stage)</td>
+                      <td class="cell-val"><span class="matrix-pill">Stage 11 – 15</span> (5 Stage)</td>
+                      <td class="cell-val"><span class="matrix-pill">Stage 16 – 20</span> (5 Stage)</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🎨</span>
+                        <strong>Biome & Visual Latar</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Biome: Clay Valley<br>
+                        • Palet: Biru Siang (#4A7DA5)<br>
+                        • Partikel FX: Golden Pollen
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Biome: Sunset Canyon<br>
+                        • Palet: Sandstone (#D89B7B)<br>
+                        • Partikel FX: Warm Sand Dust
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Biome: Midnight Cyber<br>
+                        • Palet: Obsidian (#111936)<br>
+                        • Partikel FX: Cyan Pulse
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Biome: Cosmic Singularity<br>
+                        • Palet: Void Magenta (#0C081F)<br>
+                        • Partikel FX: Cosmic Starlight
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🛡️</span>
+                        <strong>Pengganda HP Musuh (World)</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">⏱️</span>
+                        <strong>Jeda Tembak Musuh (Cooldown)</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">⚡</span>
+                        <strong>Kecepatan Peluru Musuh</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Rata 1x)</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🚀</span>
+                        <strong>Kecepatan Gerak Musuh</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Universal Lock)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Universal Lock)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Universal Lock)</td>
+                      <td class="cell-val"><span class="matrix-pill">1.00x</span> (Universal Lock)</td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">💎</span>
+                        <strong>Pengganda Skor World</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-badge bg-world-1">1.00x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-world-2">2.00x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-world-3">3.00x</span></td>
+                      <td class="cell-val"><span class="matrix-badge bg-world-4">4.00x</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🌊</span>
+                        <strong>Intensitas Wave Stage</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Densitas: 3 Wave/Stage<br>
+                        • Karakter: Pelatihan Dasar
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Densitas: 3 Wave/Stage<br>
+                        • Karakter: Eskalasi Sergap
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Densitas: 4–10 Wave<br>
+                        • Maraton: St. 14 (10 Wave)
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Densitas: 5–10 Wave<br>
+                        • Maraton: St. 19 (10 Wave)
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">👾</span>
+                        <strong>Armada & Formasi Flagship</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Scout: 1.5 HP<br>
+                        • Drone: 2.5 HP<br>
+                        • Gunship: 18 HP<br>
+                        • Blimp: 45 HP
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Stinger: 3 HP<br>
+                        • Sniper: 7 HP<br>
+                        • Bomber: 25 HP<br>
+                        • Spinner: 9 HP
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Shield Cruiser: 22+16 HP<br>
+                        • Mine Layer: 20 HP<br>
+                        • Ace: 12 HP<br>
+                        • Juggernaut: 42+24 HP
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Vortex Drone: 18 HP<br>
+                        • Interceptor: 14 HP<br>
+                        • Star Fleet Gabungan
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">⚠️</span>
+                        <strong>Gimmick Bahaya Armada</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Formasi V-Shape meliuk<br>
+                        • Salvo 3-arah Gunship
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Bidikan laser merah Sniper<br>
+                        • Bom cluster atas Bomber<br>
+                        • Pantulan gergaji Spinner
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Perisai frontal kebal peluru<br>
+                        • Sebaran ladang ranjau<br>
+                        • Manuver loop akrobatik
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Gravitasi pusaran Vortex<br>
+                        • Manuver kilat Interceptor<br>
+                        • Tekanan Juggernaut + Cruisers
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🎁</span>
+                        <strong>Base Bonus Clear Stage</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Formula: Stage × 25k × 1x<br>
+                        • Rentang: 25.000 – 125.000
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Formula: Stage × 25k × 2x<br>
+                        • Rentang: 300.000 – 500.000
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Formula: Stage × 25k × 3x<br>
+                        • Rentang: 825.000 – 1.125.000
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Formula: Stage × 25k × 4x<br>
+                        • Rentang: 1.600.000 – 2.000.000
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🔫</span>
+                        <strong>Senjata Counter Terbaik</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Primer: <strong>SPREAD</strong><br>
+                        • Sekunder: <strong>LASER</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Primer: <strong>HOMING</strong><br>
+                        • Sekunder: <strong>FLAK</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Primer: <strong>LASER</strong><br>
+                        • Sekunder: <strong>PLASMA ARC</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Primer: <strong>PLASMA ARC</strong><br>
+                        • Sekunder: <strong>SPREAD</strong> Overdrive
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- MATRIKS 2: ENSIKLOPEDIA BOSS DUNIA MULTI-MODUL -->
+            <div class="matrix-table-card">
+              <div class="matrix-table-title-row">
+                <span class="matrix-table-title">👑 TABEL 2: SPESIFIKASI TEKNIS 4 BOSS DUNIA</span>
+                <span class="matrix-table-subtag">Geser horizontal bila di layar sempit ↔️</span>
+              </div>
+              <div class="matrix-scroll-wrap">
+                <table class="diff-matrix-table world-matrix-table">
+                  <thead>
+                    <tr>
+                      <th class="col-param">PARAMETER BOSS TEMPUR</th>
+                      <th class="col-world col-world-1">
+                        <span class="th-icon">🌄</span>
+                        <span class="th-name">BOSS WORLD 1</span>
+                        <span class="th-sub">Stage 5 Dreadnought</span>
+                      </th>
+                      <th class="col-world col-world-2">
+                        <span class="th-icon">🏜️</span>
+                        <span class="th-name">BOSS WORLD 2</span>
+                        <span class="th-sub">Stage 10 Goliath</span>
+                      </th>
+                      <th class="col-world col-world-3">
+                        <span class="th-icon">🌌</span>
+                        <span class="th-name">BOSS WORLD 3</span>
+                        <span class="th-sub">Stage 15 Leviathan</span>
+                      </th>
+                      <th class="col-world col-world-4">
+                        <span class="th-icon">🪐</span>
+                        <span class="th-name">FINAL CLIMAX BOSS</span>
+                        <span class="th-sub">Stage 20 Colossus</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">👑</span>
+                        <strong>Nama Resmi Boss</strong>
+                      </td>
+                      <td class="cell-val"><strong>The Iron Clay Dreadnought</strong></td>
+                      <td class="cell-val"><strong>The Clay Goliath Zeppelin</strong></td>
+                      <td class="cell-val"><strong>The Ultimate Clay Leviathan</strong></td>
+                      <td class="cell-val"><strong style="color:#6a1b9a;">The Omega Clay Colossus</strong></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🛡️</span>
+                        <strong>Base Total HP Boss</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">600 HP (1.0x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-neutral">1.200 HP (2.0x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff">1.800 HP (3.0x)</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-debuff" style="font-weight:800;">3.600 HP (6.0x)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🎯</span>
+                        <strong>Rincian Modul & HP Bagian</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Turret Atas: <strong>110 HP</strong><br>
+                        • Turret Bawah: <strong>110 HP</strong><br>
+                        • Lambung Core: <strong>380 HP</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Baterai Mortir: <strong>260 HP</strong><br>
+                        • Hanggar Drone: <strong>240 HP</strong><br>
+                        • Lambung Balon: <strong>700 HP</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Sayap Dorsal: <strong>300 HP</strong><br>
+                        • Sayap Ventral: <strong>300 HP</strong><br>
+                        • Missile Pod: <strong>350 HP</strong><br>
+                        • Inti Bio-Naga: <strong>850 HP</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Railgun Atas/Bawah: <strong>@400 HP</strong><br>
+                        • Drone Matrix Core: <strong>500 HP</strong><br>
+                        • Colossus Hull: <strong>1.100 HP</strong><br>
+                        • Fase 2 Apex Core: <strong>1.200 HP</strong>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">⚡</span>
+                        <strong>Pola Serangan Utama</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Aimed Turret Cannon<br>
+                        • 5-Way Arc Spread Shotgun<br>
+                        • Sine-Wave Stream Barrage
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Parabolic AOE Mortar Bomb<br>
+                        • Broadside 5-Way Salvo<br>
+                        • Sortie Peluncur Hanggar
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Mega Sonic Laser Beam<br>
+                        • 6-Way Micro-Missile Pod<br>
+                        • Rotating Plasma Spiral
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Dual Piercing Railgun Beams<br>
+                        • Singularity Shockwave Pulse<br>
+                        • Fase 2: 360° Spiral Hell
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">👾</span>
+                        <strong>Skill Khusus / Gimmick</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Reinforce: Pink Scout Swarm<br>
+                        • Interval: Tiap 11.5 Detik
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Sortie: Interceptor & Stinger<br>
+                        • Interval: Tiap 2.2 Detik
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Particle Laser: Sinar Horisontal<br>
+                        • Warning: Telegraf Garis Merah
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Apex Dash: Serbuan Maju-Mundur<br>
+                        • Kinetic Barrier: Kebal 2.4 Detik
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🔥</span>
+                        <strong>Mekanik Fase Amarah (Rage)</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Threshold: HP ≤ 30% (50% Extreme)<br>
+                        • Efek: Cadence tembak non-stop
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Threshold: Modul pecah / HP ≤ 30%<br>
+                        • Efek: Sortie ganda & Triple Mortar
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Threshold: Sayap rusak / HP ≤ 30%<br>
+                        • Efek: Charge laser 2x lebih cepat
+                      </td>
+                      <td class="cell-val text-highlight-extreme">
+                        • Threshold: Fase 1 HP 0 (Fase 2 Start)<br>
+                        • Efek: Transformasi Omega Apex Core
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🛸</span>
+                        <strong>Gaya Manuver di Arena</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Pola: Oskilasi Vertikal Linier<br>
+                        • Posisi: X: 1040 (Garis Belakang)
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Pola: Melayang Steampunk<br>
+                        • Posisi: X: 1040 (Sisi Kanan)
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Pola: Bio-Serpentine Meliuk<br>
+                        • Posisi: Dinamis Vertikal-Horisontal
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Fase 1: Stasioner (X: 1040)<br>
+                        • Fase 2: Dash Rush (X: 260 ➔ 1040)
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">💰</span>
+                        <strong>Base Bonus Kalahkan Boss</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-pill">+250.000</span> (x Diff Mult)</td>
+                      <td class="cell-val"><span class="matrix-pill">+600.000</span> (x Diff Mult)</td>
+                      <td class="cell-val"><span class="matrix-pill">+1.200.000</span> (x Diff Mult)</td>
+                      <td class="cell-val"><span class="matrix-pill" style="background:#e1bee7; color:#4a148c; font-weight:800;">+3.500.000 VICTORY BONUS</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">🎁</span>
+                        <strong>Reward Transisi World</strong>
+                      </td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+1 Nyawa Ekstra</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+1 Nyawa Ekstra</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff">+1 Nyawa Ekstra</span></td>
+                      <td class="cell-val"><span class="matrix-tag tag-buff" style="background:#ede7f6; color:#4a148c; font-weight:800;">🏆 VICTORY SCREEN</span></td>
+                    </tr>
+                    <tr>
+                      <td class="cell-param">
+                        <span class="param-icon">💡</span>
+                        <strong>Taktik & Prioritas Target</strong>
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Target 1: Turret Atas & Bawah (@110)<br>
+                        • Target 2: Inti Lambung (380 HP)
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Target 1: Hanggar Drone (240 HP)<br>
+                        • Target 2: Baterai Mortir ➔ Lambung
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Target 1: Sayap Ganda (@300 HP)<br>
+                        • Manuver: Hindari jalur telegraf laser
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Target 1: Dual Railguns (@400 HP)<br>
+                        • Fase 2: Jauhi jalur Dash, serang pasca-barrier
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
 
           <!-- Tab 4: Matriks Konfigurasi Difficulty -->
@@ -560,15 +1280,18 @@
             <div class="matrix-hero-banner">
               <div class="matrix-hero-icon">⚖️</div>
               <div class="matrix-hero-text">
-                <h4>MATRIKS TINGKAT KESULITAN DINAMIS</h4>
-                <p>Prinsip <em>Risk vs Reward</em> presisi: Semakin tinggi tantangan, pengganda skor melonjak fantastis (hingga <strong>5.0x</strong>). Bonus penyelesaian stage dinaikkan untuk balancing: dihitung dari <strong>Multiplier World (1x–4x)</strong> terlebih dahulu lalu dikalikan <strong>Multiplier Difficulty (0.25x–5x)</strong>!</p>
+                <h4>SPESIFIKASI TEKNIS: MATRIKS TINGKAT KESULITAN</h4>
+                <ul class="matrix-card-param-list" style="margin-top:2px;">
+                  <li>• <strong>Formula Skor Stage</strong>: <code>Base Bonus × Multiplier World (1.0x – 4.0x) × Multiplier Difficulty (0.25x – 5.0x)</code></li>
+                  <li>• <strong>Regulasi Engine</strong>: 12 Atribut Dinamis (HP Musuh, Cooldown, Peluru, Nyawa, Durasi Senjata, Overdrive, Boss Bonus, Gimmick)</li>
+                </ul>
               </div>
             </div>
 
             <!-- Claymorphic Matrix Table Card -->
             <div class="matrix-table-card">
               <div class="matrix-table-title-row">
-                <span class="matrix-table-title">⚡ TABEL KOMPARASI LENGKAP 5 DIFFICULTY</span>
+                <span class="matrix-table-title">⚡ TABEL REGULASI LENGKAP 5 DIFFICULTY</span>
                 <span class="matrix-table-subtag">Geser horizontal bila di layar sempit ↔️</span>
               </div>
               <div class="matrix-scroll-wrap">
@@ -727,108 +1450,75 @@
                     </tr>
                     <tr>
                       <td class="cell-param">
-                        <span class="param-icon">⚡</span>
-                        <strong>Pulse (Z) - Awal / Maks</strong>
-                      </td>
-                      <td class="cell-val">2 / maks 3</td>
-                      <td class="cell-val">2 / maks 2</td>
-                      <td class="cell-val">1 / maks 1</td>
-                      <td class="cell-val">1 / maks 1</td>
-                      <td class="cell-val">0 / maks 1</td>
-                    </tr>
-                    <tr>
-                      <td class="cell-param">
                         <span class="param-icon">🚀</span>
-                        <strong>Peluru Cepat (X) - Drop / Maks</strong>
+                        <strong>Kecepatan Senjata 1.5x - Durasi / Maks</strong>
                       </td>
-                      <td class="cell-val">+15s / maks 45s</td>
-                      <td class="cell-val">+12s / maks 40s</td>
-                      <td class="cell-val">+10s / maks 30s</td>
-                      <td class="cell-val">+8s / maks 25s</td>
-                      <td class="cell-val">+5s / maks 20s</td>
+                      <td class="cell-val">25s / maks 25s</td>
+                      <td class="cell-val">20s / maks 20s</td>
+                      <td class="cell-val">15s / maks 15s</td>
+                      <td class="cell-val">10s / maks 10s</td>
+                      <td class="cell-val">7s / maks 7s</td>
                     </tr>
                     <tr>
                       <td class="cell-param">
                         <span class="param-icon">💥</span>
                         <strong>Mekanik Spesial / Gimmick</strong>
                       </td>
-                      <td class="cell-val text-subtle">Sangat toleran, belajar pola musuh</td>
-                      <td class="cell-val text-subtle">Senjata awet tidak hilang saat jatuh</td>
-                      <td class="cell-val text-subtle">Keseimbangan arcade otentik 2002</td>
-                      <td class="cell-val text-subtle">Peluru cepat, tanpa nyawa dari boss</td>
-                      <td class="cell-val text-highlight-extreme">Revenge Bullets & Boss Rage 50% HP!</td>
+                      <td class="cell-val text-subtle">
+                        • Toleransi: Maksimal<br>
+                        • Senjata: Tetap Aktif<br>
+                        • Revenge Bullets: Nonaktif
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Toleransi: Tinggi<br>
+                        • Senjata: Tetap Aktif<br>
+                        • Revenge Bullets: Nonaktif
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Regulasi: Standar 2002<br>
+                        • Senjata: Reset Gugur<br>
+                        • Revenge Bullets: Nonaktif
+                      </td>
+                      <td class="cell-val text-subtle">
+                        • Peluru: +15% Kencang<br>
+                        • Boss Reward: 0 Nyawa<br>
+                        • Revenge Bullets: Nonaktif
+                      </td>
+                      <td class="cell-val text-highlight-extreme">
+                        • HP Musuh: +50% (1.50x)<br>
+                        • Revenge Bullets: Aktif<br>
+                        • Boss Rage: HP ≤ 50%
+                      </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- 5 Detailed Mode Cards -->
-            <div class="matrix-cards-grid">
-              <div class="clay-diff-card card-beginner">
-                <div class="card-diff-header">
-                  <span class="diff-icon">🛡️</span>
-                  <div>
-                    <h5 class="diff-title">BEGINNER (PEMULA)</h5>
-                    <span class="diff-chip chip-beginner">Skor 0.25x • +Nyawa Tiap 100.000</span>
-                  </div>
-                </div>
-                <p class="diff-desc">Dibuat khusus untuk pengenalan visual, pemain baru, atau anak-anak. HP musuh 25% lebih empuk, tembakan pelan dan renggang, serta toleransi hingga 20 nyawa dan durasi kebal 4 detik.</p>
-              </div>
-
-              <div class="clay-diff-card card-easy">
-                <div class="card-diff-header">
-                  <span class="diff-icon">🟢</span>
-                  <div>
-                    <h5 class="diff-title">EASY (SANTAI)</h5>
-                    <span class="diff-chip chip-easy">Skor 0.50x • +Nyawa Tiap 500.000</span>
-                  </div>
-                </div>
-                <p class="diff-desc">Pengalaman santai dan nyaman. Senjata spesial bertahan 20 detik dan tidak hilang saat pesawat tertembak. Sangat cocok untuk eksplorasi semua 20 stage dan 4 dunia.</p>
-              </div>
-
-              <div class="clay-diff-card card-normal">
-                <div class="card-diff-header">
-                  <span class="diff-icon">🟡</span>
-                  <div>
-                    <h5 class="diff-title">NORMAL (KLASIK ARCADE)</h5>
-                    <span class="diff-chip chip-normal">Skor 1.00x • +Nyawa Tiap 2.000.000</span>
-                  </div>
-                </div>
-                <p class="diff-desc">Standar emas arcade otentik Platypus 2002. Keseimbangan presisi antara tantangan dan strategi pengelolaan senjata serta pengumpulan buah poin.</p>
-              </div>
-
-              <div class="clay-diff-card card-hard">
-                <div class="card-diff-header">
-                  <span class="diff-icon">🔴</span>
-                  <div>
-                    <h5 class="diff-title">HARD (TANTANGAN HARDCORE)</h5>
-                    <span class="diff-chip chip-hard">Skor 2.00x • +Nyawa Tiap 10.000.000</span>
-                  </div>
-                </div>
-                <p class="diff-desc">Bagi pilot terampil yang mencari tantangan tinggi. Peluru musuh melesat 15% lebih kencang, interval tembak lebih rapat, senjata hanya 10 detik, dan boss tidak lagi memberikan nyawa!</p>
-              </div>
-
-              <div class="clay-diff-card card-extreme">
-                <div class="card-diff-header">
-                  <span class="diff-icon">🔥</span>
-                  <div>
-                    <h5 class="diff-title">EXTREME (NERAKA PELURU)</h5>
-                    <span class="diff-chip chip-extreme">Skor 5.00x • +Nyawa Tiap 50.000.000</span>
-                  </div>
-                </div>
-                <p class="diff-desc">Tingkat kesulitan pamungkas! HP musuh 1.5x, peluru sangat cepat dan rapat. Musuh berarmor memuntahkan <em>Revenge Bullets</em> saat hancur, dan semua Boss memasuki <em>Rage Mode</em> saat HP &le; 50%!</p>
-              </div>
-            </div>
           </div>
         </div>
 
         <!-- Guide Footer -->
         <div class="guide-footer-actions">
           <button type="button" id="btn-guide-close" class="clay-btn green">
-            <span>✅ MENGERTI & TUTUP (ESC)</span>
+            <span class="btn-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span>MENGERTI & TUTUP (ESC)</span>
           </button>
         </div>
+      </div>
+
+      <!-- Elongated Bottom Guidance Dock Bar for Guide Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Tutup Panduan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> Pindah Tab</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>TAB</kbd> Navigasi Konten</span>
       </div>
     </div>
 
@@ -837,7 +1527,9 @@
       <div class="clay-card pause-modal-card">
         <!-- Floating Pill Header -->
         <div class="modal-pill-tag tag-pause">
-          <span class="tag-icon">⏸️</span>
+          <span class="tag-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"></rect><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"></rect></svg>
+          </span>
           <span>PERMAINAN DIJEDA</span>
         </div>
 
@@ -857,7 +1549,10 @@
           </div>
           <div class="clay-stat-chip">
             <span class="chip-label">SISA NYAWA</span>
-            <span id="pause-lives-val" class="chip-val">❤️ 3</span>
+            <span class="chip-val">
+              <svg class="ui-icon filled" style="color:#ef5350;" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              <span id="pause-lives-val">3</span>
+            </span>
           </div>
         </div>
 
@@ -865,7 +1560,9 @@
         <div class="modal-vertical-actions">
           <button id="btn-resume" class="clay-btn green vertical-action-btn primary-action" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">▶️</span>
+              <span class="btn-icon">
+                <svg class="ui-icon filled" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </span>
               <span class="btn-text">LANJUTKAN PERMAINAN</span>
             </span>
             <kbd class="clay-kbd-pill">ENTER / ⏎</kbd>
@@ -873,15 +1570,29 @@
 
           <button id="btn-settings-pause" class="clay-btn amber vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">⚙️</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              </span>
               <span class="btn-text">PENGATURAN & AUDIO</span>
             </span>
             <kbd class="clay-kbd-pill">O</kbd>
           </button>
 
+          <button id="btn-cheat-pause" class="clay-btn purple vertical-action-btn" type="button">
+            <span class="btn-lead">
+              <span class="btn-icon">
+                <svg class="ui-icon" width="18" height="18" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+              </span>
+              <span class="btn-text">KONFIGURASI CURANG</span>
+            </span>
+            <kbd class="clay-kbd-pill">C</kbd>
+          </button>
+
           <button id="btn-restart-pause" class="clay-btn secondary vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">🔄</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </span>
               <span class="btn-text">ULANGI PERMAINAN</span>
             </span>
             <kbd class="clay-kbd-pill">R</kbd>
@@ -889,16 +1600,30 @@
 
           <button id="btn-menu-pause" class="clay-btn red vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">🏠</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              </span>
               <span class="btn-text">KEMBALI KE MENU UTAMA</span>
             </span>
             <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
           </button>
         </div>
+      </div>
 
-        <div class="modal-keyboard-hint">
-          <span>💡 Tekan <kbd>ENTER / ⏎</kbd> lanjut • <kbd>O</kbd> pengaturan • <kbd>R</kbd> ulangi • <kbd>ESC / ⎋</kbd> menu</span>
-        </div>
+      <!-- Elongated Bottom Guidance Dock Bar for Pause Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ENTER / ⏎</kbd> Lanjutkan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>O</kbd> Pengaturan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>C</kbd> Curang</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>R</kbd> Ulangi</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Menu Utama</span>
       </div>
     </div>
 
@@ -907,7 +1632,9 @@
       <div class="clay-card gameover-modal-card">
         <!-- Floating Pill Header -->
         <div class="modal-pill-tag tag-gameover">
-          <span class="tag-icon">💥</span>
+          <span class="tag-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </span>
           <span>MISI GAGAL • ARMADA GUGUR</span>
         </div>
 
@@ -921,7 +1648,9 @@
             <div class="hero-label">SKOR DIPEROLEH</div>
             <div id="gameover-score-display" class="hero-score-val">0</div>
             <div id="gameover-new-record" class="stat-new-record-pill" style="display: none;">
-              <span class="record-star">⭐</span>
+              <span class="record-star">
+                <svg class="ui-icon-sm filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </span>
               <span>REKOR TERTINGGI BARU!</span>
             </div>
           </div>
@@ -948,14 +1677,17 @@
 
         <!-- Cheat Notice Warning -->
         <p id="gameover-cheat-notice" class="cheat-unrecorded-notice" style="display: none;">
-          ⚠️ Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
+          <svg class="ui-icon-sm" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
         </p>
 
         <!-- Vertical Actions Stack -->
         <div class="modal-vertical-actions">
           <button id="btn-retry" class="clay-btn primary-launch vertical-action-btn primary-action" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">🔄</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </span>
               <span class="btn-text">COBA LAGI</span>
             </span>
             <kbd class="clay-kbd-pill">ENTER / ⏎ / R</kbd>
@@ -963,7 +1695,9 @@
 
           <button id="btn-settings-gameover" class="clay-btn amber vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">⚙️</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              </span>
               <span class="btn-text">PENGATURAN & AUDIO</span>
             </span>
             <kbd class="clay-kbd-pill">O</kbd>
@@ -971,16 +1705,26 @@
 
           <button id="btn-menu-gameover" class="clay-btn secondary vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">🏠</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              </span>
               <span class="btn-text">KEMBALI KE MENU UTAMA</span>
             </span>
             <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
           </button>
         </div>
+      </div>
 
-        <div class="modal-keyboard-hint">
-          <span>💡 Tekan <kbd>ENTER / ⏎</kbd> atau <kbd>R</kbd> untuk coba lagi • <kbd>O</kbd> pengaturan • <kbd>ESC / ⎋</kbd> menu</span>
-        </div>
+      <!-- Elongated Bottom Guidance Dock Bar for Game Over Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ENTER / ⏎ / R</kbd> Coba Lagi</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>O</kbd> Pengaturan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Menu Utama</span>
       </div>
     </div>
 
@@ -992,7 +1736,9 @@
       <div class="clay-card victory-modal-card">
         <!-- Floating Pill Header -->
         <div class="modal-pill-tag tag-victory">
-          <span class="tag-icon">🏆</span>
+          <span class="tag-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+          </span>
           <span>MISI DITUNTASKAN • MASTER ACE</span>
         </div>
 
@@ -1003,7 +1749,13 @@
         <!-- Victory Trophy & Performance Showcase Deck -->
         <div class="clay-stat-tray victory-stat-tray">
           <div class="victory-rank-pill">
-            <span class="rank-stars">⭐⭐⭐⭐⭐</span>
+            <span class="rank-stars">
+              <svg class="ui-icon-sm filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg class="ui-icon-sm filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg class="ui-icon-sm filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg class="ui-icon-sm filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg class="ui-icon-sm filled" style="color:#ffd54f;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </span>
             <span id="victory-rank-title" class="rank-text">RANK S+ • PENGUASA LANGIT</span>
           </div>
 
@@ -1011,7 +1763,9 @@
             <div class="hero-label">SKOR TOTAL AKHIR</div>
             <div id="victory-score-display" class="hero-score-val victory-gold">0</div>
             <div id="victory-new-record" class="stat-new-record-pill victory-record" style="display: none;">
-              <span class="record-star">🏆</span>
+              <span class="record-star">
+                <svg class="ui-icon-sm" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+              </span>
               <span>REKOR TERTINGGI BARU TERCIPTA!</span>
             </div>
           </div>
@@ -1033,14 +1787,17 @@
 
         <!-- Cheat Notice Warning -->
         <p id="victory-cheat-notice" class="cheat-unrecorded-notice" style="display: none;">
-          ⚠️ Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
+          <svg class="ui-icon-sm" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Mode Curang Aktif: Skor Tidak Dicatat ke Rekor Tertinggi
         </p>
 
         <!-- Vertical Actions Stack -->
         <div class="modal-vertical-actions">
           <button id="btn-play-again" class="clay-btn green vertical-action-btn primary-action victory-action-glow" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">🌟</span>
+              <span class="btn-icon">
+                <svg class="ui-icon filled" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </span>
               <span class="btn-text">MAIN LAGI DENGAN MODE INI</span>
             </span>
             <kbd class="clay-kbd-pill">ENTER / ⏎</kbd>
@@ -1048,7 +1805,9 @@
 
           <button id="btn-settings-victory" class="clay-btn amber vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">⚙️</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              </span>
               <span class="btn-text">PENGATURAN & AUDIO</span>
             </span>
             <kbd class="clay-kbd-pill">O</kbd>
@@ -1056,16 +1815,26 @@
 
           <button id="btn-menu-victory" class="clay-btn secondary vertical-action-btn" type="button">
             <span class="btn-lead">
-              <span class="btn-icon">🏠</span>
+              <span class="btn-icon">
+                <svg class="ui-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              </span>
               <span class="btn-text">KEMBALI KE MENU UTAMA</span>
             </span>
             <kbd class="clay-kbd-pill">ESC / ⎋</kbd>
           </button>
         </div>
+      </div>
 
-        <div class="modal-keyboard-hint">
-          <span>💡 Tekan <kbd>ENTER / ⏎</kbd> main lagi • <kbd>O</kbd> pengaturan • <kbd>ESC / ⎋</kbd> menu utama</span>
-        </div>
+      <!-- Elongated Bottom Guidance Dock Bar for Victory Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ENTER / ⏎</kbd> Main Lagi</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>O</kbd> Pengaturan</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Menu Utama</span>
       </div>
     </div>
 
@@ -1074,7 +1843,8 @@
       <div class="clay-card cheat-modal-card">
         <!-- Floating Pill Header -->
         <div class="cheat-badge-pill">
-          <span>🛠️ FITUR KHUSUS • KENDALI BEBAS</span>
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          <span>FITUR KHUSUS • KENDALI BEBAS</span>
         </div>
 
         <h2 class="cheat-modal-title">KONFIGURASI CURANG</h2>
@@ -1082,7 +1852,9 @@
 
         <!-- Unrecorded High Score Warning Notice -->
         <div class="cheat-warning-card">
-          <span class="cheat-warning-icon">⚠️</span>
+          <span class="cheat-warning-icon">
+            <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </span>
           <div class="cheat-warning-body">
             <strong>PROTEKSI REKOR TERTINGGI:</strong>
             <p>Jika mode curang aktif, skor sesi ini <strong>tidak dicatat dalam rekor tertinggi</strong>.</p>
@@ -1104,13 +1876,22 @@
         <!-- Cheat Segmented Tabs -->
         <div class="cheat-tab-bar" id="cheat-tab-bar">
           <button type="button" class="cheat-tab-btn active" data-cheat-tab="cheat-tab-mission">
-            <span class="tab-icon">🚀</span> TAHAP & SENJATA
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 9V4s3.03.55 4 2c1.08 1.62 0 5 0 5"></path></svg>
+            </span>
+            <span>TAHAP & SENJATA</span>
           </button>
           <button type="button" class="cheat-tab-btn" data-cheat-tab="cheat-tab-lives">
-            <span class="tab-icon">❤️</span> SISTEM NYAWA
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"></path></svg>
+            </span>
+            <span>SISTEM NYAWA</span>
           </button>
           <button type="button" class="cheat-tab-btn" data-cheat-tab="cheat-tab-enemy">
-            <span class="tab-icon">👾</span> PARAMETER MUSUH
+            <span class="tab-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+            </span>
+            <span>PARAMETER MUSUH</span>
           </button>
         </div>
 
@@ -1123,7 +1904,9 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">🚀</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 9V4s3.03.55 4 2c1.08 1.62 0 5 0 5"></path></svg>
+                  </span>
                   <span class="group-title">AWAL STAGE (STAGE 1 – 20)</span>
                 </div>
                 <span id="cheat-stage-val-badge" class="cheat-val-badge">STAGE 1</span>
@@ -1153,12 +1936,16 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">⚡</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+                  </span>
                   <span class="group-title">DURASI SENJATA SPESIAL</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-weapon" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
                   <span id="cheat-weapon-val-badge" class="cheat-val-badge">15 DETIK</span>
@@ -1175,7 +1962,9 @@
                 </div>
                 <div class="cheat-toggle-option-row">
                   <button type="button" id="btn-toggle-infinite-weapon" class="clay-opt-toggle">
-                    <span class="opt-icon">♾️</span>
+                    <span class="opt-icon">
+                      <svg class="ui-icon" viewBox="0 0 24 24"><path d="M18.178 8c5.096 0 5.096 8 0 8-2.61 0-4.303-2.023-6.178-4-1.875 1.977-3.568 4-6.178 4-5.096 0-5.096-8 0-8 2.61 0 4.303 2.023 6.178 4 1.875-1.977 3.568-4 6.178-4z"></path></svg>
+                    </span>
                     <span class="opt-text">Senjata Tak Terbatas (Infinite)</span>
                   </button>
                   <div class="cheat-quick-pills-inline">
@@ -1195,12 +1984,16 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">❤️</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"></path></svg>
+                  </span>
                   <span class="group-title">JUMLAH NYAWA AWAL</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-starting-lives" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
                   <span id="cheat-lives-val-badge" class="cheat-val-badge">10 NYAWA</span>
@@ -1217,7 +2010,9 @@
                 </div>
                 <div class="cheat-toggle-option-row">
                   <button type="button" id="btn-toggle-infinite-lives" class="clay-opt-toggle">
-                    <span class="opt-icon">♾️</span>
+                    <span class="opt-icon">
+                      <svg class="ui-icon" viewBox="0 0 24 24"><path d="M18.178 8c5.096 0 5.096 8 0 8-2.61 0-4.303-2.023-6.178-4-1.875 1.977-3.568 4-6.178 4-5.096 0-5.096-8 0-8 2.61 0 4.303 2.023 6.178 4 1.875-1.977 3.568-4 6.178-4z"></path></svg>
+                    </span>
                     <span class="opt-text">Nyawa Tak Terbatas (Infinite / Godmode)</span>
                   </button>
                   <div class="cheat-quick-pills-inline">
@@ -1235,12 +2030,16 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">🛡️</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  </span>
                   <span class="group-title">BATAS NYAWA MAKSIMAL</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-max-lives" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
                   <span id="cheat-max-lives-val-badge" class="cheat-val-badge">20 NYAWA</span>
@@ -1269,15 +2068,19 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">🎁</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  </span>
                   <span class="group-title">INTERVAL SKOR +1 NYAWA</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-score-interval" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
-                  <span id="cheat-score-interval-val-badge" class="cheat-val-badge">2.000.000 PTS</span>
+                  <span id="cheat-score-interval-val-badge" class="cheat-val-badge">200.000 PTS</span>
                 </div>
               </div>
               <div class="cheat-detail-info">
@@ -1290,13 +2093,15 @@
                   <button type="button" class="clay-step-btn" id="btn-score-interval-inc" title="Tambah Interval">+</button>
                 </div>
                 <div class="cheat-quick-pills">
+                  <button type="button" class="quick-chip" data-set-score-interval="10000">10 Rb</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="25000">25 Rb</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="50000">50 Rb</button>
                   <button type="button" class="quick-chip" data-set-score-interval="100000">100 Rb</button>
+                  <button type="button" class="quick-chip" data-set-score-interval="200000">200 Rb</button>
                   <button type="button" class="quick-chip" data-set-score-interval="500000">500 Rb</button>
                   <button type="button" class="quick-chip" data-set-score-interval="1000000">1 Juta</button>
                   <button type="button" class="quick-chip" data-set-score-interval="2000000">2 Juta</button>
                   <button type="button" class="quick-chip" data-set-score-interval="5000000">5 Juta</button>
-                  <button type="button" class="quick-chip" data-set-score-interval="10000000">10 Juta</button>
-                  <button type="button" class="quick-chip" data-set-score-interval="50000000">50 Juta</button>
                 </div>
               </div>
             </div>
@@ -1308,12 +2113,16 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">🩸</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  </span>
                   <span class="group-title">PENGGANDA HP MUSUH</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-enemy-hp" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
                   <span id="cheat-enemy-hp-val-badge" class="cheat-val-badge">1.00× HP</span>
@@ -1343,12 +2152,16 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">⏱️</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  </span>
                   <span class="group-title">JEDA TEMBAK MUSUH</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-shoot-cooldown" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
                   <span id="cheat-shoot-cooldown-val-badge" class="cheat-val-badge">1.00× JEDA</span>
@@ -1378,12 +2191,16 @@
             <div class="cheat-control-group">
               <div class="cheat-group-header">
                 <div class="cheat-group-label">
-                  <span class="group-icon">☄️</span>
+                  <span class="group-icon">
+                    <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"></polygon></svg>
+                  </span>
                   <span class="group-title">KECEPATAN PELURU MUSUH</span>
                 </div>
                 <div class="cheat-header-right">
                   <button type="button" id="btn-toggle-diff-bullet-speed" class="diff-override-btn" title="Klik untuk beralih antara Mode Difficulty dan Kustom">
-                    <span class="diff-btn-icon">🔒</span>
+                    <span class="diff-btn-icon">
+                      <svg class="ui-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
                     <span class="diff-btn-text">SESUAI DIFFICULTY</span>
                   </button>
                   <span id="cheat-bullet-speed-val-badge" class="cheat-val-badge">1.00× KEC.</span>
@@ -1412,9 +2229,12 @@
 
           <!-- Priority & Logic Notice -->
           <div class="cheat-priority-info-box">
-            <span class="priority-badge">🎯 LOGIKA EKSEKUSI STRICT & PRIORITAS</span>
+            <span class="priority-badge">
+              <svg class="ui-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+              LOGIKA EKSEKUSI STRICT & PRIORITAS
+            </span>
             <p>
-              Jika <strong>Status Master Curang NON-AKTIF</strong>, seluruh konfigurasi di halaman ini <strong>diabaikan secara tegas</strong> dan game murni mengikuti difficulty. Jika AKTIF, konfigurasi bertanda <strong>⚙️ KUSTOM</strong> akan menimpa difficulty, sedangkan yang bertanda <strong>🔒 SESUAI DIFFICULTY</strong> tetap memakai parameter bawaan difficulty yang dipilih!
+              Jika <strong>Status Master Curang NON-AKTIF</strong>, seluruh konfigurasi di halaman ini <strong>diabaikan secara tegas</strong> dan game murni mengikuti difficulty. Jika AKTIF, konfigurasi bertanda <strong>KUSTOM</strong> akan menimpa difficulty, sedangkan yang bertanda <strong>SESUAI DIFFICULTY</strong> tetap memakai parameter bawaan difficulty yang dipilih!
             </p>
           </div>
         </div>
@@ -1422,12 +2242,30 @@
         <!-- Footer Actions -->
         <div class="cheat-footer-actions">
           <button type="button" id="btn-cheat-reset" class="clay-btn secondary">
-            <span>🔄 RESET DEFAULT</span>
+            <span class="btn-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            </span>
+            <span>RESET DEFAULT</span>
           </button>
           <button type="button" id="btn-cheat-save" class="clay-btn green">
-            <span>✅ SIMPAN & TUTUP</span>
+            <span class="btn-icon">
+              <svg class="ui-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span>SIMPAN & TUTUP</span>
           </button>
         </div>
+      </div>
+
+      <!-- Elongated Bottom Guidance Dock Bar for Cheat Screen -->
+      <div class="screen-footer-guidance-bar">
+        <span class="guidance-bar-icon">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"></path></svg>
+        </span>
+        <span class="guidance-bar-segment"><kbd>ESC / ⎋</kbd> Simpan & Tutup</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>TAB</kbd> Navigasi Kontrol Curang</span>
+        <span class="guidance-bar-divider">•</span>
+        <span class="guidance-bar-segment"><kbd>KLIK / GESER</kbd> Sesuaikan Parameter</span>
       </div>
     </div>
   </div>

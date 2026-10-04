@@ -12,12 +12,14 @@ export class InputManager {
     };
 
     this.touchSteerId = null;
-    this.controlMode = 'MOUSE'; // 'MOUSE' or 'KEYBOARD'
+    this.controlMode = 'UNIFIED';
+    this.mouseSteeringActive = false;
     this.autoFire = false;
     this.pauseRequested = false;
-    this.pulseRequested = false;
-    this.speedBoostRequested = false;
     this.onAutoFireChanged = null;
+
+    this._moveVector = { dx: 0, dy: 0 };
+    this._cachedRect = null;
 
     this.isMac = typeof navigator !== 'undefined' && 
       (/Mac|iPhone|iPod|iPad/i.test(navigator.platform || navigator.userAgent || ''));
@@ -85,37 +87,11 @@ export class InputManager {
         this.toggleAutoFire();
       }
 
-      // Pulse Blast (Erase all enemy bullets):
-      // Primary: Z (with AZERTY guard so physical Z on AZERTY doesn't trigger move up),
-      // Ergonomic alternatives for macOS & all keyboards: C, K, U
-      const isPulseKey = (e.code === 'KeyZ' && e.key.toLowerCase() !== 'w') ||
-                         (e.key && e.key.toLowerCase() === 'z' && e.code !== 'KeyW') ||
-                         e.code === 'KeyC' || (e.key && e.key.toLowerCase() === 'c') ||
-                         e.code === 'KeyK' || (e.key && e.key.toLowerCase() === 'k') ||
-                         e.code === 'KeyU' || (e.key && e.key.toLowerCase() === 'u');
-      if (isPulseKey) {
-        if (!e.repeat) {
-          this.pulseRequested = true;
-        }
-      }
-
-      // Hyper Velocity Bullet Speed:
-      // Primary: X
-      // Ergonomic alternatives for macOS & all keyboards: Shift (Left/Right), L
-      const isSpeedKey = e.code === 'KeyX' || (e.key && e.key.toLowerCase() === 'x') ||
-                         e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.key === 'Shift' ||
-                         e.code === 'KeyL' || (e.key && e.key.toLowerCase() === 'l');
-      if (isSpeedKey) {
-        if (!e.repeat) {
-          this.speedBoostRequested = true;
-        }
-      }
-
-      // Switch to keyboard mode if movement keys pressed
+      // Responsive keyboard movement - seamlessly takes control over mouse
       const moveKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
       const moveChar = e.key ? e.key.toLowerCase() : '';
       if (moveKeys.includes(e.code) || ['w', 'a', 's', 'd', 'z', 'q'].includes(moveChar)) {
-        this.controlMode = 'KEYBOARD';
+        this.mouseSteeringActive = false;
       }
     });
 
@@ -132,34 +108,33 @@ export class InputManager {
       }
     });
 
-    // Mouse movement inside canvas coordinates (canonical 1280x720 UHD logical space)
+    const updateRect = () => {
+      if (this.canvas) this._cachedRect = this.canvas.getBoundingClientRect();
+    };
+    window.addEventListener('resize', updateRect, { passive: true });
+    window.addEventListener('scroll', updateRect, { passive: true });
+
+    // Mouse & Touchpad movement inside canvas coordinates (canonical 1280x720 UHD logical space)
     this.canvas.addEventListener('mousemove', (e) => {
-      const rect = this.canvas.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
+      const rect = this._cachedRect || (this._cachedRect = this.canvas.getBoundingClientRect());
+      if (!rect || rect.width <= 0 || rect.height <= 0) return;
       const scaleX = 1280 / rect.width;
       const scaleY = 720 / rect.height;
 
       const rawX = (e.clientX - rect.left) * scaleX;
       const rawY = (e.clientY - rect.top) * scaleY;
-      this.mouse.x = Math.max(0, Math.min(1280, rawX));
-      this.mouse.y = Math.max(0, Math.min(720, rawY));
-      this.mouse.active = true;
-    });
+      const clampedX = Math.max(0, Math.min(1280, rawX));
+      const clampedY = Math.max(0, Math.min(720, rawY));
 
-    const checkVirtualHudButtons = (x, y) => {
-      // Dynamic fallback hit areas for canvas HUD badges
-      // Pulse pill [Z]: center ~1118, y 674, w 88, h 32
-      if (x >= 1068 && x <= 1180 && y >= 648 && y <= 702) {
-        this.pulseRequested = true;
-        return true;
+      const mdx = clampedX - this.mouse.x;
+      const mdy = clampedY - this.mouse.y;
+      if (mdx * mdx + mdy * mdy > 1.44) {
+        this.mouse.x = clampedX;
+        this.mouse.y = clampedY;
+        this.mouseSteeringActive = true;
+        this.mouse.active = true;
       }
-      // Speed Boost pill [X]: center ~992, y 674, w 138, h 32
-      if (x >= 918 && x <= 1066 && y >= 648 && y <= 702) {
-        this.speedBoostRequested = true;
-        return true;
-      }
-      return false;
-    };
+    });
 
     this.canvas.addEventListener('mousedown', (e) => {
       // MacOS Secondary Click support: Control + Left Click (standard macOS trackpad gesture) OR right click (button 2)
@@ -171,9 +146,6 @@ export class InputManager {
       }
 
       if (e.button === 0) {
-        if (checkVirtualHudButtons(this.mouse.x, this.mouse.y)) {
-          return;
-        }
         // Left click: shoot
         this.mouse.isDown = true;
         this.mouse.active = true;
@@ -197,6 +169,7 @@ export class InputManager {
       const rawY = (touch.clientY - rect.top) * scaleY;
       this.mouse.x = Math.max(0, Math.min(1280, rawX));
       this.mouse.y = Math.max(0, Math.min(720, rawY));
+      this.mouseSteeringActive = true;
       this.mouse.active = true;
     };
 
@@ -212,7 +185,6 @@ export class InputManager {
           return;
         }
         this.mouse.isDown = true;
-        this.controlMode = 'MOUSE';
       }
     }, { passive: false });
 
@@ -300,16 +272,18 @@ export class InputManager {
       dy /= len;
     }
 
-    return { dx, dy };
+    this._moveVector.dx = dx;
+    this._moveVector.dy = dy;
+    return this._moveVector;
   }
 
   setControlMode(mode) {
-    this.controlMode = mode === 'KEYBOARD' ? 'KEYBOARD' : 'MOUSE';
+    this.controlMode = 'UNIFIED';
     return this.controlMode;
   }
 
   toggleControlMode() {
-    this.controlMode = this.controlMode === 'MOUSE' ? 'KEYBOARD' : 'MOUSE';
+    this.controlMode = 'UNIFIED';
     return this.controlMode;
   }
 
@@ -333,25 +307,5 @@ export class InputManager {
     const p = this.pauseRequested;
     this.pauseRequested = false;
     return p;
-  }
-
-  consumePulse() {
-    const p = this.pulseRequested;
-    this.pulseRequested = false;
-    return p;
-  }
-
-  consumeSpeedBoost() {
-    const s = this.speedBoostRequested;
-    this.speedBoostRequested = false;
-    return s;
-  }
-
-  requestPulse() {
-    this.pulseRequested = true;
-  }
-
-  requestSpeedBoost() {
-    this.speedBoostRequested = true;
   }
 }

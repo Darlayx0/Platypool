@@ -1,5 +1,6 @@
 // Boss System for Platypus: Clay Wings (3 Unique Bosses for Stages 5, 10, 15)
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
+import { Clay3D } from '../graphics/Clay3D.js';
 import { Bullet } from './Bullet.js';
 import { Enemy } from './Enemy.js';
 
@@ -22,6 +23,8 @@ export class Boss {
     this.dead = false;
     this.entering = true;
     this.rageMode = false;
+    this.slowTimer = 0; // Electro-paralysis slow timer from Plasma attacks
+    this.hoverAngle = 0;
 
     // Death sequence state
     this.isDying = false;
@@ -37,7 +40,7 @@ export class Boss {
       case 'OMEGA_CORE_SPAWN':
         this.title = 'THE OMEGA APEX CORE';
         this.radius = 75;
-        this.maxTotalHp = Math.round(1200 * hpM);
+        this.maxTotalHp = Math.round(800 * hpM); // World 4 Core HP: 800
         this.currentHp = this.maxTotalHp;
 
         // Dash mechanics: forward rush and backward retreat
@@ -54,9 +57,9 @@ export class Boss {
         this.invulnerableTimer = 0;
         this.shieldDuration = 2.4;
 
-        // Bullet & Attack timers
+        // Bullet & Attack timers (Peluru roket dihapus, diganti armada penyerang)
         this.spiralShootTimer = 0.55;
-        this.missileSalvoTimer = 3.2;
+        this.armadaSpawnTimer = 4.2;
         this.droneSpawnTimer = 5.5;
         this.punishWindowTimer = 0;
         break;
@@ -64,17 +67,17 @@ export class Boss {
       case 'OMEGA_COLOSSUS':
         this.title = 'THE OMEGA CLAY COLOSSUS';
         this.radius = 135;
-        this.maxTotalHp = Math.round(2400 * hpM); // Colossal World 4 climax Phase 1
+        this.maxTotalHp = Math.round(1600 * hpM); // World 4 Boss HP: 1600 (Phase 1)
         this.currentHp = this.maxTotalHp;
 
         // Sub-modules with break thresholds
-        this.railTopMaxHp = Math.round(400 * hpM);
+        this.railTopMaxHp = Math.round(270 * hpM);
         this.railTopHp = this.railTopMaxHp;
         this.railTopAlive = true;
-        this.railBottomMaxHp = Math.round(400 * hpM);
+        this.railBottomMaxHp = Math.round(270 * hpM);
         this.railBottomHp = this.railBottomMaxHp;
         this.railBottomAlive = true;
-        this.droneCoreMaxHp = Math.round(500 * hpM);
+        this.droneCoreMaxHp = Math.round(340 * hpM);
         this.droneCoreHp = this.droneCoreMaxHp;
         this.droneCoreAlive = true;
 
@@ -87,19 +90,19 @@ export class Boss {
       case 'GOLIATH_ZEPPELIN':
         this.title = 'THE CLAY GOLIATH ZEPPELIN';
         this.radius = 110;
-        this.maxTotalHp = Math.round(1200 * hpM); // World 2 airship fortress
+        this.maxTotalHp = Math.round(1000 * hpM); // World 2 Boss HP: 1000
         this.currentHp = this.maxTotalHp;
 
         // Sub-modules with break thresholds
-        this.mortarMaxHp = Math.round(260 * hpM);
+        this.mortarMaxHp = Math.round(220 * hpM);
         this.mortarHp = this.mortarMaxHp;
         this.mortarAlive = true;
-        this.hangarMaxHp = Math.round(240 * hpM);
+        this.hangarMaxHp = Math.round(200 * hpM);
         this.hangarHp = this.hangarMaxHp;
         this.hangarAlive = true;
 
-        this.mortarTimer = 3.0;
-        this.broadsideTimer = 2.4;
+        this.mortarTimer = 2.7;
+        this.broadsideTimer = 2.1;
         this.minionSpawnTimer = 2.2; // Sedikit lebih cepat: spawn aktif & konsisten (2.2s)
         this.minionTypeToggle = 0;   // Bergantian HANYA 2 tipe: 3-laser Interceptor & Forward Rusher
         this.mortarAngle = Math.PI * 0.85;
@@ -109,24 +112,25 @@ export class Boss {
       case 'LEVIATHAN_TITAN':
         this.title = 'THE ULTIMATE CLAY LEVIATHAN';
         this.radius = 120;
-        this.maxTotalHp = Math.round(1800 * hpM); // World 3 heavyweight bio-mech (1800 HP)
+        this.maxTotalHp = Math.round(1400 * hpM); // World 3 Boss HP: 1400
         this.currentHp = this.maxTotalHp;
 
         // Sub-modules with break thresholds
-        this.wingTopMaxHp = Math.round(300 * hpM);
+        this.wingTopMaxHp = Math.round(240 * hpM);
         this.wingTopHp = this.wingTopMaxHp;
         this.wingTopAlive = true;
-        this.wingBottomMaxHp = Math.round(300 * hpM);
+        this.wingBottomMaxHp = Math.round(240 * hpM);
         this.wingBottomHp = this.wingBottomMaxHp;
         this.wingBottomAlive = true;
-        this.missilePodMaxHp = Math.round(350 * hpM);
+        this.missilePodMaxHp = Math.round(280 * hpM);
         this.missilePodHp = this.missilePodMaxHp;
         this.missilePodAlive = true;
 
         this.isChargingLaser = false;
         this.laserChargeTime = 0;
         this.laserChargeRatio = 0;
-        this.laserAttackCooldown = 4.8;
+        this.laserCount = 11; // 11 laser fanned out, identical in normal & rage
+        this.laserAttackCooldown = 7.5; // Jeda lebih lama saat tidak mengamuk (7.5s)
         this.missileSalvoTimer = 3.5;
         this.spiralShootTimer = 0.8;
         break;
@@ -178,8 +182,30 @@ export class Boss {
     return Math.max(0, Math.min(1, this.currentHp / this.maxTotalHp));
   }
 
+  applyPlasmaSlow(duration = 1.5) {
+    this.slowTimer = Math.max(this.slowTimer || 0, duration);
+  }
+
   update(dt, player, bullets, sound, camera, particles, extraEnemies = [], allEnemies = []) {
     this.tick++;
+
+    // Electro-paralysis slow effect on Boss from Plasma attacks
+    let effectiveDt = dt;
+    if (this.slowTimer > 0) {
+      this.slowTimer -= dt;
+      effectiveDt = dt * 0.55; // 45% reduction in movement speed & attack cycles
+      if (particles && this.tick % 4 === 0) {
+        particles.createElectricSpark(
+          this.x + (Math.random() - 0.5) * this.radius * 1.4,
+          this.y + (Math.random() - 0.5) * this.radius * 1.2,
+          2,
+          '#ea80fc',
+          '#00e5ff'
+        );
+      }
+    }
+
+    this.hoverAngle = (this.hoverAngle || 0) + effectiveDt * (this.rageMode ? 2.5 : 1.6);
 
     // Death sequence
     if (this.isDying) {
@@ -225,23 +251,23 @@ export class Boss {
       if (particles) particles.createClaySplat(this.x, this.y, 30, '#ff1744', '#b71c1c');
     }
 
-    // Boss Type Updates
+    // Boss Type Updates (Uses effectiveDt so slowTimer slows down attack cycles and movement)
     switch (this.bossType) {
       case 'OMEGA_CORE_SPAWN':
-        this.updateOmegaCoreSpawn(dt, player, bullets, sound, camera, particles, extraEnemies);
+        this.updateOmegaCoreSpawn(effectiveDt, player, bullets, sound, camera, particles, extraEnemies, allEnemies);
         break;
       case 'OMEGA_COLOSSUS':
-        this.updateOmegaColossus(dt, player, bullets, sound, camera, particles, extraEnemies);
+        this.updateOmegaColossus(effectiveDt, player, bullets, sound, camera, particles, extraEnemies, allEnemies);
         break;
       case 'GOLIATH_ZEPPELIN':
-        this.updateGoliath(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies);
+        this.updateGoliath(effectiveDt, player, bullets, sound, camera, particles, extraEnemies, allEnemies);
         break;
       case 'LEVIATHAN_TITAN':
-        this.updateLeviathan(dt, player, bullets, sound, camera, particles);
+        this.updateLeviathan(effectiveDt, player, bullets, sound, camera, particles);
         break;
       case 'DREADNOUGHT':
       default:
-        this.updateDreadnought(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies);
+        this.updateDreadnought(effectiveDt, player, bullets, sound, camera, particles, extraEnemies, allEnemies);
         break;
     }
 
@@ -250,9 +276,8 @@ export class Boss {
 
   updateDreadnought(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies = []) {
     // Boss World 1: Jalan tengah (menantang, aktif, berpola indah & rapi, tidak brutal / acak)
-    const hoverSpeed = this.rageMode ? 0.035 : 0.025;
     const hoverRange = this.rageMode ? 85 : 65;
-    this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
+    this.y = (this.canvasHeight / 2) + Math.sin(this.hoverAngle) * hoverRange;
     this.x = this.targetX;
 
     const topX = this.x - 30;
@@ -445,31 +470,30 @@ export class Boss {
   }
 
   updateGoliath(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies = []) {
-    const hoverSpeed = this.rageMode ? 0.038 : 0.024;
     const hoverRange = this.rageMode ? 105 : 75;
-    this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
+    this.y = (this.canvasHeight / 2) + Math.sin(this.hoverAngle) * hoverRange;
 
-    // Musuh HANYA 2 jenis sesuai instruksi:
-    // 1. Penembak 3 laser (INTERCEPTOR)
+    // Musuh HANYA 2 jenis sesuai dunia 2 (Canyon):
+    // 1. Raptor Pemburu Ngarai (FALCON_TRACKER)
     // 2. Yang maju ke depan saja (STINGER forward rusher)
-    const activeMinions = allEnemies.filter(e => !e.dead && (e.type === 'INTERCEPTOR' || e.type === 'STINGER')).length;
+    const activeMinions = allEnemies.filter(e => !e.dead && (e.type === 'FALCON_TRACKER' || e.type === 'STINGER')).length;
     // Cepat & aktif: 4 minion aktif (5 saat rage) agar terasa mengganggu ("percepat spawn pesawat musuh")
     const maxMinions = this.rageMode ? 5 : 4;
 
-    // Sortie Awal saat Goliath baru saja masuk arena (1 penembak 3-laser + 1 perayap maju)
+    // Sortie Awal saat Goliath baru saja masuk arena (1 pemburu Falcon + 1 perayap maju)
     if (!this.initialSortieDone) {
       this.initialSortieDone = true;
       if (sound) sound.playBossAlarm();
       if (particles) {
-        particles.createFloatingText(640, 250, '✈️ GOLIATH AIR WING: SIAP TEMPUR!', '#00e5ff');
+        particles.createFloatingText(640, 250, '🦅 GOLIATH AIR WING: SIAP TEMPUR!', '#00e5ff');
       }
-      // 1 Musuh menembak 3 laser
+      // 1 Musuh pemburu terarah (FALCON_TRACKER)
       extraEnemies.push(new Enemy({
-        type: 'INTERCEPTOR',
+        type: 'FALCON_TRACKER',
         x: this.x - 20,
         y: this.y - 65,
         stage: 10,
-        hp: 3.5
+        hp: 4.0
       }));
       // 1 Musuh yang maju ke depan saja
       extraEnemies.push(new Enemy({
@@ -493,20 +517,20 @@ export class Boss {
 
       if (activeMinions < maxMinions) {
         this.minionTypeToggle++;
-        const spawn3Laser = (this.minionTypeToggle % 2 === 0);
+        const spawnFalcon = (this.minionTypeToggle % 2 === 0);
 
-        if (spawn3Laser) {
-          // Musuh menembak 3 laser (INTERCEPTOR)
+        if (spawnFalcon) {
+          // Musuh pemburu pelacak World 2 (FALCON_TRACKER)
           extraEnemies.push(new Enemy({
-            type: 'INTERCEPTOR',
+            type: 'FALCON_TRACKER',
             x: this.x - 20,
             y: this.y - 65,
             stage: 10,
-            hp: 3.5
+            hp: 4.0
           }));
           if (particles) {
             particles.createSmokePuff(this.x - 20, this.y - 65, 2, 12);
-            particles.createFloatingText(this.x - 30, this.y - 80, '⚡ INTERCEPTOR 3-LASER!', '#ab47bc');
+            particles.createFloatingText(this.x - 30, this.y - 80, '🦅 FALCON PEMBURU!', '#ffd54f');
           }
           if (sound) sound.playShoot('LASER');
         } else {
@@ -524,7 +548,7 @@ export class Boss {
           }));
           if (particles) {
             particles.createClaySplat(this.x + 20, spawnY, 8, '#ffb300', '#e65100');
-            particles.createFloatingText(this.x - 20, spawnY - 15, '✈️ RAIDER MAJU!', '#ffb300');
+            particles.createFloatingText(this.x - 20, spawnY - 15, '⚡ STINGER MENYENGAT!', '#ffb300');
           }
           if (sound) sound.playShoot('SPREAD');
         }
@@ -539,10 +563,10 @@ export class Boss {
     if (this.mortarAlive) {
       this.mortarTimer -= dt;
       if (this.mortarTimer <= 0) {
-        this.mortarTimer = this.rageMode ? 2.2 : 3.0;
+        this.mortarTimer = this.rageMode ? 2.0 : 2.7;
         const mortarOffsets = this.rageMode
-          ? [-40, 0, 40]
-          : [-30, 30];
+          ? [-45, -15, 15, 45]
+          : [-35, 0, 35];
 
         for (let m = 0; m < mortarOffsets.length; m++) {
           const vxOff = mortarOffsets[m];
@@ -566,16 +590,16 @@ export class Boss {
     // 3. BROADSIDE FLAK CANNON: Tembakan samping meriam kapal
     this.broadsideTimer -= dt;
     if (this.broadsideTimer <= 0) {
-      this.broadsideTimer = this.rageMode ? 1.8 : 2.4;
+      this.broadsideTimer = this.rageMode ? 1.6 : 2.1;
       const broadsideOffsets = this.rageMode
-        ? [-35, -12, 12, 35]
-        : [-25, 0, 25];
+        ? [-40, -20, 0, 20, 40]
+        : [-30, -10, 10, 30];
 
       for (const offset of broadsideOffsets) {
         bullets.push(new Bullet({
           x: this.x - 70,
           y: this.y + 35 + offset * 0.4,
-          vx: this.rageMode ? -390 : -350,
+          vx: this.rageMode ? -400 : -360,
           vy: offset * 1.2,
           radius: 7.5,
           isEnemy: true
@@ -586,38 +610,43 @@ export class Boss {
   }
 
   updateLeviathan(dt, player, bullets, sound, camera, particles) {
-    const hoverSpeed = this.rageMode ? 0.06 : 0.03;
     const hoverRange = this.rageMode ? 160 : 110;
-    this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
+    this.y = (this.canvasHeight / 2) + Math.sin(this.hoverAngle * 1.5) * hoverRange;
 
-    // 1. Sonic Laser Sweep Beam (fast 0.7s charge in rage mode!)
+    // 1. Sonic Laser Sweep Beam (11 laser fanned out, peringatan charging, jeda 7.5s normal / 3.4s rage)
     this.laserAttackCooldown -= dt;
     if (this.laserAttackCooldown <= 0 && !this.isChargingLaser) {
       this.isChargingLaser = true;
       this.laserChargeTime = 0;
+      if (sound) sound.playBossAlarm();
+      if (particles) {
+        particles.createFloatingText(this.x - 120, this.y - 75, '⚠️ PERINGATAN: MEGA LASER BARRAGE!', '#00e5ff');
+      }
     }
 
     if (this.isChargingLaser) {
       this.laserChargeTime += dt;
-      const targetChargeTime = this.rageMode ? 0.8 : 1.4;
+      // Diberi peringatan dan jeda charging yang lebih lama (2.0s normal / 1.2s rage)
+      const targetChargeTime = this.rageMode ? 1.2 : 2.0;
       this.laserChargeRatio = Math.min(1.0, this.laserChargeTime / targetChargeTime);
 
-      if (particles && this.tick % 4 === 0) {
+      if (particles && this.tick % 3 === 0) {
         particles.createElectricSpark(this.x - 110, this.y + (Math.random() - 0.5) * 40, 2, '#00e5ff', '#ffffff');
       }
 
       if (this.laserChargeTime >= targetChargeTime) {
         this.isChargingLaser = false;
-        this.laserAttackCooldown = this.rageMode ? 3.0 : 5.5;
+        // Jeda serangan laser: 7.5s normal (lebih lama); saat mengamuk dipercepat ke 3.4s
+        this.laserAttackCooldown = this.rageMode ? 3.4 : 7.5;
 
         sound.playShoot('LASER');
         camera.addTrauma(0.5);
 
-        // Dense laser burst wave (9 lasers when enraged, 7 normal - leaves corner safe pockets)
-        const laserCount = this.rageMode ? 9 : 7;
+        // Saat mengamuk TIDAK ADA perbedaan jumlah laser: keduanya menembakkan 11 laser tersebar luas!
+        const laserCount = 11;
         const half = Math.floor(laserCount / 2);
         for (let i = 0; i < laserCount; i++) {
-          const lAngle = (i - half) * (this.rageMode ? 0.085 : 0.095);
+          const lAngle = (i - half) * 0.115;
           bullets.push(new Bullet({
             x: this.x - 110,
             y: this.y,
@@ -675,11 +704,10 @@ export class Boss {
     }
   }
 
-  updateOmegaColossus(dt, player, bullets, sound, camera, particles, extraEnemies) {
-    const hoverSpeed = this.rageMode ? 0.065 : 0.035;
+  updateOmegaColossus(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies = []) {
     const hoverRange = this.rageMode ? 175 : 120;
-    this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
-    this.x = this.targetX + Math.cos(this.tick * hoverSpeed * 0.7) * (this.rageMode ? 45 : 18);
+    this.y = (this.canvasHeight / 2) + Math.sin(this.hoverAngle * 1.3) * hoverRange;
+    this.x = this.targetX + Math.cos(this.hoverAngle * 0.9) * (this.rageMode ? 45 : 18);
 
     // 1. Dual High-Velocity Railgun Beams
     this.railgunTimer -= dt;
@@ -717,23 +745,31 @@ export class Boss {
       camera.addTrauma(0.25);
     }
 
-    // 2. Drone Matrix Support Deployment
+    // 2. Drone Matrix Support Deployment (Armada Musuh Dunia 4: COSMIC_ORBITER & VOID_STALKER)
     if (this.droneCoreAlive) {
       this.droneDeployTimer -= dt;
       if (this.droneDeployTimer <= 0) {
         this.droneDeployTimer = this.rageMode ? 3.5 : 4.5;
-        const count = this.rageMode ? 2 : 1;
-        for (let d = 0; d < count; d++) {
-          const type = Math.random() > 0.4 ? 'ACE' : 'SPINNER';
-          extraEnemies.push(new Enemy({
-            type,
-            x: this.x - 40,
-            y: this.y + (d === 0 ? -55 : 55),
-            stage: 20
-          }));
+        const activeMinions = allEnemies.filter(e => !e.dead && (e.type === 'COSMIC_ORBITER' || e.type === 'VOID_STALKER')).length;
+        const maxMinions = this.rageMode ? 4 : 3;
+
+        if (activeMinions < maxMinions) {
+          const count = Math.min(maxMinions - activeMinions, this.rageMode ? 2 : 1);
+          for (let d = 0; d < count; d++) {
+            const type = Math.random() > 0.5 ? 'COSMIC_ORBITER' : 'VOID_STALKER';
+            extraEnemies.push(new Enemy({
+              type,
+              x: this.x - 40,
+              y: this.y + (d === 0 ? -55 : 55),
+              stage: 20
+            }));
+          }
+          sound.playShoot('HOMING');
+          if (particles) {
+            particles.createClaySplat(this.x - 40, this.y, 14, '#c084fc', '#581c87');
+            particles.createFloatingText(this.x - 40, this.y - 45, '🌀 DRONE KOSMIS!', '#ba68c8');
+          }
         }
-        sound.playShoot('HOMING');
-        particles.createClaySplat(this.x - 40, this.y, 14, '#c084fc', '#581c87');
       }
     }
 
@@ -776,7 +812,7 @@ export class Boss {
     }
   }
 
-  updateOmegaCoreSpawn(dt, player, bullets, sound, camera, particles, extraEnemies) {
+  updateOmegaCoreSpawn(dt, player, bullets, sound, camera, particles, extraEnemies, allEnemies = []) {
     // 1. Invulnerability Barrier Skill Logic
     if (this.isInvulnerable) {
       this.invulnerableTimer -= dt;
@@ -898,10 +934,9 @@ export class Boss {
 
       case 'IDLE':
       default: {
-        const hoverSpeed = this.rageMode ? 0.07 : 0.045;
         const hoverRange = this.rageMode ? 160 : 120;
-        this.y = (this.canvasHeight / 2) + Math.sin(this.tick * hoverSpeed) * hoverRange;
-        this.x = this.homeX + Math.sin(this.tick * hoverSpeed * 0.7) * 25;
+        this.y = (this.canvasHeight / 2) + Math.sin(this.hoverAngle * 1.4) * hoverRange;
+        this.x = this.homeX + Math.sin(this.hoverAngle * 0.9) * 25;
 
         this.dashCooldown -= dt;
         if (this.dashCooldown <= 0) {
@@ -947,50 +982,40 @@ export class Boss {
       }
     }
 
-    // 4. Mutant Homing Spore Salvo
-    this.missileSalvoTimer -= dt;
-    if (this.missileSalvoTimer <= 0) {
-      this.missileSalvoTimer = this.rageMode ? 2.8 : 4.0;
-      const count = this.rageMode ? 3 : 2;
-      for (let i = 0; i < count; i++) {
-        const yOff = (i - (count - 1) / 2) * 36;
-        bullets.push(new Bullet({
-          x: this.x - 30,
-          y: this.y + yOff,
-          vx: -210,
-          vy: yOff * 3.5,
-          radius: 8,
-          type: 'ENEMY_HOMING',
-          life: 4.0,
-          isEnemy: true
-        }));
-      }
-      sound.playShoot('HOMING');
-    }
+    // 4. Apex Armada Carrier Strike: Munculkan armada musuh yang bergerak ke player & mengeluarkan peluru (roket dihapus)
+    this.armadaSpawnTimer -= dt;
+    if (this.armadaSpawnTimer <= 0) {
+      this.armadaSpawnTimer = this.rageMode ? 3.0 : 4.5;
+      const activeMinions = allEnemies.filter(e => !e.dead && (e.type === 'VOID_STALKER' || e.type === 'COSMIC_ORBITER')).length;
+      const maxMinions = this.rageMode ? 4 : 3;
 
-    // 5. Spawn Drone Matrix Support (Mini Mutant Drones)
-    this.droneSpawnTimer -= dt;
-    if (this.droneSpawnTimer <= 0) {
-      this.droneSpawnTimer = this.rageMode ? 3.5 : 6.0;
-      const spawnCount = this.rageMode ? 2 : 1;
-      for (let d = 0; d < spawnCount; d++) {
-        extraEnemies.push(new Enemy({
-          type: Math.random() > 0.5 ? 'SPINNER' : 'INTERCEPTOR',
-          x: this.x - 30,
-          y: this.y + (d === 0 ? -60 : 60),
-          stage: 20
-        }));
+      if (activeMinions < maxMinions) {
+        const spawnCount = Math.min(maxMinions - activeMinions, this.rageMode ? 3 : 2);
+        for (let i = 0; i < spawnCount; i++) {
+          const yOff = (i - (spawnCount - 1) / 2) * 65;
+          extraEnemies.push(new Enemy({
+            type: 'VOID_STALKER', // Bergerak ke arah pemain (tracking) & aktif menembakkan peluru
+            x: this.x - 40,
+            y: Math.max(90, Math.min(630, this.y + yOff)),
+            stage: 20
+          }));
+        }
+        if (sound) sound.playBossAlarm();
+        if (particles) {
+          particles.createClaySplat(this.x - 30, this.y, 20, '#d500f9', '#00e5ff');
+          particles.createFloatingText(this.x - 40, this.y - 65, '🚨 ARMADA SERANG INTI DILUNCURKAN!', '#00e5ff');
+        }
       }
-      if (particles) particles.createClaySplat(this.x - 30, this.y, 16, '#00e5ff', '#7b1fa2');
     }
   }
 
   takeDamage(amount, hitY, particles, sound, bulletType = 'NORMAL') {
     if (this.isDying) return false;
 
-    // Heavy Boss Armor Faraday resistance: Plasma energy deals 25% reduced damage to Bosses
+    // Heavy Boss Armor Faraday resistance: Plasma energy deals 40% reduced damage to Bosses (insulation grounding)
     if (bulletType === 'PLASMA' || bulletType === 'PLASMA_ZAP') {
-      amount *= 0.75;
+      amount *= 0.60;
+      this.applyPlasmaSlow(bulletType === 'PLASMA' ? 1.5 : 1.0);
     }
 
     if (this.bossType === 'OMEGA_CORE_SPAWN') {
@@ -1188,6 +1213,137 @@ export class Boss {
   }
 
   draw(ctx) {
+    if (ClayRenderer.use3D) {
+      // Body is rendered by Scene3D; keep the dash telegraph readable in 2D
+      if (this.bossType === 'OMEGA_CORE_SPAWN' && this.dashState === 'TELEGRAPH') {
+        ctx.save();
+        const a = 0.35 + Math.sin(this.tick * 0.8) * 0.25;
+        ctx.strokeStyle = `rgba(255, 23, 68, ${a})`;
+        ctx.lineWidth = 6;
+        ctx.setLineDash([18, 10]);
+        ctx.beginPath();
+        ctx.moveTo(this.x - this.radius, this.y);
+        ctx.lineTo(this.targetDashX || 260, this.targetDashY || this.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+      return;
+    }
     ClayRenderer.drawBoss(ctx, this);
   }
+
+  drawShadow(ctx) {
+    if (!this.dead && this.x > -250 && this.x < 1550) {
+      Clay3D.draw3DGroundShadow(ctx, this.x, this.y, 1.25, this.radius * 1.15, this.radius * 0.58);
+    }
+  }
+
+  serialize() {
+    return {
+      bossType: this.bossType,
+      options: this.options,
+      x: this.x,
+      y: this.y,
+      targetX: this.targetX,
+      targetY: this.targetY,
+      radius: this.radius,
+      tick: this.tick,
+      dead: Boolean(this.dead),
+      entering: Boolean(this.entering),
+      rageMode: Boolean(this.rageMode),
+      rageThreshold: this.rageThreshold,
+      hpMult: this.hpMult,
+      isDying: Boolean(this.isDying),
+      deathTimer: this.deathTimer,
+      deathExplosionTimer: this.deathExplosionTimer,
+      title: this.title,
+      maxTotalHp: this.maxTotalHp,
+      currentHp: this.currentHp,
+
+      // DREADNOUGHT
+      turretTopMaxHp: this.turretTopMaxHp,
+      turretTopHp: this.turretTopHp,
+      turretTopAlive: this.turretTopAlive,
+      turretBottomMaxHp: this.turretBottomMaxHp,
+      turretBottomHp: this.turretBottomHp,
+      turretBottomAlive: this.turretBottomAlive,
+      topTurretAngle: this.topTurretAngle,
+      bottomTurretAngle: this.bottomTurretAngle,
+      turretShootTimer: this.turretShootTimer,
+      mainCannonTimer: this.mainCannonTimer,
+      scatterTimer: this.scatterTimer,
+
+      // GOLIATH_ZEPPELIN
+      mortarMaxHp: this.mortarMaxHp,
+      mortarHp: this.mortarHp,
+      mortarAlive: this.mortarAlive,
+      hangarMaxHp: this.hangarMaxHp,
+      hangarHp: this.hangarHp,
+      hangarAlive: this.hangarAlive,
+      mortarTimer: this.mortarTimer,
+      broadsideTimer: this.broadsideTimer,
+      minionSpawnTimer: this.minionSpawnTimer,
+      minionTypeToggle: this.minionTypeToggle,
+      mortarAngle: this.mortarAngle,
+      initialSortieDone: this.initialSortieDone,
+
+      // LEVIATHAN_TITAN
+      wingTopMaxHp: this.wingTopMaxHp,
+      wingTopHp: this.wingTopHp,
+      wingTopAlive: this.wingTopAlive,
+      wingBottomMaxHp: this.wingBottomMaxHp,
+      wingBottomHp: this.wingBottomHp,
+      wingBottomAlive: this.wingBottomAlive,
+      missilePodMaxHp: this.missilePodMaxHp,
+      missilePodHp: this.missilePodHp,
+      missilePodAlive: this.missilePodAlive,
+      isChargingLaser: this.isChargingLaser,
+      laserChargeTime: this.laserChargeTime,
+      laserChargeRatio: this.laserChargeRatio,
+      laserAttackCooldown: this.laserAttackCooldown,
+      missileSalvoTimer: this.missileSalvoTimer,
+      spiralShootTimer: this.spiralShootTimer,
+
+      // OMEGA_COLOSSUS
+      railTopMaxHp: this.railTopMaxHp,
+      railTopHp: this.railTopHp,
+      railTopAlive: this.railTopAlive,
+      railBottomMaxHp: this.railBottomMaxHp,
+      railBottomHp: this.railBottomHp,
+      railBottomAlive: this.railBottomAlive,
+      droneCoreMaxHp: this.droneCoreMaxHp,
+      droneCoreHp: this.droneCoreHp,
+      droneCoreAlive: this.droneCoreAlive,
+      railgunTimer: this.railgunTimer,
+      droneDeployTimer: this.droneDeployTimer,
+      singularityWaveTimer: this.singularityWaveTimer,
+      rageBarrageTimer: this.rageBarrageTimer,
+
+      // OMEGA_CORE_SPAWN
+      dashState: this.dashState,
+      dashCooldown: this.dashCooldown,
+      dashTimer: this.dashTimer,
+      homeX: this.homeX,
+      targetDashX: this.targetDashX,
+      targetDashY: this.targetDashY,
+      isInvulnerable: this.isInvulnerable,
+      invulnerableCooldown: this.invulnerableCooldown,
+      invulnerableTimer: this.invulnerableTimer,
+      shieldDuration: this.shieldDuration,
+      droneSpawnTimer: this.droneSpawnTimer,
+      punishWindowTimer: this.punishWindowTimer
+    };
+  }
+
+  static deserialize(canvasWidth, canvasHeight, data) {
+    if (!data) return null;
+    const boss = new Boss(canvasWidth, canvasHeight, data.bossType, data.options || {});
+    for (const key of Object.keys(data)) {
+      if (data[key] !== undefined) {
+        boss[key] = data[key];
+      }
+    }
+    return boss;
+  }
 }
+

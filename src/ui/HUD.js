@@ -1,11 +1,13 @@
 // In-game Arcade HUD & UI Renderer - Professional UHD Suite
 import { ClayRenderer } from '../graphics/ClayRenderer.js';
+import { CachedNumberLabel, formatInt } from '../engine/NumberFormat.js';
 
 export class HUD {
   constructor() {
     this.difficulty = 'NORMAL';
     this.difficultyConfig = null;
     this.highScore = 0;
+    this.migrateHighScoresIfNeeded();
     this.reloadHighScore();
 
     this.bannerText = '';
@@ -22,6 +24,95 @@ export class HUD {
     this.isCheatActive = false;
     this.highScoreDirty = false;
     this.highScoreSaveTimer = 0;
+    this.lifeShipFrames = [];
+    this.initLifeShipSprites();
+
+    // Fast memoized score formatters (zero allocation per frame)
+    this.scoreLabel = new CachedNumberLabel('SKOR: ');
+    this.highScoreLabel = new CachedNumberLabel('TERTINGGI: ');
+    this._emblemCache = new Map();
+  }
+
+  migrateHighScoresIfNeeded() {
+    try {
+      if (localStorage.getItem('platypus_score_redenominated_v2') !== 'true') {
+        const keys = [
+          'platypus_highscore',
+          'platypus_highscore_BEGINNER',
+          'platypus_highscore_EASY',
+          'platypus_highscore_NORMAL',
+          'platypus_highscore_HARD',
+          'platypus_highscore_EXTREME'
+        ];
+        for (const k of keys) {
+          const val = localStorage.getItem(k);
+          if (val) {
+            const num = parseInt(val, 10);
+            if (!isNaN(num) && num > 0) {
+              localStorage.setItem(k, Math.floor(num / 10).toString());
+            }
+          }
+        }
+        // Also migrate saved game if present
+        const savedStr = localStorage.getItem('platypus_saved_game');
+        if (savedStr) {
+          try {
+            const saved = JSON.parse(savedStr);
+            if (saved && typeof saved === 'object' && !saved._redenominated) {
+              saved.score = Math.floor((saved.score || 0) / 10);
+              if (saved.player) {
+                saved.player.score = Math.floor((saved.player.score || 0) / 10);
+                if (saved.player.nextLifeScore) saved.player.nextLifeScore = Math.floor(saved.player.nextLifeScore / 10);
+                if (saved.player.scoreIntervalForLife) saved.player.scoreIntervalForLife = Math.floor(saved.player.scoreIntervalForLife / 10);
+              }
+              if (saved.nextLifeScore) saved.nextLifeScore = Math.floor(saved.nextLifeScore / 10);
+              if (saved.scoreIntervalForLife) saved.scoreIntervalForLife = Math.floor(saved.scoreIntervalForLife / 10);
+              saved._redenominated = true;
+              localStorage.setItem('platypus_saved_game', JSON.stringify(saved));
+            }
+          } catch (err) {}
+        }
+        localStorage.setItem('platypus_score_redenominated_v2', 'true');
+      }
+    } catch (e) {
+      console.warn('High score migration error:', e);
+    }
+  }
+
+  resetAllHighScores() {
+    try {
+      const keys = [
+        'platypus_highscore',
+        'platypus_highscore_BEGINNER',
+        'platypus_highscore_EASY',
+        'platypus_highscore_NORMAL',
+        'platypus_highscore_HARD',
+        'platypus_highscore_EXTREME'
+      ];
+      for (const k of keys) {
+        localStorage.removeItem(k);
+      }
+    } catch (e) {
+      console.warn('LocalStorage reset error:', e);
+    }
+    this.highScore = 0;
+    this.highScoreDirty = false;
+    this.highScoreSaveTimer = 0;
+  }
+
+  initLifeShipSprites() {
+    if (typeof document === 'undefined') return;
+    const frameCount = 6;
+    for (let f = 0; f < frameCount; f++) {
+      const off = document.createElement('canvas');
+      off.width = 120;
+      off.height = 70;
+      const octx = off.getContext('2d');
+      if (octx) {
+        ClayRenderer.drawPlayerShip(octx, 60, 35, 0, false, (f / frameCount) * 6.28, 'NORMAL');
+        this.lifeShipFrames.push(off);
+      }
+    }
   }
 
   flushHighScore() {
@@ -114,7 +205,7 @@ export class HUD {
     // 2. Lives Remaining & Horizontal Fleet of Ships (Bottom Left - Frameless Floating)
     this.drawLivesPanel(ctx, player);
 
-    // 3. Dynamic Skills & Weapons Dock (Bottom Right - Special Weapon, Speed Boost [X], Pulse Fleet [Z])
+    // 3. Dynamic Skills & Weapons Dock (Bottom Right - Special Weapon, Speed Boost [X])
     this.drawSkillsAndWeaponsDock(ctx, player);
 
     // 5. UHD Boss Battle Bar (Top Center - Compact & Solid Dynamic Color)
@@ -147,15 +238,17 @@ export class HUD {
     // 1. Current Score (Bold & Crisp Arcade Typography)
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px "Luckiest Guy", cursive';
-    ctx.fillText(`SKOR: ${Math.floor(player.score).toLocaleString()}`, sx, sy + 24);
+    ctx.fillText(this.scoreLabel.get(Math.floor(player.score)), sx, sy + 24);
 
-    // 2. High Score (Warm Gold Hue)
-    ctx.font = '700 13px "Fredoka", sans-serif';
-    ctx.fillStyle = '#ffe082';
-    const hsText = this.isCheatActive 
-      ? `TERTINGGI: ${this.highScore.toLocaleString()} (NON-AKTIF)` 
-      : `TERTINGGI: ${this.highScore.toLocaleString()}`;
-    ctx.fillText(hsText, sx, sy + 44);
+    let nextY = sy + 44;
+
+    // 2. High Score (Warm Gold Hue) - ONLY displayed when cheat mode is NOT active!
+    if (!this.isCheatActive) {
+      ctx.font = '700 13px "Fredoka", sans-serif';
+      ctx.fillStyle = '#ffe082';
+      ctx.fillText(this.highScoreLabel.get(this.highScore), sx, nextY);
+      nextY += 20;
+    }
 
     // 3. Integrated Clay Difficulty Pill Badge (Standalone floating pill)
     const diffLabel = (this.difficultyConfig && this.difficultyConfig.name) || this.difficulty || 'NORMAL';
@@ -171,7 +264,7 @@ export class HUD {
     const pillW = 104;
     const pillH = 18;
     const pillX = sx + pillW / 2;
-    const pillY = sy + 62;
+    const pillY = nextY - 2;
 
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -184,76 +277,88 @@ export class HUD {
     ctx.shadowBlur = 3;
     ctx.fillText(`MODE: ${diffLabel}`, pillX, pillY);
 
+    // 4. Prominent HUD Cheat Active Label (Only when cheat is active)
+    if (this.isCheatActive) {
+      const cheatPillW = 120;
+      const cheatPillH = 18;
+      const cheatPillX = pillX + pillW / 2 + 10 + cheatPillW / 2;
+      const cheatPillY = pillY;
+
+      const pulse = Math.sin(this.hudTick * 6) * 0.35 + 0.65;
+      ctx.shadowColor = 'rgba(244, 67, 54, 0.7)';
+      ctx.shadowBlur = 4 + pulse * 5;
+
+      ClayRenderer.drawClayCapsule(ctx, cheatPillX, cheatPillY, cheatPillW, cheatPillH, '#c62828', '#ff5252');
+
+      // Draw crisp vector warning icon
+      const triX = cheatPillX - 44;
+      const triY = cheatPillY;
+      ctx.save();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffe082';
+      ctx.beginPath();
+      ctx.moveTo(triX, triY - 5.5);
+      ctx.lineTo(triX + 5.5, triY + 5);
+      ctx.lineTo(triX - 5.5, triY + 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#b71c1c';
+      ctx.font = 'bold 7.5px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('!', triX, triY + 1.2);
+      ctx.restore();
+
+      ctx.font = 'bold 9.5px "Luckiest Guy", cursive';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowBlur = 2;
+      ctx.fillText('CURANG AKTIF', cheatPillX + 5, cheatPillY);
+    }
+
     ctx.restore();
   }
 
   drawLivesPanel(ctx, player) {
     const isInfinite = Boolean(player.infiniteLives);
-    const lives = isInfinite ? '∞' : Math.max(0, player.lives);
-    const maxLives = isInfinite ? '∞' : (player.maxLives || 10);
+    const livesText = isInfinite ? '∞' : Math.max(0, player.lives).toString();
 
     ctx.save();
 
-    // Bottom-Left Anchors (Frameless / Floating directly on canvas without card/container)
-    const startX = 26;
-    const startY = 688;
-    const badgeY = 654;
+    // Bottom-Left Anchor
+    const iconX = 42;
+    const iconY = 688;
 
+    // 1. Draw Player Aircraft Icon (Crisp Clay Vector Graphic from pre-rendered frames)
+    ctx.save();
+    ctx.translate(iconX, iconY);
+    ctx.scale(0.68, 0.68);
+    if (this.lifeShipFrames && this.lifeShipFrames.length > 0) {
+      const fIdx = Math.floor(this.hudTick * 3) % this.lifeShipFrames.length;
+      ctx.drawImage(this.lifeShipFrames[fIdx], -60, -35);
+    } else {
+      ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, this.hudTick * 3, 'NORMAL');
+    }
+    ctx.restore();
+
+    // 2. Number of Lives right beside the airplane icon
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 1;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
 
-    // 1. Floating Lives Indicator (No Container)
-    ctx.font = 'bold 13px "Fredoka", sans-serif';
-    ctx.fillStyle = '#ff5252';
-    ctx.fillText('❤️', startX, badgeY);
-
-    ctx.font = 'bold 13px "Luckiest Guy", cursive';
+    ctx.font = 'bold 22px "Luckiest Guy", cursive';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`LIVES: ${lives} / ${maxLives}`, startX + 22, badgeY + 1);
-
-    // 2. Ships Tray with Adaptive Spacing & Scale (Lined up from left to right)
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-
-    if (isInfinite) {
-      for (let i = 0; i < 5; i++) {
-        ctx.save();
-        ctx.translate(startX + i * 30, startY);
-        ctx.scale(0.72, 0.72);
-        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, this.hudTick * 3, 'NORMAL');
-        ctx.restore();
-      }
-      ctx.font = 'bold 24px "Fredoka", sans-serif';
-      ctx.fillStyle = '#ffd54f';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('♾️', startX + 5 * 30 + 4, startY);
-    } else {
-      const shipCount = Math.min(20, Math.max(0, player.lives));
-      const scale = shipCount > 15 ? 0.44 : (shipCount > 11 ? 0.50 : (shipCount > 8 ? 0.60 : (shipCount > 5 ? 0.72 : 0.82)));
-      const spacing = shipCount > 15 ? 18 : (shipCount > 11 ? 21 : (shipCount > 8 ? 25 : (shipCount > 5 ? 29 : 35)));
-
-      for (let i = 0; i < shipCount; i++) {
-        ctx.save();
-        ctx.translate(startX + i * spacing, startY);
-        ctx.scale(scale, scale);
-        ClayRenderer.drawPlayerShip(ctx, 0, 0, 0, false, this.hudTick * 3, 'NORMAL');
-        ctx.restore();
-      }
-    }
+    ctx.fillText(`x ${livesText}`, iconX + 34, iconY + 1);
 
     ctx.restore();
   }
 
   // ---------------------------------------------------------------------------
   // Dynamic Skills & Weapons Dock (Bottom Right)
-  // "jika peningkat senjata normal habis dan juga pulse habis, maka label tidak ditampilkan"
-  // "pada HUD pulse... desainnya seperti deretan nyawa pesawat, tanpa kontainer dan ikon berbentuk pulse yang modern dan simpel"
-  // "saat senjata spesial aktif maka peningkat senjata normal otomatis nonaktif dan diblokir"
   // ---------------------------------------------------------------------------
   drawSkillsAndWeaponsDock(ctx, player) {
     if (!player) return;
@@ -261,11 +366,9 @@ export class HUD {
     const hasSpecial = Boolean(player.activeWeapon && player.activeWeapon !== 'NORMAL');
     const timeLeft = Math.max(0, player.speedBoostTimeLeft || 0);
     const hasSpeedBoost = (timeLeft > 0);
-    const pulseCharges = Math.max(0, player.pulseCharges || 0);
-    const hasPulse = (pulseCharges > 0);
 
     // Jika seluruh skill/peningkat habis dan senjata normal -> Layar bersih tanpa label
-    if (!hasSpecial && !hasSpeedBoost && !hasPulse) {
+    if (!hasSpecial && !hasSpeedBoost) {
       return;
     }
 
@@ -282,31 +385,52 @@ export class HUD {
       curRightX -= (gaugeR * 2 + 18);
     }
 
-    // 2. Peningkat Senjata Normal [X] (Hanya jika sisa durasi > 0)
+    // 2. Peningkat Kecepatan Senjata 2x [X] (Hanya jika sisa durasi > 0)
     if (hasSpeedBoost) {
       const cx = curRightX - gaugeR;
-      this.renderSpeedBoostGauge(ctx, player, cx, cy, gaugeR, hasSpecial, timeLeft);
+      this.renderSpeedBoostGauge(ctx, player, cx, cy, gaugeR, timeLeft);
       curRightX -= (gaugeR * 2 + 20);
-    }
-
-    // 3. Pulse Fleet (Deretan pulse seperti deretan nyawa pesawat, tanpa kontainer)
-    if (hasPulse) {
-      this.renderPulseFleet(ctx, player, curRightX, pulseCharges);
     }
 
     ctx.restore();
   }
 
-  renderSpecialWeaponGauge(ctx, player, cx, cy, gaugeR) {
-    const weapons = {
-      SPREAD: { color: '#ff1744', dot: '#ff5252' },
-      LASER: { color: '#00e5ff', dot: '#29b6f6' },
-      HOMING: { color: '#00e676', dot: '#69f0ae' },
-      FLAK: { color: '#ffd600', dot: '#ffb300' },
-      PLASMA: { color: '#e040fb', dot: '#ba68c8' }
-    };
+  static WEAPON_CONFIGS = {
+    SPREAD: { color: '#ff1744', dot: '#ff5252' },
+    LASER: { color: '#00e5ff', dot: '#29b6f6' },
+    HOMING: { color: '#00e676', dot: '#69f0ae' },
+    FLAK: { color: '#ffd600', dot: '#ffb300' },
+    PLASMA: { color: '#e040fb', dot: '#ba68c8' }
+  };
 
-    const cur = weapons[player.activeWeapon] || { color: '#00e5ff', dot: '#29b6f6' };
+  getEmblemSprite(type, active = true) {
+    const key = `${type}_${active}`;
+    let sprite = this._emblemCache.get(key);
+    if (!sprite && typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 44;
+      c.height = 44;
+      const g = c.getContext('2d');
+      if (g) {
+        if (type === 'SPEED_BOOST') {
+          const speedBg = active ? '#e65100' : '#4e342e';
+          const speedBorder = active ? '#ffb74d' : '#8d6e63';
+          ClayRenderer.drawClayBlob(g, 22, 22, 16, 16, speedBg, speedBorder);
+          ClayRenderer.drawWeaponIcon(g, 22, 22, 'SPEED_BOOST', 12, active ? '#fff9c4' : '#ffffff');
+        } else {
+          const cur = HUD.WEAPON_CONFIGS[type] || { color: '#00e5ff', dot: '#29b6f6' };
+          ClayRenderer.drawClayBlob(g, 22, 22, 16, 16, cur.dot, '#1a100a');
+          ClayRenderer.drawWeaponIcon(g, 22, 22, type, 13, '#ffffff');
+        }
+      }
+      sprite = c;
+      this._emblemCache.set(key, sprite);
+    }
+    return sprite;
+  }
+
+  renderSpecialWeaponGauge(ctx, player, cx, cy, gaugeR) {
+    const cur = HUD.WEAPON_CONFIGS[player.activeWeapon] || { color: '#00e5ff', dot: '#29b6f6' };
     const isExpiring = !player.infiniteWeapon && player.weaponTimeLeft <= 3.5;
     const ratio = player.infiniteWeapon ? 1.0 : Math.max(0, Math.min(1, player.weaponTimeLeft / (player.maxWeaponTime || 15.0)));
 
@@ -347,15 +471,21 @@ export class HUD {
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 2;
 
-    // Center Clay Emblem with Weapon Icon (NO letters)
-    ClayRenderer.drawClayBlob(ctx, cx, cy, 16, 16, cur.dot, '#1a100a');
-    ClayRenderer.drawWeaponIcon(ctx, cx, cy, player.activeWeapon, 13, '#ffffff');
+    // Center Clay Emblem with Weapon Icon (Fast cached sprite blit)
+    const emblem = this.getEmblemSprite(player.activeWeapon);
+    if (emblem) {
+      ctx.drawImage(emblem, cx - 22, cy - 22);
+    } else {
+      ClayRenderer.drawClayBlob(ctx, cx, cy, 16, 16, cur.dot, '#1a100a');
+      ClayRenderer.drawWeaponIcon(ctx, cx, cy, player.activeWeapon, 13, '#ffffff');
+    }
   }
 
-  renderSpeedBoostGauge(ctx, player, cx, cy, gaugeR, isBlocked, timeLeft) {
-    const maxDuration = player.speedBoostMaxDuration || 30.0;
+  renderSpeedBoostGauge(ctx, player, cx, cy, gaugeR, timeLeft) {
+    const maxDuration = player.speedBoostMaxDuration || 15.0;
     const speedRatio = Math.max(0, Math.min(1, timeLeft / maxDuration));
-    const isSpeedActive = Boolean(!isBlocked && player.speedBoostActive && timeLeft > 0);
+    const isSpeedActive = Boolean(player.speedBoostActive && timeLeft > 0);
+    const isExpiring = (timeLeft <= 3.5);
 
     // Subtle ambient shadow
     ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
@@ -370,10 +500,12 @@ export class HUD {
     ctx.arc(cx, cy, gaugeR, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 2. Active Circular Duration Ring (cincin durasi berdasarkan max durasi)
+    // 2. Active Circular Duration Ring
     if (speedRatio > 0.005) {
-      const ringColor = isBlocked ? '#546e7a' : (isSpeedActive ? '#ff9100' : '#ffb74d');
-      const glowBlur = isBlocked ? 2 : (isSpeedActive ? (8 + Math.sin(this.hudTick * 12) * 4) : 4);
+      const ringAlpha = isExpiring ? 0.6 + Math.sin(this.hudTick * 14) * 0.4 : 1.0;
+      ctx.globalAlpha = ringAlpha;
+      const ringColor = isSpeedActive ? '#ff9100' : '#ffb74d';
+      const glowBlur = isSpeedActive ? (8 + Math.sin(this.hudTick * 12) * 4) : 4;
       ctx.strokeStyle = ringColor;
       ctx.lineWidth = 4.5;
       ctx.lineCap = 'round';
@@ -387,75 +519,23 @@ export class HUD {
       ctx.stroke();
     }
 
-    // Reset shadow
+    // Reset shadow & alpha
+    ctx.globalAlpha = 1.0;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
     ctx.shadowBlur = 4;
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 2;
 
-    // 3. Center Clay Emblem
-    const speedBg = isBlocked ? '#263238' : (isSpeedActive ? '#e65100' : '#4e342e');
-    const speedBorder = isBlocked ? '#37474f' : (isSpeedActive ? '#ffb74d' : '#8d6e63');
-    ClayRenderer.drawClayBlob(ctx, cx, cy, 16, 16, speedBg, speedBorder);
-
-    // 4. Speed Booster Vector Icon
-    ctx.save();
-    if (isBlocked) ctx.globalAlpha = 0.35;
-    ClayRenderer.drawWeaponIcon(ctx, cx, cy, 'SPEED_BOOST', 12, isSpeedActive ? '#fff9c4' : '#ffffff');
-    ctx.restore();
-
-    // 5. Khusus Peningkat Senjata Normal: Diberikan Label Waktu Durasi
-    ctx.font = 'bold 11px "Luckiest Guy", cursive';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-    ctx.shadowBlur = 4;
-    ctx.fillStyle = isBlocked ? '#90a4ae' : (isSpeedActive ? '#ffeb3b' : '#ffe082');
-    ctx.fillText(`${Math.ceil(timeLeft)}s`, cx, cy - 28);
-
-    // 6. Compact Hotkey Badge [X] Below (Menampilkan status KUNCI jika diblokir)
-    const pillW = isBlocked ? 44 : 34;
-    const pillH = 14;
-    const pillCol = isBlocked ? '#263238' : (isSpeedActive ? '#ff9100' : '#5d4037');
-    const pillBorder = isBlocked ? '#455a64' : (isSpeedActive ? '#ffe082' : '#8d6e63');
-    ClayRenderer.drawClayCapsule(ctx, cx, cy + 28, pillW, pillH, pillCol, pillBorder);
-    ctx.font = 'bold 9px "Luckiest Guy", cursive';
-    ctx.fillStyle = isBlocked ? '#ff5252' : (isSpeedActive ? '#ffffff' : '#ffecb3');
-    const pillText = isBlocked ? '[X] BLOK' : (isSpeedActive ? '[X] ON' : '[X]');
-    ctx.fillText(pillText, cx, cy + 28);
-  }
-
-  renderPulseFleet(ctx, player, rightX, pulseCharges) {
-    const pulseMax = Math.max(1, player.pulseMaxStock || 1);
-    const pulseCount = Math.min(10, pulseCharges);
-    const spacing = 26;
-    const badgeY = 654;
-    const startY = 688;
-
-    ctx.save();
-
-    // 1. Floating Text Header (Tanpa Kontainer - Identik dengan Floating Lives Indicator)
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 2;
-
-    ctx.font = 'bold 13px "Luckiest Guy", cursive';
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillText(`⚡ PULSE: ${pulseCharges} / ${pulseMax} [Z]`, rightX, badgeY);
-
-    // 2. Pulse Tray (Deretan ikon pulse modern dan simpel, tanpa kontainer)
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-
-    for (let i = 0; i < pulseCount; i++) {
-      const iconX = rightX - 12 - (pulseCount - 1 - i) * spacing;
-      ClayRenderer.drawModernPulseIcon(ctx, iconX, startY, 11, 1.0);
+    // 3. Center Clay Emblem (Fast cached sprite blit)
+    const speedEmblem = this.getEmblemSprite('SPEED_BOOST', isSpeedActive);
+    if (speedEmblem) {
+      ctx.drawImage(speedEmblem, cx - 22, cy - 22);
+    } else {
+      const speedBg = isSpeedActive ? '#e65100' : '#4e342e';
+      const speedBorder = isSpeedActive ? '#ffb74d' : '#8d6e63';
+      ClayRenderer.drawClayBlob(ctx, cx, cy, 16, 16, speedBg, speedBorder);
+      ClayRenderer.drawWeaponIcon(ctx, cx, cy, 'SPEED_BOOST', 12, isSpeedActive ? '#fff9c4' : '#ffffff');
     }
-
-    ctx.restore();
   }
 
   // Compatibility stubs

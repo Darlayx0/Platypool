@@ -1,14 +1,27 @@
 // Procedural Claymation Graphics Engine for Platypus AI
+import { Clay3D } from './Clay3D.js';
+
 export class ClayRenderer {
+  // When true, entity bodies are rendered by the WebGL Scene3D layer instead of these 2D routines
+  static use3D = false;
   // Flyweight cache for radial and linear CanvasGradient objects
   static gradientCache = new Map();
+
+  static evictOldGradients(count = 60) {
+    const iter = ClayRenderer.gradientCache.keys();
+    for (let i = 0; i < count; i++) {
+      const k = iter.next().value;
+      if (k) ClayRenderer.gradientCache.delete(k);
+      else break;
+    }
+  }
 
   static getRadialGradient(ctx, lx, ly, r0, r1, baseColor, shadowColor) {
     const key = `rad_${Math.round(lx)}_${Math.round(ly)}_${Math.round(r0)}_${Math.round(r1)}_${baseColor}_${shadowColor}`;
     let grad = ClayRenderer.gradientCache.get(key);
     if (!grad) {
-      if (ClayRenderer.gradientCache.size > 300) {
-        ClayRenderer.gradientCache.clear();
+      if (ClayRenderer.gradientCache.size > 500) {
+        ClayRenderer.evictOldGradients(60);
       }
       grad = ctx.createRadialGradient(lx, ly, r0, 0, 0, r1);
       grad.addColorStop(0, '#ffffff');
@@ -24,8 +37,8 @@ export class ClayRenderer {
     const key = `lin_${Math.round(r)}_${baseColor}_${shadowColor}`;
     let grad = ClayRenderer.gradientCache.get(key);
     if (!grad) {
-      if (ClayRenderer.gradientCache.size > 300) {
-        ClayRenderer.gradientCache.clear();
+      if (ClayRenderer.gradientCache.size > 500) {
+        ClayRenderer.evictOldGradients(60);
       }
       grad = ctx.createLinearGradient(0, -r, 0, r);
       grad.addColorStop(0, 'rgba(255,255,255,0.7)');
@@ -41,6 +54,8 @@ export class ClayRenderer {
    * Helper to draw a shaded clay sphere/blob with 3D depth and specular highlight
    */
   static drawClayBlob(ctx, x, y, radiusX, radiusY, baseColor, shadowColor, lightAngle = -Math.PI / 4) {
+    radiusX = Math.max(0.5, Math.abs(radiusX));
+    radiusY = Math.max(0.5, Math.abs(radiusY));
     ctx.save();
     ctx.translate(x, y);
 
@@ -85,6 +100,8 @@ export class ClayRenderer {
    * Helper to draw a rounded clay capsule / hull
    */
   static drawClayCapsule(ctx, x, y, width, height, baseColor, shadowColor, rotation = 0) {
+    width = Math.max(1, Math.abs(width));
+    height = Math.max(1, Math.abs(height));
     ctx.save();
     ctx.translate(x, y);
     if (rotation !== 0) {
@@ -213,111 +230,129 @@ export class ClayRenderer {
 
   /**
    * Draw the iconic Player Fighter Plane (Novocastrian style)
+   * Full 3D Volumetric Claymation: 3D Roll Banking, Pitch Kinematics, Beveled Wings & Canopy
    */
-  static drawPlayerShip(ctx, x, y, tilt = 0, invulnerable = false, engineTick = 0, weaponType = 'NORMAL') {
+  static drawPlayerShip(ctx, x, y, tilt = 0, invulnerable = false, engineTick = 0, weaponType = 'NORMAL', roll = 0, pitch = 0, isBoosted = false) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(tilt * 0.25); // tilt based on vertical movement
+
+    // Compute effective roll and pitch (fallback to tilt if roll not explicitly supplied)
+    const effRoll = roll !== 0 ? roll : (tilt * 0.45);
+    const effPitch = pitch !== 0 ? pitch : (-tilt * 0.12);
+
+    // Pitch attitude rotation on 2D screen
+    ctx.rotate(tilt * 0.22);
 
     // Invulnerability flashing
     if (invulnerable && Math.floor(Date.now() / 80) % 2 === 0) {
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.42;
     }
 
-    // Shield bubble if invulnerable
+    // Shield bubble if invulnerable (with 3D depth orbital rings)
     if (invulnerable) {
       ctx.save();
+      // Outer 3D orbital shield ring
       ctx.beginPath();
-      ctx.arc(0, 0, 44, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(66, 165, 245, 0.85)';
+      ctx.ellipse(0, 0, 48, 42, effRoll * 0.3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(66, 165, 245, 0.88)';
       ctx.lineWidth = 3.5;
-      ctx.setLineDash([8, 6]);
+      ctx.setLineDash([9, 6]);
       ctx.lineDashOffset = -engineTick * 4;
       ctx.stroke();
-      ctx.fillStyle = 'rgba(33, 150, 243, 0.18)';
+
+      // Translucent clay energy field
+      ctx.fillStyle = 'rgba(33, 150, 243, 0.20)';
       ctx.fill();
+
+      // Inner specular rim
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 44, 38, effRoll * 0.3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.restore();
     }
 
-    // Engine exhaust clay fire plumes (animated dual-layer)
-    const flameSize = 11 + Math.sin(engineTick * 0.8) * 4;
-    this.drawClayBlob(ctx, -34 - flameSize * 0.45, 0, flameSize, flameSize * 0.55, '#ff9800', '#d84315');
-    this.drawClayBlob(ctx, -28 - flameSize * 0.2, 0, flameSize * 0.65, flameSize * 0.4, '#fff59d', '#f57c00');
-    this.drawClayBlob(ctx, -24, 0, 5, 4, '#ffffff', '#ffee58');
+    // 1. Engine exhaust 3D volumetric fire plumes
+    Clay3D.drawVolumetricExhaust(ctx, -26, 0, effRoll, effPitch, engineTick, isBoosted);
 
-    // Tail fin (vertical rudder)
-    this.drawClayCapsule(ctx, -26, -14, 18, 10, '#cfd8dc', '#78909c', -0.3);
-    this.drawClayBlob(ctx, -26, -18, 5, 5, '#e53935', '#b71c1c');
-
-    // Lower wing
-    this.drawClayCapsule(ctx, 4, 16, 32, 10, '#b0bec5', '#546e7a', 0.15);
-
-    // Main fuselage body (Chunky rounded vintage clay rocket-plane)
-    this.drawClayCapsule(ctx, -2, 0, 56, 26, '#eceff1', '#607d8b');
-
-    // Red clay accent stripe along fuselage
+    // 2. Vertical Rudder (Tail fin) with 3D leaning angle
     ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(2, 0, 20, 6, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#e53935';
-    ctx.fill();
+    const rudderLean = -0.28 + effRoll * 0.42;
+    const rudderY = -14 - Math.sin(effRoll) * 7;
+    this.drawClayCapsule(ctx, -26, rudderY, 18, 9, '#cfd8dc', '#78909c', rudderLean);
+    this.drawClayBlob(ctx, -26, rudderY - 5, 5, 5, '#e53935', '#b71c1c');
     ctx.restore();
 
-    // Upper wing
-    this.drawClayCapsule(ctx, 4, -14, 38, 12, '#cfd8dc', '#546e7a', -0.1);
+    // 3. Lower Wing (Sub-fuselage 3D depth layer)
+    Clay3D.draw3DWing(ctx, 0, 0, effRoll, effPitch, false, weaponType, engineTick);
 
-    // Wing tip red clay caps
-    this.drawClayBlob(ctx, 16, -18, 6, 6, '#e53935', '#b71c1c');
-    this.drawClayBlob(ctx, 16, 18, 6, 6, '#e53935', '#b71c1c');
+    // 4. Volumetric Main Fuselage (Chunky rounded vintage clay rocket-plane)
+    Clay3D.drawVolumetricFuselage(ctx, 0, 0, effRoll, effPitch, 58, 13, 15, '#eceff1', '#607d8b', '#e53935');
 
-    // Active special weapon energy aura on wing pylons
-    const weaponGlows = {
-      SPREAD: '#ff5252',
-      LASER: '#00e5ff',
-      HOMING: '#69f0ae',
-      FLAK: '#ffd54f',
-      PLASMA: '#e040fb'
-    };
-    if (weaponType && weaponGlows[weaponType]) {
-      const glowCol = weaponGlows[weaponType];
-      ctx.save();
-      ctx.shadowColor = glowCol;
-      ctx.shadowBlur = 8;
-      this.drawClayBlob(ctx, 16, -18, 4, 4, glowCol, '#ffffff');
-      this.drawClayBlob(ctx, 16, 18, 4, 4, glowCol, '#ffffff');
-      ctx.restore();
-    }
+    // 5. Upper Wing (Supra-fuselage 3D depth layer)
+    Clay3D.draw3DWing(ctx, 0, 0, effRoll, effPitch, true, weaponType, engineTick);
 
-    // Dual gun barrels on wings
-    this.drawClayCapsule(ctx, 14, -10, 16, 5, '#37474f', '#212121');
-    this.drawClayCapsule(ctx, 14, 10, 16, 5, '#37474f', '#212121');
+    // 6. Cockpit Canopy Bubble (Yellow clay glass with 3D refraction arcs)
+    Clay3D.draw3DCockpitCanopy(ctx, 0, 0, effRoll, effPitch, 14, 9);
 
-    // Cockpit Canopy (Yellow clay glass bubble with curved specular highlights)
-    this.drawClayBlob(ctx, 6, -3, 14, 9, '#fff176', '#fbc02d', -Math.PI / 3);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(5, -4, 6, -Math.PI * 0.8, -Math.PI * 0.2);
-    ctx.stroke();
+    // 7. 3D Inclined Propeller Disk & Sculpted Spinner Hub
+    Clay3D.draw3DPropeller(ctx, 29, 0, effRoll, effPitch, 19, engineTick);
+
     ctx.restore();
+  }
 
-    // Nose cone (Red clay bulb)
-    this.drawClayBlob(ctx, 27, 0, 8, 8, '#e53935', '#b71c1c');
-
-    // Spinning propeller with motion blur disc
+  /**
+   * Draw Stage 5 Wave 1 Special Fruit Carrier Ship
+   * A delightful golden-amber clay transport aircraft loaded with juicy fruits
+   */
+  static drawFruitCarrier(ctx, x, y, tick = 0, color = '#ffb300', shadowColor = '#e65100', roll = 0, pitch = 0) {
     ctx.save();
-    ctx.translate(34, 0);
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-    ctx.fill();
+    ctx.translate(x, y);
 
-    const propAngle = engineTick * 0.9;
+    // Subtle gentle bobbing and 3D banking
+    const bob = Math.sin(tick * 0.05) * 2.0;
+    ctx.translate(0, bob);
+    ctx.rotate(roll * 0.28);
+    const sinR = Math.sin(roll);
+
+    // 1. Soft clay shadow underneath
+    this.drawClayBlob(ctx, 4, 18 + sinR * 4, 28, 8, 'rgba(0,0,0,0.22)', 'transparent');
+
+    // 2. Twin Wings (Upper & Lower biplane / transport wings) with 3D displacement
+    this.drawClayCapsule(ctx, 2, -18 + sinR * 6, 54, 12, '#ffe082', '#ffb300', -0.06 + roll * 0.12);
+    this.drawClayCapsule(ctx, 2, 18 + sinR * 6, 54, 12, '#ffe082', '#ffb300', 0.06 + roll * 0.12);
+
+    // Wing vertical struts
+    this.drawClayCapsule(ctx, -8, 0, 8, 32, '#ffca28', '#f57f17');
+    this.drawClayCapsule(ctx, 14, 0, 8, 32, '#ffca28', '#f57f17');
+
+    // 3. Tail stabilizer & fin with 3D lean
+    this.drawClayCapsule(ctx, 24, -12 - sinR * 4, 18, 10, color, shadowColor, -0.4 + roll * 0.2);
+    this.drawClayBlob(ctx, 26, -16 - sinR * 4, 7, 9, '#ff5722', '#bf360c');
+
+    // 4. Main Fuselage (Chunky rounded transport body)
+    this.drawClayCapsule(ctx, 0, 0, 64, 28, color, shadowColor);
+
+    // 5. Cargo compartment stripe (Pastel cream belly with 3D shift)
+    this.drawClayCapsule(ctx, 2, 4 + sinR * 3, 44, 13, '#fff9c4', '#fff59d');
+
+    // 6. Fruit crate emblem on the side (Colorful clay fruit slice badge)
+    this.drawClayBlob(ctx, -3, 4 + sinR * 3, 7, 7, '#4caf50', '#2e7d32');
+    this.drawClayBlob(ctx, -3, 4 + sinR * 3, 4.5, 4.5, '#e91e63', '#c2185b');
+    this.drawClayBlob(ctx, 8, 3 + sinR * 3, 5.5, 5.5, '#ffd600', '#f57f17');
+
+    // 7. Cockpit window (Teal/cyan clay bubble)
+    this.drawClayBlob(ctx, -18, -4 - sinR * 3, 9, 8, '#00e5ff', '#0097a7');
+    this.drawClayBlob(ctx, -20, -6 - sinR * 3, 3.5, 3.5, '#ffffff', '#e0f7fa');
+
+    // 8. Spinning Propeller at Nose (Left side)
+    const propAngle = tick * 24;
+    ctx.save();
+    ctx.translate(-33, 0);
+    this.drawClayBlob(ctx, 0, 0, 5, 5, '#d84315', '#bf360c');
     ctx.rotate(propAngle);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.fillRect(-2, -18, 4, 36);
-    this.drawClayBlob(ctx, 0, 0, 5, 5, '#ffb300', '#ff6f00');
+    this.drawClayCapsule(ctx, 0, 0, 6, 28, 'rgba(255, 255, 255, 0.85)', '#cfd8dc');
     ctx.restore();
 
     ctx.restore();
@@ -326,25 +361,28 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Scout (small red/purple rounded insectoid plane)
    */
-  static drawScout(ctx, x, y, tick = 0) {
+  static drawScout(ctx, x, y, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.35);
 
-    // Wing flap
     const flap = Math.sin(tick * 0.4) * 4;
+    const sinR = Math.sin(roll);
 
-    // Small exhaust puff
+    // Small exhaust puff with 3D wobble
     this.drawClayBlob(ctx, 18, 0, 5, 4, '#ffb74d', '#e65100');
 
-    // Wings
-    this.drawClayCapsule(ctx, 0, -12 + flap, 24, 7, '#ab47bc', '#6a1b9a', -0.1);
-    this.drawClayCapsule(ctx, 0, 12 - flap, 24, 7, '#ab47bc', '#6a1b9a', 0.1);
+    // 3D Beveled Wings
+    const wingY1 = -12 + flap + sinR * 6;
+    const wingY2 = 12 - flap + sinR * 6;
+    this.drawClayCapsule(ctx, 0, wingY1, 24, 7, '#ab47bc', '#6a1b9a', -0.15 + roll * 0.2);
+    this.drawClayCapsule(ctx, 0, wingY2, 24, 7, '#ab47bc', '#6a1b9a', 0.15 + roll * 0.2);
 
-    // Main bulbous body
-    this.drawClayBlob(ctx, 0, 0, 18, 14, '#e91e63', '#880e4f');
+    // Main bulbous body with 3D normal lighting
+    this.drawClayBlob(ctx, 0, 0, 18, 14, '#e91e63', '#880e4f', -Math.PI / 4 + roll * 0.35);
 
-    // Cockpit / eye
-    this.drawClayBlob(ctx, -8, 0, 7, 7, '#80deea', '#00838f');
+    // Cockpit / eye with 3D glass highlight
+    this.drawClayBlob(ctx, -8, -sinR * 2, 7, 7, '#80deea', '#00838f');
 
     // Nose stinger / gun
     this.drawClayCapsule(ctx, -18, 0, 10, 4, '#424242', '#212121');
@@ -355,22 +393,25 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Drone (fast green beetle craft)
    */
-  static drawDrone(ctx, x, y, tick = 0) {
+  static drawDrone(ctx, x, y, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.35);
 
-    // Twin engines
-    this.drawClayCapsule(ctx, 12, -9, 14, 6, '#66bb6a', '#2e7d32');
-    this.drawClayCapsule(ctx, 12, 9, 14, 6, '#66bb6a', '#2e7d32');
+    const sinR = Math.sin(roll);
 
-    // Main hull
-    this.drawClayBlob(ctx, 0, 0, 20, 12, '#43a047', '#1b5e20');
+    // Twin engines with 3D depth offset
+    this.drawClayCapsule(ctx, 12, -9 + sinR * 5, 14, 6, '#66bb6a', '#2e7d32');
+    this.drawClayCapsule(ctx, 12, 9 + sinR * 5, 14, 6, '#66bb6a', '#2e7d32');
 
-    // Yellow armored back stripes
-    this.drawClayCapsule(ctx, 4, 0, 8, 10, '#fbc02d', '#f57f17');
+    // Main hull with 3D normal lighting
+    this.drawClayBlob(ctx, 0, 0, 20, 12, '#43a047', '#1b5e20', -Math.PI / 4 + roll * 0.35);
 
-    // Red visor
-    this.drawClayCapsule(ctx, -10, 0, 6, 8, '#ff5252', '#b71c1c');
+    // Yellow armored back stripes with 3D curve
+    this.drawClayCapsule(ctx, 4, -sinR * 3, 8, 10, '#fbc02d', '#f57f17');
+
+    // Red visor with tactile specular arc
+    this.drawClayCapsule(ctx, -10, -sinR * 2, 6, 8, '#ff5252', '#b71c1c');
 
     ctx.restore();
   }
@@ -378,28 +419,31 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Heavy Gunship (armored blue flying fortress)
    */
-  static drawGunship(ctx, x, y, hpRatio = 1, tick = 0) {
+  static drawGunship(ctx, x, y, hpRatio = 1, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.28);
 
-    // Massive wings
-    this.drawClayCapsule(ctx, 10, -28, 48, 16, '#3949ab', '#1a237e', -0.2);
-    this.drawClayCapsule(ctx, 10, 28, 48, 16, '#3949ab', '#1a237e', 0.2);
+    const sinR = Math.sin(roll);
 
-    // Wing turrets
-    this.drawClayBlob(ctx, 4, -32, 9, 9, '#ffca28', '#f57f17');
-    this.drawClayBlob(ctx, 4, 32, 9, 9, '#ffca28', '#f57f17');
+    // 1. Massive 3D wings with depth layer displacement and bevels
+    this.drawClayCapsule(ctx, 10, -28 + sinR * 8, 48, 16, '#3949ab', '#1a237e', -0.2 + roll * 0.15);
+    this.drawClayCapsule(ctx, 10, 28 + sinR * 8, 48, 16, '#3949ab', '#1a237e', 0.2 + roll * 0.15);
 
-    // Main heavy fuselage
+    // Wing turrets with 3D highlight
+    this.drawClayBlob(ctx, 4, -32 + sinR * 8, 9, 9, '#ffca28', '#f57f17', -Math.PI / 4 + roll * 0.3);
+    this.drawClayBlob(ctx, 4, 32 + sinR * 8, 9, 9, '#ffca28', '#f57f17', -Math.PI / 4 + roll * 0.3);
+
+    // 2. Main heavy fuselage with volumetric clay gradient
     this.drawClayCapsule(ctx, 0, 0, 72, 34, '#42a5f5', '#0d47a1');
 
-    // Armored frontal cockpit
-    this.drawClayBlob(ctx, -22, 0, 15, 12, '#cfd8dc', '#455a64');
-    this.drawClayCapsule(ctx, -26, 0, 6, 12, '#ff1744', '#b71c1c');
+    // 3. Armored frontal cockpit with 3D visor
+    this.drawClayBlob(ctx, -22, -sinR * 3, 15, 12, '#cfd8dc', '#455a64');
+    this.drawClayCapsule(ctx, -26, -sinR * 3, 6, 12, '#ff1744', '#b71c1c');
 
-    // Dual heavy cannons
-    this.drawClayCapsule(ctx, -28, -12, 22, 7, '#37474f', '#212121');
-    this.drawClayCapsule(ctx, -28, 12, 22, 7, '#37474f', '#212121');
+    // 4. Dual heavy cannons with 3D perspective
+    this.drawClayCapsule(ctx, -28, -12 + sinR * 4, 22, 7, '#37474f', '#212121');
+    this.drawClayCapsule(ctx, -28, 12 + sinR * 4, 22, 7, '#37474f', '#212121');
 
     // HP bar above gunship if damaged
     if (hpRatio < 1) {
@@ -415,42 +459,50 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Zeppelin / Blimp
    */
-  static drawBlimp(ctx, x, y, hpRatio = 1, tick = 0) {
+  static drawBlimp(ctx, x, y, hpRatio = 1, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
 
     const bob = Math.sin(tick * 0.05) * 3;
     ctx.translate(0, bob);
+    ctx.rotate(roll * 0.16);
+    const sinR = Math.sin(roll);
 
-    // Rear rudder fins
-    this.drawClayCapsule(ctx, 60, -32, 26, 14, '#ffb74d', '#e65100', -0.4);
-    this.drawClayCapsule(ctx, 60, 32, 26, 14, '#ffb74d', '#e65100', 0.4);
+    // Rear rudder fins with 3D banking angles
+    this.drawClayCapsule(ctx, 60, -32 - sinR * 6, 26, 14, '#ffb74d', '#e65100', -0.4 + roll * 0.15);
+    this.drawClayCapsule(ctx, 60, 32 - sinR * 6, 26, 14, '#ffb74d', '#e65100', 0.4 + roll * 0.15);
     this.drawClayCapsule(ctx, 65, 0, 24, 12, '#ffb74d', '#e65100');
 
     // Giant Gasbag (Clay Zeppelin body)
     this.drawClayCapsule(ctx, 0, 0, 130, 62, '#ffe082', '#ff8f00');
 
-    // Seams and clay ridges on balloon
-    ctx.strokeStyle = 'rgba(191, 54, 12, 0.4)';
+    // 3D dynamic rotating latitude ridges on balloon
+    const ridgeShift = Math.sin(tick * 0.03 + roll) * 8;
+    ctx.strokeStyle = 'rgba(191, 54, 12, 0.42)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, 56, -Math.PI / 3, Math.PI / 3);
+    ctx.arc(ridgeShift, 0, 56, -Math.PI / 3, Math.PI / 3);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(0, 0, 42, -Math.PI / 3, Math.PI / 3);
+    ctx.arc(ridgeShift - 14, 0, 42, -Math.PI / 3, Math.PI / 3);
     ctx.stroke();
 
-    // Underbelly cabin / gondola
-    this.drawClayCapsule(ctx, -10, 36, 48, 16, '#8d6e63', '#4e342e');
+    // Underbelly cabin / gondola with 3D drop shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(-10, 34 + sinR * 4, 25, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    this.drawClayCapsule(ctx, -10, 36 + sinR * 4, 48, 16, '#8d6e63', '#4e342e');
 
     // Cabin windows
     for (let i = -22; i <= 6; i += 10) {
-      this.drawClayBlob(ctx, i, 36, 3, 3, '#81d4fa', '#0288d1');
+      this.drawClayBlob(ctx, i, 36 + sinR * 4, 3, 3, '#81d4fa', '#0288d1');
     }
 
-    // Front Gun Turret
-    this.drawClayBlob(ctx, -56, 10, 14, 14, '#78909c', '#37474f');
-    this.drawClayCapsule(ctx, -68, 10, 16, 6, '#263238', '#000000');
+    // Front Gun Turret with 3D highlight
+    this.drawClayBlob(ctx, -56, 10 + sinR * 2, 14, 14, '#78909c', '#37474f', -Math.PI / 4 + roll * 0.25);
+    this.drawClayCapsule(ctx, -68, 10 + sinR * 2, 16, 6, '#263238', '#000000');
 
     // HP Bar
     if (hpRatio < 1) {
@@ -466,36 +518,39 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Stinger (fast aggressive wasp interceptor)
    */
-  static drawStinger(ctx, x, y, tick = 0) {
+  static drawStinger(ctx, x, y, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.38);
+
+    const sinR = Math.sin(roll);
 
     // Jet thruster flames
     const flame = 12 + Math.sin(tick * 0.8) * 5;
     this.drawClayBlob(ctx, 16 + flame * 0.3, 0, flame, flame * 0.5, '#ff3d00', '#bf360c');
     this.drawClayBlob(ctx, 12, 0, 6, 4, '#ffee58', '#f57c00');
 
-    // Swept-forward wings
-    this.drawClayCapsule(ctx, 2, -14, 22, 6, '#ffa000', '#e65100', -0.35);
-    this.drawClayCapsule(ctx, 2, 14, 22, 6, '#ffa000', '#e65100', 0.35);
+    // Swept-forward wings with 3D depth displacement
+    this.drawClayCapsule(ctx, 2, -14 + sinR * 6, 22, 6, '#ffa000', '#e65100', -0.35 + roll * 0.2);
+    this.drawClayCapsule(ctx, 2, 14 + sinR * 6, 22, 6, '#ffa000', '#e65100', 0.35 + roll * 0.2);
 
-    // Aerodynamic wasp fuselage
+    // Aerodynamic wasp fuselage with 3D volumetric shading
     this.drawClayCapsule(ctx, 0, 0, 32, 13, '#ffb300', '#e65100');
 
-    // Black clay stinger stripes
+    // Black clay stinger stripes with 3D curvature
     ctx.fillStyle = '#212121';
     ctx.beginPath();
-    ctx.ellipse(3, 0, 4, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(3, -sinR * 2, 4, 6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(-3, 0, 4, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(-3, -sinR * 2, 4, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Sharp stinger nose
     this.drawClayCapsule(ctx, -18, 0, 14, 4, '#d84315', '#bf360c');
 
-    // Glowing red ocular sensor
-    this.drawClayBlob(ctx, -8, 0, 5, 5, '#ff1744', '#b71c1c');
+    // Glowing red ocular sensor with specular glare
+    this.drawClayBlob(ctx, -8, -sinR * 2, 5, 5, '#ff1744', '#b71c1c');
 
     ctx.restore();
   }
@@ -503,16 +558,19 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Sniper Skiff (long range precision craft)
    */
-  static drawSniper(ctx, x, y, isAiming = false, aimProgress = 0, tick = 0) {
+  static drawSniper(ctx, x, y, isAiming = false, aimProgress = 0, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.26);
+
+    const sinR = Math.sin(roll);
 
     // Engine exhaust
     this.drawClayBlob(ctx, 22, 0, 7, 5, '#ab47bc', '#4a148c');
 
-    // Sleek needle wings
-    this.drawClayCapsule(ctx, 6, -16, 26, 6, '#7e57c2', '#311b92', -0.2);
-    this.drawClayCapsule(ctx, 6, 16, 26, 6, '#7e57c2', '#311b92', 0.2);
+    // Sleek needle wings with 3D depth
+    this.drawClayCapsule(ctx, 6, -16 + sinR * 5, 26, 6, '#7e57c2', '#311b92', -0.2 + roll * 0.15);
+    this.drawClayCapsule(ctx, 6, 16 + sinR * 5, 26, 6, '#7e57c2', '#311b92', 0.2 + roll * 0.15);
 
     // Main stealth chassis
     this.drawClayCapsule(ctx, 2, 0, 44, 15, '#512da8', '#1a237e');
@@ -525,8 +583,8 @@ export class ClayRenderer {
       this.drawClayBlob(ctx, -40, 0, chargePulse, chargePulse, '#ff1744', '#b71c1c');
     }
 
-    // Targeting scanner optic
-    this.drawClayBlob(ctx, -8, 0, 6, 6, isAiming ? '#ff1744' : '#00e676', '#004d40');
+    // Targeting scanner optic with 3D glare
+    this.drawClayBlob(ctx, -8, -sinR * 2, 6, 6, isAiming ? '#ff1744' : '#00e676', '#004d40');
 
     ctx.restore();
   }
@@ -534,38 +592,41 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Heavy Bomber
    */
-  static drawBomber(ctx, x, y, hpRatio = 1, tick = 0) {
+  static drawBomber(ctx, x, y, hpRatio = 1, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.25);
 
-    // Heavy dual propeller engines
-    this.drawClayCapsule(ctx, 4, -26, 32, 12, '#558b2f', '#1b5e20');
-    this.drawClayCapsule(ctx, 4, 26, 32, 12, '#558b2f', '#1b5e20');
+    const sinR = Math.sin(roll);
 
-    // Propeller spinners
+    // Heavy dual propeller engines with 3D depth displacement
+    this.drawClayCapsule(ctx, 4, -26 + sinR * 8, 32, 12, '#558b2f', '#1b5e20');
+    this.drawClayCapsule(ctx, 4, 26 + sinR * 8, 32, 12, '#558b2f', '#1b5e20');
+
+    // Propeller spinners with 3D tilt
     const prop1 = tick * 0.8;
     ctx.save();
-    ctx.translate(-12, -26);
+    ctx.translate(-12, -26 + sinR * 8);
     ctx.rotate(prop1);
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillRect(-2, -12, 4, 24);
     ctx.restore();
 
     ctx.save();
-    ctx.translate(-12, 26);
+    ctx.translate(-12, 26 + sinR * 8);
     ctx.rotate(-prop1);
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillRect(-2, -12, 4, 24);
     ctx.restore();
 
-    // Main heavy fuselage
+    // Main heavy fuselage with volumetric shading
     this.drawClayCapsule(ctx, 0, 0, 68, 30, '#689f38', '#2e7d32');
 
     // Bomb bay doors underbelly
-    this.drawClayCapsule(ctx, 0, 10, 30, 8, '#33691e', '#1b5e20');
+    this.drawClayCapsule(ctx, 0, 10 + sinR * 4, 30, 8, '#33691e', '#1b5e20');
 
     // Glass bubble cockpit
-    this.drawClayBlob(ctx, -22, -4, 11, 9, '#80deea', '#00838f');
+    this.drawClayBlob(ctx, -22, -4 - sinR * 3, 11, 9, '#80deea', '#00838f');
 
     // HP bar if damaged
     if (hpRatio < 1) {
@@ -581,9 +642,14 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Clay Spinner (buzzing blade disc)
    */
-  static drawSpinner(ctx, x, y, tick = 0) {
+  static drawSpinner(ctx, x, y, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+
+    // 3D Oblique Perspective Foreshortening
+    const tiltScale = Math.max(0.65, 1.0 - Math.abs(roll) * 0.35);
+    ctx.scale(1.0, tiltScale);
+    ctx.rotate(roll * 0.3);
 
     const spinAngle = tick * 0.2;
     ctx.rotate(spinAngle);
@@ -597,7 +663,7 @@ export class ClayRenderer {
       ctx.restore();
     }
 
-    // Outer disc ring
+    // Outer disc ring with 3D gradient
     this.drawClayBlob(ctx, 0, 0, 20, 20, '#d32f2f', '#7f0000');
 
     // Core bronze cap
@@ -611,38 +677,41 @@ export class ClayRenderer {
   /**
    * Draw Enemy: Shield Cruiser (front energy shield)
    */
-  static drawShieldCruiser(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0) {
+  static drawShieldCruiser(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0, roll = 0, pitch = 0) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.rotate(roll * 0.28);
+
+    const sinR = Math.sin(roll);
 
     // Twin heavy ion thrusters
     const thrust = 12 + Math.sin(tick * 0.5) * 4;
-    this.drawClayBlob(ctx, 32 + thrust * 0.2, -14, thrust, thrust * 0.5, '#00e5ff', '#00838f');
-    this.drawClayBlob(ctx, 32 + thrust * 0.2, 14, thrust, thrust * 0.5, '#00e5ff', '#00838f');
+    this.drawClayBlob(ctx, 32 + thrust * 0.2, -14 + sinR * 5, thrust, thrust * 0.5, '#00e5ff', '#00838f');
+    this.drawClayBlob(ctx, 32 + thrust * 0.2, 14 + sinR * 5, thrust, thrust * 0.5, '#00e5ff', '#00838f');
 
-    // Heavy battleship hull
+    // Heavy battleship hull with 3D volumetric shading
     this.drawClayCapsule(ctx, 0, 0, 68, 34, '#37474f', '#212121');
 
-    // Cyan reinforced plating
-    this.drawClayCapsule(ctx, -8, -14, 38, 10, '#00acc1', '#006064');
-    this.drawClayCapsule(ctx, -8, 14, 38, 10, '#00acc1', '#006064');
+    // Cyan reinforced plating with 3D depth displacement
+    this.drawClayCapsule(ctx, -8, -14 + sinR * 6, 38, 10, '#00acc1', '#006064');
+    this.drawClayCapsule(ctx, -8, 14 + sinR * 6, 38, 10, '#00acc1', '#006064');
 
     // Shield Projector emitters at prow
-    this.drawClayBlob(ctx, -32, -16, 7, 7, '#00e5ff', '#00838f');
-    this.drawClayBlob(ctx, -32, 16, 7, 7, '#00e5ff', '#00838f');
+    this.drawClayBlob(ctx, -32, -16 + sinR * 4, 7, 7, '#00e5ff', '#00838f');
+    this.drawClayBlob(ctx, -32, 16 + sinR * 4, 7, 7, '#00e5ff', '#00838f');
 
-    // Forward Energy Shield Dome (if active)
+    // Forward Energy Shield Dome (3D elliptical arc in perspective)
     if (shieldRatio > 0) {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(-26, 0, 36, -Math.PI * 0.42, Math.PI * 0.42);
+      ctx.ellipse(-26, 0, 36, 42, roll * 0.25, -Math.PI * 0.42, Math.PI * 0.42);
       ctx.strokeStyle = `rgba(0, 229, 255, ${0.4 + shieldRatio * 0.5})`;
       ctx.lineWidth = 6;
       ctx.stroke();
 
       // Shield shimmer arc
       ctx.beginPath();
-      ctx.arc(-26, 0, 33, -Math.PI * 0.38, Math.PI * 0.38);
+      ctx.ellipse(-26, 0, 33, 39, roll * 0.25, -Math.PI * 0.38, Math.PI * 0.38);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.lineWidth = 2.5;
       ctx.stroke();
@@ -931,6 +1000,646 @@ export class ClayRenderer {
   }
 
   /**
+   * Draw Enemy: Retro Biplane (World 1 vintage aircraft)
+   */
+  static drawRetroBiplane(ctx, x, y, tick = 0, hpRatio = 1, isAnchored = false, facingLeft = true, roll = 0, pitch = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (!facingLeft) ctx.scale(-1, 1);
+
+    // 3D Roll Banking
+    ctx.rotate(roll * 0.35);
+    const sinR = Math.sin(roll);
+
+    // Propeller spinning animation at nose with 3D skewed disk
+    const propPhase = Math.sin(tick * 1.2);
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(-26, 0, 3.5, Math.max(1, Math.abs(17 * propPhase)), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Nose spinner cap (Clay cone)
+    this.drawClayBlob(ctx, -24, 0, 6, 6, '#d84315', '#bf360c');
+
+    // Fuselage (warm clay orange with 3D shading)
+    this.drawClayCapsule(ctx, 0, 0, 44, 16, '#ff7043', '#d84315');
+
+    // Upper wing (3D depth displaced)
+    this.drawClayCapsule(ctx, -2, -14 + sinR * 6, 46, 8, '#ffa726', '#e65100', -roll * 0.15);
+    // Lower wing (3D depth displaced)
+    this.drawClayCapsule(ctx, 2, 14 + sinR * 6, 42, 8, '#ffa726', '#e65100', roll * 0.15);
+
+    // Wing connecting struts (3D perspective slant)
+    ctx.strokeStyle = '#bf360c';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-10, -10 + sinR * 6); ctx.lineTo(-10, 10 + sinR * 6);
+    ctx.moveTo(10, -10 + sinR * 6); ctx.lineTo(10, 10 + sinR * 6);
+    ctx.stroke();
+
+    // Tail fin and rudder with 3D lean
+    this.drawClayCapsule(ctx, 20, -8 - sinR * 4, 12, 14, '#ff7043', '#bf360c', 0.2 + roll * 0.2);
+
+    // Cockpit windscreen
+    this.drawClayBlob(ctx, -4, -4 - sinR * 2, 7, 5, '#80deea', '#0097a7');
+
+    // Wheels undercarriage with depth
+    this.drawClayBlob(ctx, -6, 12 + sinR * 4, 5, 5, '#37474f', '#212121');
+
+    if (isAnchored) {
+      // Thruster brake glow when anchored at right screen
+      ctx.fillStyle = 'rgba(255, 179, 0, 0.4)';
+      ctx.beginPath();
+      ctx.arc(22, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -26, 36, 4);
+      ctx.fillStyle = '#ff7043';
+      ctx.fillRect(-18, -26, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Swing Glider (World 1 aerodynamic pendulum glider)
+   */
+  static drawSwingGlider(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Dynamic bank tilt based on pendulum motion
+    const bankAngle = Math.sin(tick * 0.1) * 0.22;
+    ctx.rotate(bankAngle);
+
+    // Decorative clay tail streamers
+    const tailWave = Math.sin(tick * 0.2) * 8;
+    ctx.strokeStyle = 'rgba(38, 166, 154, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(22, 0);
+    ctx.quadraticCurveTo(34, tailWave, 46, -tailWave);
+    ctx.stroke();
+
+    // Broad swept delta wings (teal/emerald clay)
+    this.drawClayCapsule(ctx, -2, -16, 28, 9, '#26a69a', '#004d40', -0.35);
+    this.drawClayCapsule(ctx, -2, 16, 28, 9, '#26a69a', '#004d40', 0.35);
+
+    // Central rounded pod fuselage
+    this.drawClayCapsule(ctx, 0, 0, 40, 15, '#00897b', '#004d40');
+
+    // Canopy jewel
+    this.drawClayBlob(ctx, -8, 0, 8, 5, '#80cbc4', '#004d40');
+
+    // Wingtip orb blasters
+    this.drawClayBlob(ctx, -14, -18, 4, 4, '#ffb300', '#ff6f00');
+    this.drawClayBlob(ctx, -14, 18, 4, 4, '#ffb300', '#ff6f00');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -26, 32, 4);
+      ctx.fillStyle = '#26a69a';
+      ctx.fillRect(-16, -26, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Canyon Diver (World 2 steep dive-bomber from sky)
+   */
+  static drawCanyonDiver(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    // Heading angled downward
+    ctx.rotate(0.55);
+
+    // Sand dust plume from exhaust
+    const exhaust = 14 + Math.sin(tick * 0.4) * 4;
+    this.drawClayBlob(ctx, 24, 0, exhaust, exhaust * 0.45, '#ffb74d', '#e65100');
+
+    // Sharp hawk-beak fuselage (amber / terracotta)
+    this.drawClayCapsule(ctx, 0, 0, 44, 14, '#ff9800', '#e65100');
+
+    // Knife-edged dive fins
+    this.drawClayCapsule(ctx, 4, -16, 26, 7, '#ffa726', '#bf360c', -0.5);
+    this.drawClayCapsule(ctx, 4, 16, 26, 7, '#ffa726', '#bf360c', 0.5);
+
+    // Sharp beak nose cone
+    this.drawClayBlob(ctx, -22, 0, 8, 4, '#d84315', '#8c2600');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -26, 32, 4);
+      ctx.fillStyle = '#ff9800';
+      ctx.fillRect(-16, -26, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Geyser Rusher (World 2 rocket jumper from bottom)
+   */
+  static drawGeyserRusher(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    // Heading angled upward
+    ctx.rotate(-0.55);
+
+    // Fiery sand booster flame plume
+    const flame = 18 + Math.sin(tick * 0.5) * 5;
+    this.drawClayBlob(ctx, 24, 0, flame, flame * 0.45, '#ff5722', '#b71c1c');
+
+    // Heavy rocket canister hull (brick red / dark rust)
+    this.drawClayCapsule(ctx, 0, 0, 42, 16, '#d84315', '#bf360c');
+
+    // Stabilizer fins
+    this.drawClayCapsule(ctx, 16, -14, 18, 6, '#e64a19', '#8c2600', -0.4);
+    this.drawClayCapsule(ctx, 16, 14, 18, 6, '#e64a19', '#8c2600', 0.4);
+
+    // Reinforced drill nose
+    this.drawClayBlob(ctx, -20, 0, 7, 6, '#ffab91', '#d84315');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -24, 32, 4);
+      ctx.fillStyle = '#ff5722';
+      ctx.fillRect(-16, -24, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Falcon Tracker (World 2 active 2D pursuit raptor)
+   */
+  static drawFalconTracker(ctx, x, y, angle = Math.PI, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    // Orient towards actual heading angle
+    ctx.rotate(angle);
+
+    // Twin vector thrust nozzles
+    const thruster = 12 + Math.sin(tick * 0.3) * 3;
+    this.drawClayBlob(ctx, -20, -8, thruster, 4, '#ff9800', '#e65100');
+    this.drawClayBlob(ctx, -20, 8, thruster, 4, '#ff9800', '#e65100');
+
+    // Raptor swept-forward wings
+    this.drawClayCapsule(ctx, -2, -18, 30, 8, '#f57c00', '#b26a00', 0.45);
+    this.drawClayCapsule(ctx, -2, 18, 30, 8, '#f57c00', '#b26a00', -0.45);
+
+    // Main raptor body (golden canyon clay)
+    this.drawClayCapsule(ctx, 0, 0, 46, 15, '#ffb300', '#e65100');
+
+    // Sensor eye cluster
+    this.drawClayBlob(ctx, 16, -4, 4, 3, '#d50000', '#b71c1c');
+    this.drawClayBlob(ctx, 16, 4, 4, 3, '#d50000', '#b71c1c');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -28, 36, 4);
+      ctx.fillStyle = '#f57c00';
+      ctx.fillRect(-18, -28, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Cyber Phantom (World 3 stealth jet with rear flank & anchor)
+   */
+  static drawCyberPhantom(ctx, x, y, tick = 0, hpRatio = 1, isAnchored = false) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (isAnchored) {
+      // Facing player to the left
+      ctx.scale(1, 1);
+    } else {
+      // Moving right forward
+      ctx.scale(-1, 1);
+    }
+
+    // Neon cyan grid aura
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-22, -14, 44, 28);
+
+    // Sleek faceted obsidian stealth body
+    this.drawClayCapsule(ctx, 0, 0, 48, 14, '#1a237e', '#0d1338');
+
+    // Razor wings with cyan circuit lines
+    this.drawClayCapsule(ctx, 4, -18, 28, 7, '#00bcd4', '#006064', -0.4);
+    this.drawClayCapsule(ctx, 4, 18, 28, 7, '#00bcd4', '#006064', 0.4);
+
+    // Visor eye
+    this.drawClayBlob(ctx, -18, 0, 8, 4, '#00e5ff', '#00838f');
+
+    if (isAnchored) {
+      // Pulsing EMP emitter coil when locked on target
+      const empGlow = 10 + Math.sin(tick * 0.4) * 4;
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.35)';
+      ctx.beginPath();
+      ctx.arc(-24, 0, empGlow, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -26, 36, 4);
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-18, -26, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Cyber Pendulum (World 3 magnetic laser sweeper)
+   */
+  static drawCyberPendulum(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Magnetic flux beam from top screen
+    ctx.strokeStyle = 'rgba(124, 77, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, -100);
+    ctx.lineTo(0, 0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Rotating gyro rings (purple & electric violet)
+    ctx.save();
+    ctx.rotate(tick * 0.08);
+    ctx.strokeStyle = 'rgba(179, 136, 255, 0.8)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 24, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Spherical core
+    this.drawClayBlob(ctx, 0, 0, 18, 18, '#7c4dff', '#4527a0');
+    // Inner pulse lens
+    this.drawClayBlob(ctx, -4, 0, 8, 8, '#e040fb', '#aa00ff');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -26, 32, 4);
+      ctx.fillStyle = '#b388ff';
+      ctx.fillRect(-16, -26, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Void Stalker (World 4 alien cosmic homing biomech)
+   */
+  static drawVoidStalker(ctx, x, y, angle = Math.PI, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    // Undulating alien bio-tentacles
+    for (let k = -1; k <= 1; k++) {
+      const tWave = Math.sin(tick * 0.2 + k * 1.5) * 8;
+      ctx.strokeStyle = 'rgba(234, 128, 252, 0.65)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-20, k * 10);
+      ctx.quadraticCurveTo(-32, k * 14 + tWave, -44, k * 10 - tWave);
+      ctx.stroke();
+    }
+
+    // Alien crystal carapace (cosmic violet / dark nebula)
+    this.drawClayCapsule(ctx, 0, 0, 48, 16, '#6a1b9a', '#38006b');
+
+    // Forward chitinous mandibles
+    this.drawClayCapsule(ctx, 18, -8, 16, 5, '#ab47bc', '#4a148c', 0.35);
+    this.drawClayCapsule(ctx, 18, 8, 16, 5, '#ab47bc', '#4a148c', -0.35);
+
+    // Glowing cosmic pupil
+    const eyeP = 7 + Math.sin(tick * 0.2) * 2;
+    this.drawClayBlob(ctx, 6, 0, eyeP, eyeP * 0.6, '#00e5ff', '#00b0ff');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -28, 36, 4);
+      ctx.fillStyle = '#ea80fc';
+      ctx.fillRect(-18, -28, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Meteor Diver (World 4 burning cosmic shard from above)
+   */
+  static drawMeteorDiver(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(0.65);
+
+    // Flaming comet tail
+    const flameL = 28 + Math.sin(tick * 0.5) * 6;
+    this.drawClayBlob(ctx, 28, 0, flameL, flameL * 0.4, '#ff1744', '#b71c1c');
+    this.drawClayBlob(ctx, 16, 0, 16, 10, '#ff9100', '#d50000');
+
+    // Rough asteroid chunk body
+    this.drawClayBlob(ctx, 0, 0, 22, 16, '#c62828', '#5f0909');
+    // Molten magma fissures
+    this.drawClayBlob(ctx, -8, -4, 6, 4, '#ffd600', '#ff6d00');
+    this.drawClayBlob(ctx, 4, 6, 5, 3, '#ffd600', '#ff6d00');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -26, 32, 4);
+      ctx.fillStyle = '#ff5252';
+      ctx.fillRect(-16, -26, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Abyss Ascender (World 4 void rocket from bottom)
+   */
+  static drawAbyssAscender(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.65);
+
+    // Violet plasma booster trail
+    const pTrail = 26 + Math.sin(tick * 0.4) * 6;
+    this.drawClayBlob(ctx, 28, 0, pTrail, pTrail * 0.38, '#d500f9', '#4a148c');
+
+    // Dark void hull with radiant violet edges
+    this.drawClayCapsule(ctx, 0, 0, 46, 16, '#4a148c', '#12005e');
+
+    // Swept starlight fins
+    this.drawClayCapsule(ctx, 14, -14, 20, 6, '#aa00ff', '#4a148c', -0.4);
+    this.drawClayCapsule(ctx, 14, 14, 20, 6, '#aa00ff', '#4a148c', 0.4);
+
+    // Crystalline nose cone
+    this.drawClayBlob(ctx, -20, 0, 8, 5, '#ea80fc', '#aa00ff');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -26, 32, 4);
+      ctx.fillStyle = '#ea80fc';
+      ctx.fillRect(-16, -26, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Warp Flanker (World 4 dimension jumper)
+   */
+  static drawWarpFlanker(ctx, x, y, tick = 0, hpRatio = 1, isAnchored = false) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (!isAnchored) ctx.scale(-1, 1);
+
+    // Warp ripple rings
+    ctx.strokeStyle = 'rgba(224, 64, 251, 0.45)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Delta needle craft
+    this.drawClayCapsule(ctx, 0, 0, 48, 14, '#8e24aa', '#4a148c');
+    this.drawClayCapsule(ctx, 2, -16, 26, 6, '#ba68c8', '#6a1b9a', -0.4);
+    this.drawClayCapsule(ctx, 2, 16, 26, 6, '#ba68c8', '#6a1b9a', 0.4);
+
+    // Warp core
+    this.drawClayBlob(ctx, -14, 0, 7, 5, '#f48fb1', '#c2185b');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -26, 32, 4);
+      ctx.fillStyle = '#e040fb';
+      ctx.fillRect(-16, -26, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Cosmic Orbiter (World 4 gyroscopic gravity orbiter)
+   */
+  static drawCosmicOrbiter(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Dual gyroscopic orbits
+    ctx.save();
+    ctx.rotate(tick * 0.05);
+    ctx.strokeStyle = 'rgba(100, 255, 218, 0.8)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 32, 16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.rotate(Math.PI / 2);
+    ctx.strokeStyle = 'rgba(128, 222, 234, 0.8)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 32, 16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Central pulsing nebula sphere
+    const p = 18 + Math.sin(tick * 0.15) * 3;
+    this.drawClayBlob(ctx, 0, 0, p, p, '#004d40', '#00251a');
+    this.drawClayBlob(ctx, 0, 0, 9, 9, '#64ffda', '#00bfa5');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -34, 36, 4);
+      ctx.fillStyle = '#64ffda';
+      ctx.fillRect(-18, -34, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Jumbo Enemy: JUMBO DREAD CRUISER (World 1 Steam Sky Fortress)
+   */
+  static drawJumboDreadCruiser(ctx, x, y, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // 1. Dual steam funnels with puffing steam clouds
+    [-20, 20].forEach((fx, idx) => {
+      this.drawClayCapsule(ctx, fx, -34, 12, 22, '#455a64', '#1c313a');
+      const puffY = -50 - ((tick * 1.5 + idx * 25) % 30);
+      const puffR = 8 + ((tick + idx * 15) % 15) * 0.6;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.beginPath();
+      ctx.arc(fx + Math.sin(tick * 0.1 + idx) * 5, puffY, puffR, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 2. Colossal Bronze / Iron Hull (Radius ~62)
+    this.drawClayCapsule(ctx, 0, 0, 128, 58, '#546e7a', '#263238');
+    this.drawClayCapsule(ctx, -10, 0, 110, 48, '#607d8b', '#37474f');
+
+    // Armor plating banding and rivets
+    [-40, 0, 40].forEach(bx => {
+      this.drawClayCapsule(ctx, bx, 0, 16, 52, '#78909c', '#37474f');
+    });
+
+    // 3. Rotating Clay Gun Turrets (Front, Top, Rear)
+    // Front heavy turret
+    this.drawClayBlob(ctx, -46, 0, 16, 16, '#ff9800', '#e65100');
+    this.drawClayCapsule(ctx, -62, 0, 24, 6, '#263238', '#000000');
+    // Top turret
+    this.drawClayBlob(ctx, -10, -22, 12, 12, '#ffb74d', '#f57c00');
+    this.drawClayCapsule(ctx, -24, -22, 18, 5, '#263238', '#000000', 0.2);
+    // Bottom turret
+    this.drawClayBlob(ctx, -10, 22, 12, 12, '#ffb74d', '#f57c00');
+    this.drawClayCapsule(ctx, -24, 22, 18, 5, '#263238', '#000000', -0.2);
+
+    // Rear engine giant propeller
+    const propP = Math.sin(tick * 0.8);
+    ctx.fillStyle = 'rgba(255, 179, 0, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(66, 0, 6, Math.max(0.5, Math.abs(36 * propP)), 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Jumbo Enemy: JUMBO SAND FORTRESS (World 2 Flying Sandstone Citadel)
+   */
+  static drawJumboSandFortress(ctx, x, y, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Sand dust swirl aura
+    ctx.strokeStyle = 'rgba(216, 155, 123, 0.35)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 78, 48, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Tiered sandstone fortress slabs
+    this.drawClayCapsule(ctx, 0, 0, 138, 64, '#a1887f', '#4e342e');
+    this.drawClayCapsule(ctx, -12, 0, 118, 52, '#bcaaa4', '#5d4037');
+
+    // Central sand turbine wheel
+    ctx.save();
+    ctx.rotate(tick * 0.08);
+    for (let b = 0; b < 4; b++) {
+      ctx.rotate(Math.PI / 2);
+      this.drawClayCapsule(ctx, 16, 0, 24, 8, '#d7ccc8', '#6d4c41');
+    }
+    ctx.restore();
+
+    // Twin heavy mortars top and bottom
+    this.drawClayCapsule(ctx, -48, -20, 36, 12, '#3e2723', '#1b0000');
+    this.drawClayCapsule(ctx, -48, 20, 36, 12, '#3e2723', '#1b0000');
+
+    // Glowing combustion furnaces
+    const glow = 10 + Math.sin(tick * 0.3) * 3;
+    this.drawClayBlob(ctx, -56, -20, glow, 6, '#ff5722', '#d50000');
+    this.drawClayBlob(ctx, -56, 20, glow, 6, '#ff5722', '#d50000');
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Jumbo Enemy: JUMBO CYBER GARGANTUA (World 3 Shielded Obsidian Titan)
+   */
+  static drawJumboCyberGargantua(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Heavy glowing frontal energy barrier dome
+    if (shieldRatio > 0) {
+      ctx.save();
+      const sAlpha = 0.45 + Math.sin(tick * 0.25) * 0.25;
+      ctx.strokeStyle = `rgba(0, 229, 255, ${sAlpha})`;
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.arc(-20, 0, 72, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.stroke();
+
+      // Hexagonal energy lattice pattern
+      ctx.fillStyle = `rgba(0, 229, 255, ${sAlpha * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(-20, 0, 70, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Heavy faceted obsidian chassis
+    this.drawClayCapsule(ctx, 0, 0, 144, 70, '#0d1338', '#000010');
+    this.drawClayCapsule(ctx, -8, 0, 124, 56, '#1a237e', '#0d1338');
+
+    // Twin giant railgun needles
+    this.drawClayCapsule(ctx, -58, -22, 54, 8, '#00bcd4', '#006064');
+    this.drawClayCapsule(ctx, -58, 22, 54, 8, '#00bcd4', '#006064');
+
+    // Central pulsing EMP reactor core
+    const coreP = 22 + Math.sin(tick * 0.3) * 4;
+    this.drawClayBlob(ctx, 6, 0, coreP, coreP, '#311b92', '#12005e');
+    this.drawClayBlob(ctx, 6, 0, 10, 10, '#00e5ff', '#00b0ff');
+
+    // Reactor cooling fins
+    [-18, 30].forEach(cx => {
+      this.drawClayCapsule(ctx, cx, 0, 14, 62, '#00838f', '#004d40');
+    });
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw Jumbo Enemy: JUMBO SINGULARITY TITAN (World 4 Cosmic Singularity Behemoth)
+   */
+  static drawJumboSingularityTitan(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // 1. Cosmic distortion aura with swirling event horizon
+    ctx.save();
+    ctx.rotate(tick * 0.04);
+    for (let r = 0; r < 3; r++) {
+      ctx.strokeStyle = `rgba(213, 0, 249, ${0.3 + r * 0.15})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 84 + r * 6, 50 + r * 5, (r * Math.PI) / 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 2. Colossal cosmic void body
+    this.drawClayCapsule(ctx, 0, 0, 154, 76, '#12005e', '#000000');
+    this.drawClayCapsule(ctx, -10, 0, 134, 62, '#311b92', '#12005e');
+
+    // 3. Central black hole vortex
+    const vPulse = 26 + Math.sin(tick * 0.2) * 4;
+    this.drawClayBlob(ctx, 0, 0, vPulse, vPulse, '#000000', '#4a148c');
+    this.drawClayBlob(ctx, 0, 0, 12, 12, '#e040fb', '#7b1fa2');
+
+    // 4. Four orbiting satellite nodes
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2 + tick * 0.06;
+      const sx = Math.cos(a) * 65;
+      const sy = Math.sin(a) * 36;
+      this.drawClayBlob(ctx, sx, sy, 8, 8, '#64ffda', '#004d40');
+    }
+
+    // Heavy frontal cosmic spires
+    this.drawClayCapsule(ctx, -65, -24, 48, 10, '#aa00ff', '#4a148c');
+    this.drawClayCapsule(ctx, -65, 24, 48, 10, '#aa00ff', '#4a148c');
+
+    ctx.restore();
+  }
+
+  /**
    * Main Boss Dispatcher
    */
   static drawBoss(ctx, boss) {
@@ -957,6 +1666,25 @@ export class ClayRenderer {
         this.drawClayBlob(ctx, fx, fy, 8, 8, '#ff5252', '#d50000');
         this.drawClayBlob(ctx, fx, fy, 4, 4, '#ffeb3b', '#ff6f00');
       }
+      ctx.restore();
+    }
+
+    // Electro-paralysis plasma aura when Boss is affected by plasma slow
+    if (boss.slowTimer > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#ea80fc';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI * 2) / 8 + boss.tick * 0.2;
+        const r = boss.radius + 8 + Math.sin(boss.tick * 0.5 + i * 1.5) * 8;
+        const px = boss.x + Math.cos(a) * r;
+        const py = boss.y + Math.sin(a) * (r * 0.8);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -1413,13 +2141,31 @@ export class ClayRenderer {
     this.drawClayCapsule(ctx, -115, -28, 55, 18, '#455a64', '#1c2833', 0.28);
     this.drawClayCapsule(ctx, -115, 28, 55, 18, '#455a64', '#1c2833', -0.28);
 
-    // Sonic Laser Warning charging beam if firing laser
+    // Sonic Laser Warning charging beam & telegraph guide lines if firing laser
     if (boss.isChargingLaser) {
       ctx.save();
+      // Glowing core charge orb
       ctx.beginPath();
-      ctx.arc(-110, 0, 16 + boss.laserChargeRatio * 20, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0, 229, 255, ${0.4 + boss.laserChargeRatio * 0.5})`;
+      ctx.arc(-110, 0, 16 + (boss.laserChargeRatio || 0) * 22, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 229, 255, ${0.4 + (boss.laserChargeRatio || 0) * 0.5})`;
       ctx.fill();
+
+      // 11-way fanned laser telegraph guidance beams across screen
+      const laserCount = 11;
+      const half = Math.floor(laserCount / 2);
+      ctx.lineWidth = 1.5 + (boss.laserChargeRatio || 0) * 1.5;
+      for (let i = 0; i < laserCount; i++) {
+        const lAngle = (i - half) * 0.115;
+        const beamAlpha = 0.15 + (boss.laserChargeRatio || 0) * 0.35;
+        ctx.strokeStyle = `rgba(0, 229, 255, ${beamAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(-110, 0);
+        ctx.lineTo(
+          -110 + Math.cos(Math.PI + lAngle) * 1200,
+          Math.sin(Math.PI + lAngle) * 1200
+        );
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
@@ -1630,48 +2376,6 @@ export class ClayRenderer {
         break;
       }
 
-      case 'PULSE': {
-        // Concentric EMP shockwave nova with solid energy core and corona spikes
-        // 1. Outer shockwave ring
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(1.8, size * 0.15);
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.92, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 2. Mid resonance ring
-        ctx.strokeStyle = color === '#ffffff' ? '#80deea' : color;
-        ctx.lineWidth = Math.max(1.2, size * 0.11);
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.65, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 3. 4 Cardinal corona discharge spikes
-        const inD = size * 0.42;
-        const outD = size * 1.10;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(1.5, size * 0.13);
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(0, -inD); ctx.lineTo(0, -outD);
-        ctx.moveTo(outD, 0); ctx.lineTo(inD, 0);
-        ctx.moveTo(0, inD); ctx.lineTo(0, outD);
-        ctx.moveTo(-outD, 0); ctx.lineTo(-inD, 0);
-        ctx.stroke();
-
-        // 4. Solid Central EMP Energy Orb
-        ctx.fillStyle = color === '#ffffff' ? '#00e5ff' : color;
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.44, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Brilliant specular core
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(-size * 0.12, -size * 0.12, size * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-      }
 
       default: {
         // Fallback smooth geometric diamond
@@ -1692,6 +2396,7 @@ export class ClayRenderer {
 
   /**
    * Draw the cycling Weapon Power-Up Capsule (Classic Platypus mechanic)
+   * 3D Tumbling Medallion with Extruded Bevel & Perspective Foreshortening
    */
   static drawPowerUpCapsule(ctx, x, y, weaponType, tick = 0) {
     ctx.save();
@@ -1717,131 +2422,46 @@ export class ClayRenderer {
     ctx.fill();
     ctx.restore();
 
-    // Outer translucent clay crystal shell
+    // 3D Tumbling Y-Spin & X-Tilt
+    const spinY = tick * 0.07;
+    const cosY = Math.cos(spinY);
+    const sinY = Math.sin(spinY);
+    const absCosY = Math.max(0.18, Math.abs(cosY));
+
+    // 1. Extruded 3D Clay Rim Edge (Thickness visible during spin)
+    const thickness = 5.5;
+    const edgeOffset = sinY * thickness;
+    if (Math.abs(edgeOffset) > 0.6) {
+      ctx.beginPath();
+      ctx.ellipse(edgeOffset * 0.5, 0, Math.max(2, 24 * absCosY), 24, 0, 0, Math.PI * 2);
+      ctx.fillStyle = edgeOffset > 0 ? '#78909c' : '#cfd8dc';
+      ctx.fill();
+    }
+
+    // 2. Outer translucent clay crystal shell & inner core with 3D perspective
+    ctx.save();
+    ctx.scale(absCosY, 1.0);
     this.drawClayBlob(ctx, 0, 0, 24, 24, '#ffffff', '#b0bec5');
 
     // Inner vibrant spinning powerup core
-    ctx.save();
-    ctx.rotate(tick * 0.05);
     this.drawClayBlob(ctx, 0, 0, 16, 16, cfg.main, cfg.shadow);
-    ctx.restore();
 
-    // Weapon vector graphic emblem (Modern, elegant, free of text/letters)
+    // Weapon vector graphic emblem
     ctx.shadowColor = 'rgba(0,0,0,0.6)';
     ctx.shadowBlur = 4;
     this.drawWeaponIcon(ctx, 0, 0, weaponType, 13, '#ffffff');
-
-    ctx.restore();
-  }
-
-  /**
-   * Draw the Pulse Drop Collectible (Sculpted 3D Claymorphism, no round container)
-   */
-  static drawPulseDrop(ctx, x, y, tick = 0, angle = 0) {
-    ctx.save();
-    ctx.translate(x, y);
-    const floatY = Math.sin(tick * 0.12) * 3.5;
-    ctx.translate(0, floatY);
-    if (angle) ctx.rotate(angle);
-
-    // Glowing cyan electric ambient aura
-    const auraPulse = 22 + Math.sin(tick * 0.2) * 4;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, 0, auraPulse + 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#00e5ff';
-    ctx.globalAlpha = 0.28;
-    ctx.fill();
     ctx.restore();
 
-    // 1. Ambient Drop Shadow
-    ctx.save();
-    ctx.shadowColor = 'rgba(0, 30, 45, 0.65)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 4;
+    // 3. Studio Specular Light Glint that sweeps across surface
+    const glintX = -12 * cosY;
     ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 20, 30, 0.35)';
-    ctx.fill();
-    ctx.restore();
-
-    // 2. Outer 3D Clay Shockwave Ring (radius 18)
-    // Dark underside bevel
-    ctx.strokeStyle = '#006064';
-    ctx.lineWidth = 5.5;
-    ctx.beginPath();
-    ctx.arc(0, 1.5, 18, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Main vibrant cyan clay body
-    ctx.strokeStyle = '#00e5ff';
-    ctx.lineWidth = 4.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Specular highlight curve
-    ctx.strokeStyle = 'rgba(224, 247, 250, 0.9)';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, -Math.PI * 0.85, -Math.PI * 0.15);
-    ctx.stroke();
-
-    // 3. Inner 3D Clay Concentric Ring (radius 11)
-    ctx.strokeStyle = '#00838f';
-    ctx.lineWidth = 3.8;
-    ctx.beginPath();
-    ctx.arc(0, 1.2, 11, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#80deea';
-    ctx.lineWidth = 3.0;
-    ctx.beginPath();
-    ctx.arc(0, 0, 11, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.arc(0, 0, 11, -Math.PI * 0.85, -Math.PI * 0.15);
-    ctx.stroke();
-
-    // 4. Four 3D Clay Corona Discharge Spikes
-    const spikeInner = 8;
-    const spikeOuter = 21;
-    ctx.fillStyle = '#00e5ff';
-    const drawSpike = (rot) => {
-      ctx.save();
-      ctx.rotate(rot);
-      ctx.beginPath();
-      ctx.moveTo(-2.5, -spikeInner);
-      ctx.lineTo(0, -spikeOuter);
-      ctx.lineTo(2.5, -spikeInner);
-      ctx.closePath();
-      ctx.fill();
-      // Highlight tip
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(0, -spikeOuter + 1, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    };
-    drawSpike(0);
-    drawSpike(Math.PI * 0.5);
-    drawSpike(Math.PI);
-    drawSpike(Math.PI * 1.5);
-
-    // 5. Center 3D Clay EMP Nucleus Sphere (solid, substantial, glossy)
-    this.drawClayBlob(ctx, 0, 0, 9, 9, '#00e5ff', '#00838f');
-    // Specular center gloss
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(-2.5, -2.5, 3.2, 0, Math.PI * 2);
+    ctx.ellipse(glintX, -8, Math.max(1.5, 6 * absCosY), 4, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.fill();
 
     ctx.restore();
   }
+
 
   /**
    * Draw the Speed Boost Drop Collectible (Sculpted 3D Claymorphism >> Chevrons, no round container)
@@ -1936,67 +2556,6 @@ export class ClayRenderer {
     ctx.restore();
   }
 
-  /**
-   * Draw Modern & Simple Pulse Icon (for HUD Fleet/Row Display)
-   */
-  static drawModernPulseIcon(ctx, x, y, size = 11, alpha = 1.0) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.globalAlpha = alpha;
-
-    // Glowing cyan electric ambient shadow
-    ctx.shadowColor = '#00e5ff';
-    ctx.shadowBlur = Math.min(8, size * 0.6);
-
-    // 1. Outer concentric shockwave wave
-    ctx.strokeStyle = '#00e5ff';
-    ctx.lineWidth = Math.max(1.6, size * 0.16);
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.95, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // 2. Mid resonance wave
-    ctx.strokeStyle = '#80deea';
-    ctx.lineWidth = Math.max(1.2, size * 0.12);
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.66, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // 3. 4 Cardinal energy discharge spikes
-    const inD = size * 0.42;
-    const outD = size * 1.15;
-    ctx.strokeStyle = '#00e5ff';
-    ctx.lineWidth = Math.max(1.4, size * 0.14);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(0, -inD); ctx.lineTo(0, -outD);
-    ctx.moveTo(outD, 0); ctx.lineTo(inD, 0);
-    ctx.moveTo(0, inD); ctx.lineTo(0, outD);
-    ctx.moveTo(-outD, 0); ctx.lineTo(-inD, 0);
-    ctx.stroke();
-
-    // 4. Solid Central EMP Energy Orb
-    ctx.shadowBlur = 0;
-    // Base darker blue clay
-    ctx.fillStyle = '#00838f';
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Vibrant electric cyan inner sphere
-    ctx.fillStyle = '#00e5ff';
-    ctx.beginPath();
-    ctx.arc(-size * 0.05, -size * 0.05, size * 0.38, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Brilliant white specular gloss highlight
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(-size * 0.14, -size * 0.14, size * 0.17, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
 
   /**
    * Draw Bonus Score Fruits & Stars (dropped when eliminating enemy formations)
@@ -2007,12 +2566,24 @@ export class ClayRenderer {
   static drawFruit(ctx, x, y, type = 'CHERRY', tick = 0, angle = 0) {
     ctx.save();
     ctx.translate(x, y);
-    const floatY = Math.sin(tick * 0.1) * 3;
+    const floatY = Math.sin(tick * 0.1) * 3.5;
     ctx.translate(0, floatY);
 
     if (angle) {
       ctx.rotate(angle);
     }
+
+    // 3D Organic Tumbling Motion
+    const spinY = Math.sin(tick * 0.08) * 0.35;
+    const tiltX = Math.cos(tick * 0.06) * 0.18;
+    ctx.rotate(tiltX);
+    ctx.scale(1.0 - Math.abs(spinY) * 0.22, 1.0);
+
+    // Soft tactile drop shadow under fruit
+    ctx.beginPath();
+    ctx.ellipse(2, 6, 16, 8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.fill();
 
     if (type === 'CHERRY') {
       // 1. CHERRY (Common / Ordinary - Base 2,000)
@@ -2075,7 +2646,7 @@ export class ClayRenderer {
       this.drawClayBlob(ctx, -1, 5, 2, 2, '#212121', '#000000');
       this.drawClayBlob(ctx, 4, 0, 1.8, 1.8, '#212121', '#000000');
     } else if (type === 'DRAGONFRUIT') {
-      // 5. DRAGONFRUIT (Very Rare - Base 42,000)
+      // 5. DRAGONFRUIT (Very Rare - Base 126,000)
       // Exotic magenta dragonfruit body
       this.drawClayBlob(ctx, 0, 2, 13, 16, '#d81b60', '#880e4f');
       // Green flame-like scales curling out
@@ -2090,7 +2661,7 @@ export class ClayRenderer {
       this.drawClayBlob(ctx, -1, 0, 1.5, 1.5, '#212121', '#000000');
       this.drawClayBlob(ctx, 1, 3, 1.5, 1.5, '#212121', '#000000');
     } else {
-      // 6. GOLDEN_FRUIT / STAR (Special / Legendary - Base 60,000)
+      // 6. GOLDEN_FRUIT / STAR (Special / Legendary - Base 180,000)
       // Radiant mythical glowing golden fruit with sparkles
       const pulse = 1 + Math.sin(tick * 0.12) * 0.1;
       ctx.save();
@@ -2126,36 +2697,48 @@ export class ClayRenderer {
   }
 
   /**
-   * Draw Clay Splat Particles (direct single-pass rendering)
+   * Draw Clay Splat Particles (direct single-pass 3D faceted rendering)
    */
   static drawClayChunk(ctx, x, y, size, color, shadowColor, angle) {
     ctx.save();
     ctx.translate(x, y);
     if (angle !== 0) ctx.rotate(angle);
 
-    const rx = size;
-    const ry = size * 0.7;
+    const rx = Math.max(1, Math.round(size));
+    const ry = rx * 0.72;
 
-    // Drop shadow
+    // 1. Ambient Drop shadow
     ctx.beginPath();
-    ctx.ellipse(2, 3, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.ellipse(2, 4, rx * 1.05, ry * 1.05, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.fill();
 
-    // Plasticine body with cached radial gradient
-    const lx = -rx * 0.28;
-    const ly = -ry * 0.28;
-    const grad = ClayRenderer.getRadialGradient(ctx, lx, ly, rx * 0.1, rx, color, shadowColor);
-
+    // 2. Plasticine irregular chunk contour (faceted 3D clay look)
     ctx.beginPath();
-    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    ctx.moveTo(-rx, 0);
+    ctx.lineTo(-rx * 0.6, -ry * 0.9);
+    ctx.lineTo(rx * 0.5, -ry);
+    ctx.lineTo(rx, -ry * 0.3);
+    ctx.lineTo(rx * 0.8, ry * 0.8);
+    ctx.lineTo(-rx * 0.4, ry);
+    ctx.closePath();
+
+    const lx = Math.round(-rx * 0.3);
+    const ly = Math.round(-ry * 0.35);
+    const grad = ClayRenderer.getRadialGradient(ctx, lx, ly, Math.round(rx * 0.1), Math.round(rx * 1.2), color, shadowColor);
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Rim highlight
+    // 3. Tactile Faceted Bevel / Inner Clay Edge
     ctx.lineWidth = Math.max(1.2, rx * 0.08);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
     ctx.stroke();
+
+    // 4. Crisp Specular Glint Point
+    ctx.beginPath();
+    ctx.arc(lx, ly, Math.max(1.2, rx * 0.18), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+    ctx.fill();
 
     ctx.restore();
   }

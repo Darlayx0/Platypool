@@ -1,5 +1,5 @@
 // Entry Point for Platypus AI Arcade Game
-import { Game } from './engine/Game.js';
+import { Game, STAGE_CONFIGS } from './engine/Game.js';
 import { InputManager } from './engine/Input.js';
 
 function initGameApp() {
@@ -14,15 +14,30 @@ function initGameApp() {
   // DOM Modals
   const modalStart = document.getElementById('modal-start');
   let cycleDifficulty = null;
+  const modalConfirmNewGame = document.getElementById('modal-confirm-new-game');
   const modalPause = document.getElementById('modal-pause');
   const modalGameOver = document.getElementById('modal-gameover');
   const modalVictory = document.getElementById('modal-victory');
   const modalCheat = document.getElementById('modal-cheat');
   const modalSettings = document.getElementById('modal-settings');
   const modalGuide = document.getElementById('modal-guide');
+  const modalConfirmResetScore = document.getElementById('modal-confirm-reset-score');
 
   // DOM Buttons - Navigation & Actions
   const btnPlayGame = document.getElementById('btn-play-game');
+  const btnResumeGame = document.getElementById('btn-resume-game');
+  const btnNewGameSaved = document.getElementById('btn-new-game-saved');
+  const btnConfirmStartNew = document.getElementById('btn-confirm-start-new');
+  const btnCancelConfirmNew = document.getElementById('btn-cancel-confirm-new');
+  const btnResetHighScore = document.getElementById('btn-reset-highscore');
+  const btnConfirmResetScore = document.getElementById('btn-confirm-reset-score');
+  const btnCancelResetScore = document.getElementById('btn-cancel-reset-score');
+  const confirmScoreCurrentVal = document.getElementById('confirm-score-current-val');
+  const settingCurrentHighScore = document.getElementById('setting-current-highscore');
+  const savedGamePanel = document.getElementById('saved-game-panel');
+  const defaultLaunchPanel = document.getElementById('default-launch-panel');
+  const tipEnterLabel = document.getElementById('tip-enter-label');
+
   const btnResume = document.getElementById('btn-resume');
   const btnRestartPause = document.getElementById('btn-restart-pause');
   const btnMenuPause = document.getElementById('btn-menu-pause');
@@ -34,6 +49,7 @@ function initGameApp() {
   // Navigation & Modal triggers
   const btnOpenSettings = document.getElementById('btn-open-settings');
   const btnSettingsPause = document.getElementById('btn-settings-pause');
+  const btnCheatPause = document.getElementById('btn-cheat-pause');
   const btnSettingsGameOver = document.getElementById('btn-settings-gameover');
   const btnSettingsVictory = document.getElementById('btn-settings-victory');
   const btnSettingsClose = document.getElementById('btn-settings-close');
@@ -96,10 +112,6 @@ function initGameApp() {
   const btnTouchPause = document.getElementById('btn-touch-pause');
   const btnTouchAutoFire = document.getElementById('btn-touch-autofire');
   const touchAutoFireBadge = document.getElementById('touch-autofire-badge');
-  const btnTouchSpeed = document.getElementById('btn-touch-speed');
-  const touchSpeedBadge = document.getElementById('touch-speed-badge');
-  const btnTouchPulse = document.getElementById('btn-touch-pulse');
-  const touchPulseBadge = document.getElementById('touch-pulse-badge');
   const portraitBanner = document.getElementById('portrait-orientation-banner');
   const btnCloseOrientation = document.getElementById('btn-close-orientation-banner');
 
@@ -199,7 +211,7 @@ function initGameApp() {
   const victoryCheatNotice = document.getElementById('victory-cheat-notice');
 
   // Modal navigation manager with history
-  const allModals = [modalStart, modalPause, modalGameOver, modalVictory, modalCheat, modalSettings, modalGuide];
+  const allModals = [modalStart, modalConfirmNewGame, modalConfirmResetScore, modalPause, modalGameOver, modalVictory, modalCheat, modalSettings, modalGuide];
   let previousModalBeforeSettings = modalStart;
 
   // Celebratory Confetti Particle System for Victory Screen
@@ -333,16 +345,15 @@ function initGameApp() {
   let toastTimer = null;
   function showToast(text, styleClass = '', duration = 1600) {
     if (!hudToast) return;
-    hudToast.innerText = text;
-    hudToast.className = `hud-toast ${styleClass}`;
+    hudToast.innerHTML = text;
+    hudToast.className = `hud-toast ${styleClass} active`;
     hudToast.style.display = 'flex';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
-      hudToast.style.opacity = '0';
+      hudToast.classList.remove('active');
       setTimeout(() => {
         hudToast.style.display = 'none';
-        hudToast.style.opacity = '1';
-      }, 300);
+      }, 250);
     }, duration);
   }
 
@@ -373,7 +384,7 @@ function initGameApp() {
         if (scoreVal) scoreVal.innerText = Math.floor((game.player && game.player.score) || 0).toLocaleString();
         if (livesVal) {
           const l = (game.player && game.player.lives !== undefined) ? game.player.lives : 3;
-          livesVal.innerText = `❤️ ${l}`;
+          livesVal.innerText = `${l}`;
         }
         showModal(modalPause);
       } else {
@@ -410,8 +421,10 @@ function initGameApp() {
       }
 
       showModal(modalGameOver);
+      updateSavedGameUI();
     },
     onVictory: (score, totalStages, diffConfig, isCheat) => {
+      updateSavedGameUI();
       const diffName = (diffConfig && diffConfig.name) || game.difficulty || 'NORMAL';
       if (textVictoryStats) textVictoryStats.innerText = `Mode: ${diffName} | Skor Akhir: ${score.toLocaleString()} | SELURUH ${totalStages} STAGE SELESAI!`;
       const badge = document.getElementById('victory-difficulty-badge');
@@ -482,6 +495,47 @@ function initGameApp() {
     }
   };
 
+  // Update Saved Game UI Visibility and Preview Data
+  const updateSavedGameUI = () => {
+    const saved = Game.getSavedProgress();
+    if (saved) {
+      if (savedGamePanel) savedGamePanel.style.display = 'flex';
+      if (defaultLaunchPanel) defaultLaunchPanel.style.display = 'none';
+
+      const stageBadge = document.getElementById('saved-stage-badge');
+      const stageText = document.getElementById('saved-stage-text');
+      const waveText = document.getElementById('saved-wave-text');
+      const scoreText = document.getElementById('saved-score-text');
+      const livesText = document.getElementById('saved-lives-text');
+      const diffBadge = document.getElementById('saved-diff-badge');
+
+      const stageCfg = STAGE_CONFIGS[saved.stage - 1];
+      const stageName = stageCfg ? stageCfg.title : `Stage ${saved.stage}`;
+
+      if (stageBadge) stageBadge.innerText = `STAGE ${saved.stage}`;
+      if (stageText) stageText.innerText = stageBadge ? stageName : `Stage ${saved.stage}: ${stageName}`;
+      if (waveText) waveText.innerText = `Gelombang ${saved.wave || 1}`;
+      if (scoreText) scoreText.innerText = Math.floor(saved.score || 0).toLocaleString();
+      if (livesText) {
+        livesText.innerText = saved.infiniteLives ? '∞ Nyawa' : `${saved.lives !== undefined ? saved.lives : 3} Nyawa`;
+      }
+      if (diffBadge) {
+        const diffName = saved.difficulty || 'NORMAL';
+        diffBadge.innerText = diffName;
+        diffBadge.className = `saved-diff-pill diff-badge-${diffName.toLowerCase()}`;
+      }
+      if (tipEnterLabel) {
+        tipEnterLabel.innerText = 'Lanjut (N = Baru)';
+      }
+    } else {
+      if (savedGamePanel) savedGamePanel.style.display = 'none';
+      if (defaultLaunchPanel) defaultLaunchPanel.style.display = 'flex';
+      if (tipEnterLabel) {
+        tipEnterLabel.innerText = 'Mulai';
+      }
+    }
+  };
+
   // Start Game Action
   const triggerStartGame = (e) => {
     if (e) {
@@ -493,9 +547,88 @@ function initGameApp() {
     game.start();
   };
 
+  // Resume Saved Game Action
+  const triggerResumeGame = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    ensureFullscreen();
+    hideAllModals();
+    game.resumeSavedGame();
+  };
+
   if (btnPlayGame) {
     btnPlayGame.addEventListener('click', triggerStartGame);
     btnPlayGame.addEventListener('touchstart', triggerStartGame, { passive: false });
+  }
+
+  if (btnResumeGame) {
+    btnResumeGame.addEventListener('click', triggerResumeGame);
+    btnResumeGame.addEventListener('touchstart', triggerResumeGame, { passive: false });
+  }
+
+  // Confirm New Game Modal Handling
+  const openConfirmNewGameModal = () => {
+    const saved = Game.getSavedProgress();
+    if (!saved) {
+      triggerStartGame();
+      return;
+    }
+    const stageCfg = STAGE_CONFIGS[saved.stage - 1];
+    const stageName = stageCfg ? stageCfg.title : `Stage ${saved.stage}`;
+
+    const prevStageBadge = document.getElementById('confirm-stage-badge');
+    const prevStage = document.getElementById('confirm-preview-stage');
+    const prevWave = document.getElementById('confirm-preview-wave');
+    const prevScore = document.getElementById('confirm-preview-score');
+    const prevDiff = document.getElementById('confirm-preview-diff');
+
+    if (prevStageBadge) prevStageBadge.innerText = `STAGE ${saved.stage}`;
+    if (prevStage) prevStage.innerText = prevStageBadge ? stageName : `Stage ${saved.stage}: ${stageName}`;
+    if (prevWave) prevWave.innerText = `Gelombang ${saved.wave || 1}`;
+    if (prevScore) prevScore.innerText = Math.floor(saved.score || 0).toLocaleString();
+    if (prevDiff) {
+      const diffName = saved.difficulty || 'NORMAL';
+      prevDiff.innerText = diffName;
+      prevDiff.className = `confirm-tile-val confirm-diff-${diffName.toLowerCase()}`;
+    }
+
+    showModal(modalConfirmNewGame);
+  };
+
+  const confirmStartNewGame = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    game.clearSavedProgress();
+    updateSavedGameUI();
+    hideAllModals();
+    triggerStartGame();
+  };
+
+  const cancelConfirmNewGame = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    showModal(modalStart);
+  };
+
+  if (btnNewGameSaved) {
+    btnNewGameSaved.addEventListener('click', (e) => {
+      e.preventDefault();
+      openConfirmNewGameModal();
+    });
+  }
+
+  if (btnConfirmStartNew) {
+    btnConfirmStartNew.addEventListener('click', confirmStartNewGame);
+  }
+
+  if (btnCancelConfirmNew) {
+    btnCancelConfirmNew.addEventListener('click', cancelConfirmNewGame);
   }
 
   canvas.addEventListener('click', () => {
@@ -508,67 +641,54 @@ function initGameApp() {
       game.sound.playUiClick();
     }
     game.goToMainMenu();
+    updateSavedGameUI();
     showModal(modalStart);
   };
+
+  // Safe window unload/pagehide progress persistence
+  window.addEventListener('beforeunload', () => {
+    if (game && (game.state === 'PLAYING' || game.state === 'PAUSED')) {
+      game.saveProgress();
+    }
+  });
+
+  window.addEventListener('pagehide', () => {
+    if (game && (game.state === 'PLAYING' || game.state === 'PAUSED')) {
+      game.saveProgress();
+    }
+  });
 
   // ==========================================
   // MOBILE TOUCH CONTROLS & ORIENTATION SYNC
   // ==========================================
+  let _lastTouchActive = null;
+  let _lastAfState = null;
+
   function syncTouchControlsUI(gameInstance = game) {
     if (!mobileTouchControls) return;
-    const isPlaying = gameInstance && gameInstance.state === 1 /* PLAYING */;
+    const isPlaying = gameInstance && (gameInstance.state === 'PLAYING' || gameInstance.state === 1);
     if (!isPlaying) {
-      mobileTouchControls.classList.remove('active');
+      if (_lastTouchActive !== false) {
+        mobileTouchControls.classList.remove('active');
+        _lastTouchActive = false;
+      }
       return;
     }
 
     if (isTouchDevice || window.innerWidth <= 1024) {
-      mobileTouchControls.classList.add('active');
-    }
-
-    // Auto-fire badge
-    if (touchAutoFireBadge) {
-      const af = input.autoFire;
-      touchAutoFireBadge.innerText = af ? 'ON' : 'OFF';
-      touchAutoFireBadge.className = af ? 'touch-mini-badge on' : 'touch-mini-badge off';
-    }
-
-    // Pulse badge & button state
-    const p = gameInstance.player;
-    if (touchPulseBadge && p) {
-      const pulseStock = Math.max(0, p.pulseCharges || 0);
-      touchPulseBadge.innerText = pulseStock.toString();
-      if (btnTouchPulse) {
-        if (pulseStock <= 0) {
-          btnTouchPulse.classList.add('disabled');
-        } else {
-          btnTouchPulse.classList.remove('disabled');
-        }
+      if (_lastTouchActive !== true) {
+        mobileTouchControls.classList.add('active');
+        _lastTouchActive = true;
       }
     }
 
-    // Speed boost badge & button state
-    if (touchSpeedBadge && p) {
-      const hasSpecial = Boolean(p.activeWeapon && p.activeWeapon !== 'NORMAL');
-      const timeLeft = Math.max(0, p.speedBoostTimeLeft || 0);
-      const isSpeedActive = Boolean(!hasSpecial && p.speedBoostActive && timeLeft > 0);
-
-      if (hasSpecial) {
-        touchSpeedBadge.innerText = 'BLOK';
-        touchSpeedBadge.className = 'touch-mini-badge blocked';
-        if (btnTouchSpeed) btnTouchSpeed.classList.add('blocked');
-      } else if (isSpeedActive) {
-        touchSpeedBadge.innerText = `${Math.ceil(timeLeft)}s`;
-        touchSpeedBadge.className = 'touch-mini-badge on';
-        if (btnTouchSpeed) btnTouchSpeed.classList.remove('blocked');
-      } else if (timeLeft > 0) {
-        touchSpeedBadge.innerText = `${Math.ceil(timeLeft)}s`;
-        touchSpeedBadge.className = 'touch-mini-badge off';
-        if (btnTouchSpeed) btnTouchSpeed.classList.remove('blocked');
-      } else {
-        touchSpeedBadge.innerText = 'OFF';
-        touchSpeedBadge.className = 'touch-mini-badge off';
-        if (btnTouchSpeed) btnTouchSpeed.classList.remove('blocked');
+    // Auto-fire badge (dirty check)
+    if (touchAutoFireBadge) {
+      const af = input.autoFire;
+      if (_lastAfState !== af) {
+        touchAutoFireBadge.innerText = af ? 'ON' : 'OFF';
+        touchAutoFireBadge.className = af ? 'touch-mini-badge on' : 'touch-mini-badge off';
+        _lastAfState = af;
       }
     }
   }
@@ -598,18 +718,6 @@ function initGameApp() {
     }
   });
 
-  addFastTouchListener(btnTouchSpeed, () => {
-    if (input) {
-      input.requestSpeedBoost();
-    }
-  });
-
-  addFastTouchListener(btnTouchPulse, () => {
-    if (input) {
-      input.requestPulse();
-    }
-  });
-
   // Orientation banner handler for mobile
   function checkOrientation() {
     if (!portraitBanner) return;
@@ -636,7 +744,7 @@ function initGameApp() {
     const tipTray = document.getElementById('keyboard-tip-tray');
     if (tipTray) {
       tipTray.innerHTML = `
-        <span class="tip-icon">🍏</span>
+        <span class="tip-icon"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span>
         <span class="tip-segment"><kbd>RETURN ⏎</kbd> Mulai</span>
         <span class="tip-divider">•</span>
         <span class="tip-segment"><kbd>◀</kbd> <kbd>▶</kbd> Tingkat</span>
@@ -658,7 +766,8 @@ function initGameApp() {
     MUSIC_VOLUME: 'platypus_setting_music_volume',
     CONTROL_MODE: 'platypus_setting_control_mode',
     AUTOFIRE: 'platypus_setting_autofire',
-    UHD_ENABLED: 'platypus_uhd'
+    UHD_ENABLED: 'platypus_uhd',
+    ENEMY_HP_MODE: 'platypus_setting_enemy_hp_mode'
   };
 
   const settingsState = {
@@ -672,7 +781,8 @@ function initGameApp() {
       : 50,
     controlMode: localStorage.getItem(SETTINGS_STORAGE.CONTROL_MODE) || 'MOUSE',
     autoFire: localStorage.getItem(SETTINGS_STORAGE.AUTOFIRE) === 'true',
-    uhdEnabled: localStorage.getItem(SETTINGS_STORAGE.UHD_ENABLED) !== 'false'
+    uhdEnabled: localStorage.getItem(SETTINGS_STORAGE.UHD_ENABLED) !== 'false',
+    enemyHpMode: localStorage.getItem(SETTINGS_STORAGE.ENEMY_HP_MODE) || 'DYNAMIC'
   };
 
   // Floating HUD & Settings UI Synchronizers
@@ -714,28 +824,18 @@ function initGameApp() {
   }
 
   function syncControlModeUI(mode) {
-    const isMouse = mode === 'MOUSE';
     if (hudModeLabel) {
-      hudModeLabel.innerText = isMouse ? 'MOUSE' : 'KEYBOARD';
+      hudModeLabel.innerText = 'UNIFIED';
     }
     if (hudModeIcon) {
-      hudModeIcon.innerText = isMouse ? '🖱️' : '⌨️';
+      hudModeIcon.innerHTML = '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7"/><line x1="12" y1="6" x2="12" y2="10"/></svg>';
     }
     if (btnHudMode) {
-      btnHudMode.title = isMouse 
-        ? 'Mode Kemudi: MOUSE (Klik untuk beralih ke WASD/Keyboard)' 
-        : 'Mode Kemudi: KEYBOARD (Klik untuk beralih ke Mouse)';
+      btnHudMode.title = 'Kendali Terpadu: Mouse, Touchpad, WASD & Panah aktif bersamaan';
     }
     if (btnModeMouse && btnModeKeyboard) {
-      if (isMouse) {
-        btnModeMouse.classList.add('active');
-        btnModeKeyboard.classList.remove('active');
-        if (controlModeDesc) controlModeDesc.innerText = 'Pesawat bermanuver mulus mengikuti pergerakan kursor mouse di arena permainan secara presisi.';
-      } else {
-        btnModeKeyboard.classList.add('active');
-        btnModeMouse.classList.remove('active');
-        if (controlModeDesc) controlModeDesc.innerText = 'Gunakan tombol W, A, S, D atau Tombol Panah pada keyboard untuk mengemudikan pesawat.';
-      }
+      btnModeMouse.classList.add('active');
+      btnModeKeyboard.classList.add('active');
     }
   }
 
@@ -759,7 +859,9 @@ function initGameApp() {
   function syncFullscreenUI() {
     const isFs = Boolean(document.fullscreenElement);
     if (hudFsIcon) {
-      hudFsIcon.innerText = isFs ? '🗗' : '⛶';
+      hudFsIcon.innerHTML = isFs 
+        ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>'
+        : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
     }
     if (btnHudFullscreen) {
       btnHudFullscreen.title = isFs ? 'Keluar Layar Penuh (ESC)' : 'Mode Layar Penuh';
@@ -778,7 +880,9 @@ function initGameApp() {
       btnHudAudio.classList.toggle('active', Boolean(isMuted));
     }
     if (hudAudioIcon) {
-      hudAudioIcon.innerText = isMuted ? '🔇' : '🔊';
+      hudAudioIcon.innerHTML = isMuted
+        ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>'
+        : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
     }
     if (hudAudioLabel) {
       hudAudioLabel.innerText = isMuted ? 'MUTE' : 'SUARA';
@@ -795,6 +899,9 @@ function initGameApp() {
     if (typeof game.setUhdEnabled === 'function') {
       game.setUhdEnabled(settingsState.uhdEnabled);
     }
+    if (typeof game.setEnemyHpDisplayMode === 'function') {
+      game.setEnemyHpDisplayMode(settingsState.enemyHpMode);
+    }
     syncControlModeUI(settingsState.controlMode);
     syncAutoFireUI(settingsState.autoFire);
     syncUhdUI(settingsState.uhdEnabled);
@@ -810,6 +917,7 @@ function initGameApp() {
       localStorage.setItem(SETTINGS_STORAGE.CONTROL_MODE, settingsState.controlMode);
       localStorage.setItem(SETTINGS_STORAGE.AUTOFIRE, settingsState.autoFire);
       localStorage.setItem(SETTINGS_STORAGE.UHD_ENABLED, settingsState.uhdEnabled);
+      localStorage.setItem(SETTINGS_STORAGE.ENEMY_HP_MODE, settingsState.enemyHpMode);
     } catch (e) {
       console.warn('LocalStorage error saving settings:', e);
     }
@@ -836,6 +944,16 @@ function initGameApp() {
     syncAutoFireUI(settingsState.autoFire);
     syncUhdUI(settingsState.uhdEnabled);
     syncFullscreenUI();
+
+    const enemyHpSegments = document.querySelectorAll('#enemy-hp-segmented .clay-segment-btn');
+    enemyHpSegments.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === settingsState.enemyHpMode);
+    });
+
+    if (settingCurrentHighScore) {
+      const currentHs = game.hud ? (game.hud.highScore || 0) : 0;
+      settingCurrentHighScore.innerText = `${Math.floor(currentHs).toLocaleString('id-ID')} PTS`;
+    }
   };
 
   const openSettingsModal = (sourceModal = modalStart) => {
@@ -879,6 +997,46 @@ function initGameApp() {
     syncSettingsUI();
   };
 
+  const openConfirmResetScoreModal = () => {
+    game.sound.init();
+    game.sound.playUiClick();
+    if (confirmScoreCurrentVal) {
+      const currentHs = game.hud ? (game.hud.highScore || 0) : 0;
+      confirmScoreCurrentVal.innerText = `${Math.floor(currentHs).toLocaleString('id-ID')} PTS`;
+    }
+    showModal(modalConfirmResetScore);
+  };
+
+  const confirmResetScoreAction = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    game.sound.init();
+    game.sound.playUiClick();
+    if (game.hud) {
+      game.hud.resetAllHighScores();
+      game.hud.updateHighScoreDisplay();
+      game.hud.showNotification('REKOR TERTINGGI TELAH DIRESET!');
+    }
+    if (settingCurrentHighScore) {
+      settingCurrentHighScore.innerText = '0 PTS';
+    }
+    hideAllModals();
+    showModal(modalSettings);
+  };
+
+  const cancelResetScoreAction = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    game.sound.init();
+    game.sound.playUiClick();
+    hideAllModals();
+    showModal(modalSettings);
+  };
+
   // Connect Input AutoFire toggle to Toast notification and Sound
   input.onAutoFireChanged = (isAuto) => {
     settingsState.autoFire = isAuto;
@@ -887,12 +1045,17 @@ function initGameApp() {
     if (game.sound && game.sound.initialized) {
       game.sound.playUiToggle(isAuto);
     }
-    showToast(isAuto ? '⚡ AUTO-FIRE: AKTIF' : '⚡ AUTO-FIRE: NON-AKTIF', isAuto ? 'active-green' : 'active-amber');
+    showToast(isAuto 
+      ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>AUTO-FIRE: AKTIF' 
+      : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>AUTO-FIRE: NON-AKTIF', 
+      isAuto ? 'active-green' : 'active-amber'
+    );
   };
 
   // Initialize settings in engine and UI
   applySettingsToEngine();
   syncSettingsUI();
+  updateSavedGameUI();
 
   // Keyboard navigation for all screens/modals with macOS keyboard compatibility
   window.addEventListener('keydown', (e) => {
@@ -905,6 +1068,36 @@ function initGameApp() {
     const isEsc = e.code === 'Escape' || keyLower === 'escape';
     const isEnter = e.code === 'Enter' || keyLower === 'enter';
     const isSpace = e.code === 'Space' || e.key === ' ';
+
+    // If Confirm New Game Modal is active
+    if (modalConfirmNewGame && (modalConfirmNewGame.classList.contains('active') || modalConfirmNewGame.style.display === 'flex')) {
+      if (isEnter || isSpace) {
+        e.preventDefault();
+        confirmStartNewGame(e);
+        return;
+      }
+      if (isEsc) {
+        e.preventDefault();
+        cancelConfirmNewGame(e);
+        return;
+      }
+      return;
+    }
+
+    // If Confirm Reset Score Modal is active
+    if (modalConfirmResetScore && (modalConfirmResetScore.classList.contains('active') || modalConfirmResetScore.style.display === 'flex')) {
+      if (isEnter || isSpace) {
+        e.preventDefault();
+        confirmResetScoreAction(e);
+        return;
+      }
+      if (isEsc) {
+        e.preventDefault();
+        cancelResetScoreAction(e);
+        return;
+      }
+      return;
+    }
 
     // If Settings Modal is active
     if (modalSettings && (modalSettings.classList.contains('active') || modalSettings.style.display === 'flex')) {
@@ -937,8 +1130,19 @@ function initGameApp() {
     if (modalStart && (modalStart.classList.contains('active') || modalStart.style.display === 'flex')) {
       if (isEnter || isSpace) {
         e.preventDefault();
-        triggerStartGame(e);
+        if (game.hasSavedProgress()) {
+          triggerResumeGame(e);
+        } else {
+          triggerStartGame(e);
+        }
         return;
+      }
+      if (e.code === 'KeyN' || keyLower === 'n') {
+        if (game.hasSavedProgress()) {
+          e.preventDefault();
+          openConfirmNewGameModal();
+          return;
+        }
       }
       if (e.code === 'ArrowLeft' || e.code === 'KeyA' || keyLower === 'a' || (e.code === 'KeyQ' && keyLower === 'a')) {
         e.preventDefault();
@@ -950,10 +1154,25 @@ function initGameApp() {
         if (typeof cycleDifficulty === 'function') cycleDifficulty(1);
         return;
       }
+      if (e.code === 'KeyC' || keyLower === 'c') {
+        e.preventDefault();
+        openCheatModal(modalStart);
+        return;
+      }
+      if (e.code === 'KeyO' || keyLower === 'o') {
+        e.preventDefault();
+        openSettingsModal(modalStart);
+        return;
+      }
+      if (e.code === 'KeyH' || keyLower === 'h') {
+        e.preventDefault();
+        openGuideModal(modalStart);
+        return;
+      }
       return;
     }
 
-    // If Pause Screen is active: ESC returns to Main Menu, Enter/Space/P resumes, R restarts, O opens settings
+    // If Pause Screen is active: ESC returns to Main Menu, Enter/Space/P resumes, R restarts, O opens settings, C opens cheat
     if (modalPause && (modalPause.classList.contains('active') || modalPause.style.display === 'flex')) {
       if (isEsc) {
         e.preventDefault();
@@ -971,6 +1190,9 @@ function initGameApp() {
       } else if (e.code === 'KeyO' || keyLower === 'o') {
         e.preventDefault();
         openSettingsModal(modalPause);
+      } else if (e.code === 'KeyC' || keyLower === 'c') {
+        e.preventDefault();
+        openCheatModal(modalPause);
       }
       return;
     }
@@ -1027,7 +1249,11 @@ function initGameApp() {
         saveSettings();
         syncUhdUI(newUhd);
         if (game.sound && game.sound.initialized) game.sound.playUiToggle(newUhd);
-        showToast(newUhd ? '💎 UHD RETINA 4K: AKTIF' : '🖥️ RESOLUSI: STANDAR 1X', newUhd ? 'active-green' : 'active-amber');
+        showToast(newUhd 
+          ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>UHD RETINA 4K: AKTIF' 
+          : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>RESOLUSI: STANDAR 1X', 
+          newUhd ? 'active-green' : 'active-amber'
+        );
         return;
       }
       if (e.code === 'KeyO' || keyLower === 'o') {
@@ -1091,11 +1317,25 @@ function initGameApp() {
   if (btnSettingsReset) {
     btnSettingsReset.addEventListener('click', resetSettingsDefaults);
   }
+  if (btnResetHighScore) {
+    btnResetHighScore.addEventListener('click', openConfirmResetScoreModal);
+  }
+  if (btnConfirmResetScore) {
+    btnConfirmResetScore.addEventListener('click', confirmResetScoreAction);
+  }
+  if (btnCancelResetScore) {
+    btnCancelResetScore.addEventListener('click', cancelResetScoreAction);
+  }
   if (btnOpenGuide) {
     btnOpenGuide.addEventListener('click', openGuideModal);
   }
   if (btnGuideClose) {
     btnGuideClose.addEventListener('click', closeGuideModal);
+  }
+  if (btnCheatPause) {
+    btnCheatPause.addEventListener('click', () => {
+      openCheatModal(modalPause);
+    });
   }
 
   // Game Over Buttons
@@ -1183,15 +1423,15 @@ function initGameApp() {
   };
 
   const SCORE_INTERVAL_LEVELS = [
+    10000,
+    25000,
+    50000,
     100000,
-    250000,
+    200000,
     500000,
     1000000,
     2000000,
-    5000000,
-    10000000,
-    20000000,
-    50000000
+    5000000
   ];
 
   const formatScoreIntervalBadge = (pts) => {
@@ -1206,11 +1446,11 @@ function initGameApp() {
     if (!btn) return;
     if (isCustom) {
       btn.className = 'diff-override-btn mode-custom';
-      btn.innerHTML = '<span class="diff-btn-icon">⚙️</span><span class="diff-btn-text">KUSTOM</span>';
+      btn.innerHTML = '<span class="diff-btn-icon"><svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="diff-btn-text">KUSTOM</span>';
       btn.title = 'Mode Kustom Aktif (Menimpa Difficulty). Klik untuk beralih ke Sesuai Difficulty.';
     } else {
       btn.className = 'diff-override-btn mode-diff';
-      btn.innerHTML = '<span class="diff-btn-icon">🔒</span><span class="diff-btn-text">SESUAI DIFFICULTY</span>';
+      btn.innerHTML = '<span class="diff-btn-icon"><svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="diff-btn-text">SESUAI DIFFICULTY</span>';
       btn.title = 'Mode Sesuai Difficulty (Abaikan Kustom). Klik untuk mengaktifkan Kustom.';
     }
   };
@@ -1323,7 +1563,7 @@ function initGameApp() {
     const maxL = Math.max(1, Math.min(50, workingCheat.maxLives || 20));
     if (!maxLivesCustom) {
       if (cheatMaxLivesValBadge) {
-        cheatMaxLivesValBadge.innerText = 'SESUAI DIFFICULTY';
+        cheatMaxLivesValBadge.innerText = 'TAK TERBATAS';
         cheatMaxLivesValBadge.classList.add('badge-diff');
       }
       if (cheatMaxLivesSlider) cheatMaxLivesSlider.disabled = true;
@@ -1346,7 +1586,7 @@ function initGameApp() {
     const scoreIntervalCustom = Boolean(workingCheat.overrideScoreInterval);
     updateDiffOverrideBtn(btnToggleDiffScoreInterval, scoreIntervalCustom);
     if (wrapScoreIntervalControls) wrapScoreIntervalControls.classList.toggle('control-dimmed', !scoreIntervalCustom);
-    const intervalVal = workingCheat.scoreIntervalForLife || 2000000;
+    const intervalVal = workingCheat.scoreIntervalForLife || 200000;
     let bestIdx = 0;
     let minDiff = Infinity;
     for (let i = 0; i < SCORE_INTERVAL_LEVELS.length; i++) {
@@ -1456,10 +1696,14 @@ function initGameApp() {
     }
   };
 
-  const openCheatModal = () => {
+  let previousModalBeforeCheat = modalStart;
+  const openCheatModal = (sourceModal = modalStart) => {
+    previousModalBeforeCheat = sourceModal;
     game.sound.init();
     game.sound.playUiClick();
     workingCheat = Object.assign({}, game.cheatConfig);
+    cheatTabButtons.forEach((b, idx) => b.classList.toggle('active', idx === 0));
+    cheatTabPanes.forEach((p, idx) => p.classList.toggle('active', idx === 0));
     syncCheatModalUI();
     showModal(modalCheat);
   };
@@ -1469,7 +1713,7 @@ function initGameApp() {
     game.sound.playUiClick();
     game.setCheatConfig(workingCheat);
     updateCheatIndicator();
-    showModal(modalStart);
+    showModal(previousModalBeforeCheat || modalStart);
   };
 
   const resetCheatDefaults = () => {
@@ -1484,7 +1728,7 @@ function initGameApp() {
       overrideMaxLives: false,
       maxLives: 20,
       overrideScoreInterval: false,
-      scoreIntervalForLife: 2000000,
+      scoreIntervalForLife: 200000,
       overrideWeaponDuration: false,
       infiniteWeaponDuration: false,
       weaponDuration: 15,
@@ -1499,9 +1743,31 @@ function initGameApp() {
   };
 
   // Cheat event listeners
-  if (btnOpenCheat) btnOpenCheat.addEventListener('click', openCheatModal);
+  if (btnOpenCheat) btnOpenCheat.addEventListener('click', () => openCheatModal(modalStart));
   if (btnCheatSave) btnCheatSave.addEventListener('click', saveAndCloseCheat);
   if (btnCheatReset) btnCheatReset.addEventListener('click', resetCheatDefaults);
+
+  // Backdrop click dismiss handlers
+  if (modalCheat) {
+    modalCheat.addEventListener('click', (e) => {
+      if (e.target === modalCheat) saveAndCloseCheat();
+    });
+  }
+  if (modalSettings) {
+    modalSettings.addEventListener('click', (e) => {
+      if (e.target === modalSettings) closeSettingsModal();
+    });
+  }
+  if (modalGuide) {
+    modalGuide.addEventListener('click', (e) => {
+      if (e.target === modalGuide) closeGuideModal();
+    });
+  }
+  if (modalConfirmResetScore) {
+    modalConfirmResetScore.addEventListener('click', (e) => {
+      if (e.target === modalConfirmResetScore) cancelResetScoreAction();
+    });
+  }
 
   // Cheat Segmented Tab Switching
   cheatTabButtons.forEach(btn => {
@@ -2068,7 +2334,11 @@ function initGameApp() {
       settingsState.uhdEnabled = newUhd;
       saveSettings();
       syncUhdUI(newUhd);
-      showToast(newUhd ? '💎 UHD RETINA 4K: AKTIF' : '🖥️ RESOLUSI: STANDAR 1X', newUhd ? 'active-green' : 'active-amber');
+      showToast(newUhd 
+        ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>UHD RETINA 4K: AKTIF' 
+        : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>RESOLUSI: STANDAR 1X', 
+        newUhd ? 'active-green' : 'active-amber'
+      );
     });
   }
 
@@ -2086,6 +2356,28 @@ function initGameApp() {
     });
   }
 
+  // 7. Enemy HP Display Mode Setting
+  const enemyHpSegments = document.querySelectorAll('#enemy-hp-segmented .clay-segment-btn');
+  enemyHpSegments.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      if (mode && mode !== settingsState.enemyHpMode) {
+        game.sound.init();
+        game.sound.playUiClick();
+        settingsState.enemyHpMode = mode;
+        game.setEnemyHpDisplayMode(mode);
+        saveSettings();
+        syncSettingsUI();
+        const modeLabels = {
+          DYNAMIC: 'HP MUSUH: DINAMIS (1.5S ON-HIT)',
+          ALWAYS: 'HP MUSUH: SELALU AKTIF',
+          MINIMAL: 'HP MUSUH: MINIMALIS (BEBAS BAR)'
+        };
+        showToast(modeLabels[mode] || `HP MUSUH: ${mode}`, 'active-cyan');
+      }
+    });
+  });
+
   // ==========================================
   // FLOATING HUD TOP BAR BUTTON LISTENERS
   // ==========================================
@@ -2099,13 +2391,7 @@ function initGameApp() {
   if (btnHudMode) {
     btnHudMode.addEventListener('click', (e) => {
       e.stopPropagation();
-      const newMode = settingsState.controlMode === 'MOUSE' ? 'KEYBOARD' : 'MOUSE';
-      settingsState.controlMode = newMode;
-      input.setControlMode(newMode);
-      saveSettings();
-      syncControlModeUI(newMode);
-      if (game.sound && game.sound.initialized) game.sound.playUiClick();
-      showToast(newMode === 'MOUSE' ? '🖱️ MODE KEMUDI: MOUSE' : '⌨️ MODE KEMUDI: KEYBOARD', 'active-cyan');
+      showToast('<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><rect x="5" y="2" width="14" height="20" rx="7"/><line x1="12" y1="6" x2="12" y2="10"/></svg>KENDALI TERPADU AKTIF', 'active-cyan');
     });
   }
 
@@ -2117,7 +2403,11 @@ function initGameApp() {
       saveSettings();
       syncUhdUI(newUhd);
       if (game.sound && game.sound.initialized) game.sound.playUiToggle(newUhd);
-      showToast(newUhd ? '💎 UHD RETINA 4K: AKTIF' : '🖥️ RESOLUSI: STANDAR 1X', newUhd ? 'active-green' : 'active-amber');
+      showToast(newUhd 
+        ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>UHD RETINA 4K: AKTIF' 
+        : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>RESOLUSI: STANDAR 1X', 
+        newUhd ? 'active-green' : 'active-amber'
+      );
     });
   }
 
@@ -2127,7 +2417,11 @@ function initGameApp() {
       game.sound.init();
       const isMuted = game.sound.toggleMute();
       syncAudioMuteUI(isMuted);
-      showToast(isMuted ? '🔇 SUARA: DIMATIKAN (MUTE)' : '🔊 SUARA: DIAKTIFKAN', isMuted ? 'active-amber' : 'active-green');
+      showToast(isMuted 
+        ? '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>SUARA: DIMATIKAN (MUTE)' 
+        : '<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>SUARA: DIAKTIFKAN', 
+        isMuted ? 'active-amber' : 'active-green'
+      );
     });
   }
 
@@ -2305,12 +2599,12 @@ function initGameApp() {
     // Update weapon guide information dynamically
     if (tabWeaponsBtn) {
       const dur = key === 'BEGINNER' ? '25S' : (key === 'EASY' ? '20S' : (key === 'HARD' ? '10S' : (key === 'EXTREME' ? '8S' : '15S')));
-      tabWeaponsBtn.innerHTML = `<span class="tab-icon">⚡</span> SENJATA (${dur})`;
+      tabWeaponsBtn.innerHTML = `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> SENJATA (${dur})`;
     }
 
     if (weaponNoticeText) {
       const dur = key === 'BEGINNER' ? '25 detik' : (key === 'EASY' ? '20 detik' : (key === 'HARD' ? '10 detik' : (key === 'EXTREME' ? '8 detik' : '15 detik')));
-      weaponNoticeText.innerHTML = `⏱️ Seluruh 5 tipe senjata spesial memiliki durasi aktif <strong>${dur}</strong> sebelum kembali ke Pea-Shooter!`;
+      weaponNoticeText.innerHTML = `<svg class="ui-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Seluruh 5 tipe senjata spesial memiliki durasi aktif <strong>${dur}</strong> sebelum kembali ke Pea-Shooter!`;
     }
   };
 
@@ -2383,6 +2677,14 @@ function initGameApp() {
         }
       }
     }, { passive: true });
+  }
+
+  // Eagerly initialize sound and start playing soundtrack at application startup
+  if (game && game.sound) {
+    game.sound.init();
+    if (game.sound.musicEnabled && !game.sound.isMusicPlaying) {
+      game.sound.playMusic({ mode: 'MENU', fadeIn: true });
+    }
   }
 
   console.log('Platypus AI Arcade initialized successfully!');
