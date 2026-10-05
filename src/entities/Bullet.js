@@ -21,6 +21,7 @@ export class Bullet {
   static acquire(options) {
     if (Bullet.pool.length > 0) {
       const b = Bullet.pool.pop();
+      b._inPool = false;
       b.init(options);
       return b;
     }
@@ -28,7 +29,8 @@ export class Bullet {
   }
 
   static release(bullet) {
-    if (!bullet) return;
+    if (!bullet || bullet._inPool) return;
+    bullet._inPool = true;
     bullet.dead = true;
     bullet.target = null;
     if (bullet.activeArcs) bullet.activeArcs.length = 0;
@@ -41,9 +43,11 @@ export class Bullet {
     // Transparently recycle from pool if available
     if (Bullet.pool.length > 0) {
       const b = Bullet.pool.pop();
+      b._inPool = false;
       b.init(options);
       return b;
     }
+    this._inPool = false;
     this.activeArcs = [];
     this._arcSlot1 = { x: 0, y: 0 };
     this._arcSlot2 = { x: 0, y: 0 };
@@ -53,6 +57,7 @@ export class Bullet {
   }
 
   init(options) {
+    this._inPool = false;
     this.x = options.x;
     this.y = options.y;
     this.vx = options.vx || 0;
@@ -79,6 +84,8 @@ export class Bullet {
     if (!this._arcSlot4) this._arcSlot4 = { x: 0, y: 0 };
     this.startX = options.startX !== undefined ? options.startX : this.x;
     this.boosted = options.boosted || false;
+    this.accelX = options.accelX || 0;
+    this.accelY = options.accelY || 0;
     this.color = options.color || null;
     this.glowColor = options.glowColor || null;
     this.dead = false;
@@ -87,6 +94,9 @@ export class Bullet {
   update(dt, enemies = [], particles = null, player = null, boss = null, game = null) {
     this.tick++;
     this.life -= dt;
+
+    if (this.accelX !== 0) this.vx += this.accelX * dt;
+    if (this.accelY !== 0) this.vy += this.accelY * dt;
 
     // Apply gravity for bombs & mortars
     if (this.gravity !== 0) {
@@ -571,30 +581,35 @@ export class Bullet {
 
   static deserialize(data) {
     if (!data) return null;
-    const bullet = Bullet.acquire({
-      x: data.x,
-      y: data.y,
-      vx: data.vx,
-      vy: data.vy,
-      radius: data.radius,
-      damage: data.damage,
-      isEnemy: data.isEnemy,
-      type: data.type,
-      targetSector: data.targetSector,
-      piercing: data.piercing,
-      hitsLeft: data.hitsLeft,
-      life: data.life,
-      gravity: data.gravity,
-      arcTimer: data.arcTimer,
-      startX: data.startX,
-      boosted: data.boosted,
-      color: data.color,
-      glowColor: data.glowColor
-    });
-    bullet.maxLife = data.maxLife !== undefined ? data.maxLife : bullet.maxLife;
-    bullet.tick = data.tick !== undefined ? data.tick : bullet.tick;
-    bullet.dead = Boolean(data.dead);
-    return bullet;
+    try {
+      const bullet = Bullet.acquire({
+        x: data.x,
+        y: data.y,
+        vx: data.vx,
+        vy: data.vy,
+        radius: data.radius,
+        damage: data.damage,
+        isEnemy: data.isEnemy,
+        type: data.type,
+        targetSector: data.targetSector,
+        piercing: data.piercing,
+        hitsLeft: data.hitsLeft,
+        life: data.life,
+        gravity: data.gravity,
+        arcTimer: data.arcTimer,
+        startX: data.startX,
+        boosted: data.boosted,
+        color: data.color,
+        glowColor: data.glowColor
+      });
+      bullet.maxLife = data.maxLife !== undefined ? data.maxLife : bullet.maxLife;
+      bullet.tick = data.tick !== undefined ? data.tick : bullet.tick;
+      bullet.dead = Boolean(data.dead);
+      return bullet;
+    } catch (e) {
+      console.warn('Failed to deserialize bullet:', e, data);
+      return null;
+    }
   }
 }
 

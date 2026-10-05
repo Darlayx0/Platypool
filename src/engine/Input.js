@@ -108,11 +108,11 @@ export class InputManager {
       }
     });
 
-    const updateRect = () => {
+    this.updateRect = () => {
       if (this.canvas) this._cachedRect = this.canvas.getBoundingClientRect();
     };
-    window.addEventListener('resize', updateRect, { passive: true });
-    window.addEventListener('scroll', updateRect, { passive: true });
+    window.addEventListener('resize', this.updateRect, { passive: true });
+    window.addEventListener('scroll', this.updateRect, { passive: true });
 
     // Mouse & Touchpad movement inside canvas coordinates (canonical 1280x720 UHD logical space)
     this.canvas.addEventListener('mousemove', (e) => {
@@ -239,6 +239,9 @@ export class InputManager {
     this.keys.clear();
     this.mouse.isDown = false;
     this.touchSteerId = null;
+    this.pauseRequested = false;
+    this.mouseSteeringActive = false;
+    if (this.updateRect) this.updateRect();
   }
 
   isShooting() {

@@ -179,20 +179,34 @@ export const STAGE_CONFIGS = [
     subtitle: 'MISI 1: SAPU PENYELIDIK MUSUH',
     biome: 'VALLEY',
     waves: [
-      // Wave 1: Pure Scout formation (1 type)
+      // Wave 1: Intro gentle Scout formation (4 scouts, straight path)
       (game, fid) => {
-        game.spawnScoutFormation(5, 260, fid);
+        game.spawnScoutFormation(4, 320, fid, { interval: 0.42 });
       },
-      // Wave 2: Dual Scout formations top & bottom (1 type)
+      // Wave 2: Dual Scout formations top & bottom (staggered lane switching)
       (game, fid) => {
-        game.spawnScoutFormation(5, 180, fid);
-        game.scheduleSpawn(1.2, () => game.spawnScoutFormation(5, 480, fid + '_b'));
+        game.spawnScoutFormation(3, 200, fid, { interval: 0.40 });
+        game.scheduleSpawn(1.2, () => game.spawnScoutFormation(3, 480, fid + '_b', { interval: 0.40 }));
       },
-      // Wave 3: Scout formation center + Green Drones (2 types)
+      // Wave 3: Center Scout formation (4 scouts) + 1 Solitary Green Drone
       (game, fid) => {
-        game.spawnScoutFormation(6, 340, fid);
-        game.scheduleEnemy(1.0, { type: 'DRONE', x: 1320, y: 200 });
-        game.scheduleEnemy(2.0, { type: 'DRONE', x: 1320, y: 480 });
+        game.spawnScoutFormation(4, 340, fid);
+        game.scheduleEnemy(1.0, { type: 'DRONE', x: 1320, y: 220 });
+      },
+      // Wave 4: Clean Mini-V Scout formation (5 scouts, neat symmetrical V)
+      (game, fid) => {
+        game.spawnVFormation(5, 360, fid, { waveAmp: 0, spacingX: 44, spacingY: 38 });
+      },
+      // Wave 5: Dual Lane Cross-Advance (4 Scout top + 1 Drone bottom)
+      (game, fid) => {
+        game.spawnScoutFormation(4, 220, fid);
+        game.scheduleEnemy(0.8, { type: 'DRONE', x: 1320, y: 480 });
+      },
+      // Wave 6: Climax Intro Wave: Twin Scout formations + Bonus Weapon Capsule reward!
+      (game, fid) => {
+        game.spawnScoutFormation(5, 240, fid);
+        game.scheduleSpawn(1.0, () => game.spawnScoutFormation(5, 460, fid + '_b'));
+        game.scheduleSpawn(2.0, () => game.spawnWeaponCapsule(1320, 360));
       }
     ]
   },
@@ -202,24 +216,42 @@ export const STAGE_CONFIGS = [
     subtitle: 'MISI 2: PATROLI GLIDER & SERANGAN PENYUSUP',
     biome: 'VALLEY',
     waves: [
-      // Wave 1: Drone staggered patrol (1 type)
+      // Wave 1: Drone staggered patrol across 3 lanes
       (game) => {
-        game.enemies.push(new Enemy({ type: 'DRONE', x: 1320, y: 200 }));
-        game.enemies.push(new Enemy({ type: 'DRONE', x: 1320, y: 360 }));
-        game.scheduleEnemy(1.2, { type: 'DRONE', x: 1320, y: 520 });
+        game.enemies.push(new Enemy({ type: 'DRONE', x: 1320, y: 180 }));
+        game.enemies.push(new Enemy({ type: 'DRONE', x: 1320, y: 340 }));
+        game.scheduleEnemy(1.2, { type: 'DRONE', x: 1320, y: 500 });
       },
-      // Wave 2: Scout formation + Swing Gliders (2 types)
+      // Wave 2: Scout formation + Swing Glider top lane
       (game, fid) => {
-        game.spawnScoutFormation(5, 240, fid);
-        game.scheduleEnemy(0.8, { type: 'SWING_GLIDER', x: 1320, y: 180 });
-        game.scheduleEnemy(1.6, { type: 'SWING_GLIDER', x: 1320, y: 460 });
+        game.spawnScoutFormation(5, 260, fid);
+        game.scheduleEnemy(0.8, { type: 'SWING_GLIDER', x: 1320, y: 200 });
       },
-      // Wave 3: Retro Biplanes from behind + Swing Gliders (2 types)
-      (game) => {
+      // Wave 3: Retro Biplanes from behind + Scout front formation
+      (game, fid) => {
         game.enemies.push(new Enemy({ type: 'RETRO_BIPLANE', x: -60, y: 220, fromBehind: true, stopAtX: 1100 }));
-        game.scheduleEnemy(1.2, { type: 'RETRO_BIPLANE', x: -60, y: 480, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(0.6, { type: 'SWING_GLIDER', x: 1320, y: 320 });
-        game.scheduleEnemy(1.8, { type: 'SWING_GLIDER', x: 1320, y: 400 });
+        game.scheduleEnemy(1.0, { type: 'RETRO_BIPLANE', x: -60, y: 480, fromBehind: true, stopAtX: 1100 });
+        game.scheduleSpawn(0.6, () => game.spawnScoutFormation(4, 350, fid));
+      },
+      // Wave 4: Dual Swing Gliders Top & Bottom
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'SWING_GLIDER', x: 1320, y: 180 }));
+        game.enemies.push(new Enemy({ type: 'SWING_GLIDER', x: 1320, y: 520 }));
+      },
+      // Wave 5: Cross-Pincer: Front Glider + Center Drones + Rear Biplane
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'SWING_GLIDER', x: 1320, y: 220 }));
+        game.scheduleEnemy(0.6, { type: 'RETRO_BIPLANE', x: -60, y: 480, fromBehind: true, stopAtX: 1100 });
+        game.scheduleEnemy(1.0, { type: 'DRONE', x: 1320, y: 340 });
+        game.scheduleEnemy(1.8, { type: 'DRONE', x: 1320, y: 420 });
+      },
+      // Wave 6: Climax wave: 2 Swing Gliders + 2 Biplanes from behind + Scout formation
+      (game, fid) => {
+        game.enemies.push(new Enemy({ type: 'RETRO_BIPLANE', x: -60, y: 240, fromBehind: true, stopAtX: 1100 }));
+        game.scheduleEnemy(1.2, { type: 'RETRO_BIPLANE', x: -60, y: 460, fromBehind: true, stopAtX: 1100 });
+        game.scheduleEnemy(0.6, { type: 'SWING_GLIDER', x: 1320, y: 200 });
+        game.scheduleEnemy(1.6, { type: 'SWING_GLIDER', x: 1320, y: 480 });
+        game.scheduleSpawn(1.0, () => game.spawnScoutFormation(5, 350, fid));
       }
     ]
   },
@@ -229,41 +261,42 @@ export const STAGE_CONFIGS = [
     subtitle: 'MISI 3: SPAM ARMADA SCOUT DALAM FORMASI V MELIUK',
     biome: 'VALLEY',
     waves: [
-      // Wave 1: Pure Scout Undulating V-Shape Swarm (Staggered V-Formations)
+      // Wave 1: Dual Crisp V-Formations (Upper-Mid & Lower-Mid, pure pink planes)
       (game, fid) => {
-        game.spawnVFormation(7, 240, fid);
-        game.scheduleSpawn(0.8, () => game.spawnVFormation(7, 480, fid + '_b'));
+        game.spawnVFormation(7, 220, fid, { waveAmp: 0, spacingX: 46, spacingY: 38 });
+        game.scheduleSpawn(1.0, () => game.spawnVFormation(7, 480, fid + '_b', { waveAmp: 0, spacingX: 46, spacingY: 38 }));
       },
-      // Wave 2: Triple Undulating V-Formations (High, Mid, Low sweeps)
+      // Wave 2: Triple Rhythmic Symmetrical V-Formations (High, Mid, Low sweeps)
       (game, fid) => {
-        game.spawnVFormation(7, 180, fid);
-        game.scheduleSpawn(0.7, () => game.spawnVFormation(7, 360, fid + '_b'));
-        game.scheduleSpawn(1.4, () => game.spawnVFormation(7, 540, fid + '_c'));
+        game.spawnVFormation(5, 180, fid, { waveAmp: 0, spacingX: 44, spacingY: 36 });
+        game.scheduleSpawn(0.7, () => game.spawnVFormation(5, 350, fid + '_b', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
+        game.scheduleSpawn(1.4, () => game.spawnVFormation(5, 520, fid + '_c', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
       },
-      // Wave 3: Inverted Pincer V-Formation with Green Drone escorts
+      // Wave 3: Inverted Pincer V-Formation (Converging dual V-arrowheads, pure pink planes)
       (game, fid) => {
-        game.spawnVFormation(7, 220, fid);
-        game.scheduleSpawn(0.4, () => game.spawnVFormation(7, 500, fid + '_b'));
-        game.scheduleEnemy(0.6, { type: 'DRONE', x: 1320, y: 360 });
-        game.scheduleEnemy(1.2, { type: 'DRONE', x: 1320, y: 280 });
-        game.scheduleEnemy(1.2, { type: 'DRONE', x: 1320, y: 440 });
+        game.spawnVFormation(7, 210, fid, { waveAmp: 0, spacingX: 46, spacingY: 40 });
+        game.scheduleSpawn(0.5, () => game.spawnVFormation(7, 490, fid + '_b', { waveAmp: 0, spacingX: 46, spacingY: 40 }));
+        game.scheduleSpawn(1.2, () => game.spawnScoutFormation(6, 350, fid + '_c'));
       },
-      // Wave 4: Sweeping Rapid Undulating Diamond V-Formations with Bi-Plane Flankers
+      // Wave 4: Diamond Arrowhead Swarm (Large 9-plane V-lead flanked by twin 5-plane wingmen)
       (game, fid) => {
-        game.spawnVFormation(9, 360, fid);
-        game.scheduleSpawn(0.7, () => game.spawnVFormation(7, 200, fid + '_b'));
-        game.scheduleSpawn(0.7, () => game.spawnVFormation(7, 520, fid + '_c'));
-        game.scheduleEnemy(1.2, { type: 'RETRO_BIPLANE', x: 1340, y: 280 });
-        game.scheduleEnemy(1.8, { type: 'RETRO_BIPLANE', x: 1340, y: 440 });
+        game.spawnVFormation(9, 350, fid, { waveAmp: 0, spacingX: 48, spacingY: 40 });
+        game.scheduleSpawn(0.8, () => game.spawnVFormation(5, 190, fid + '_b', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
+        game.scheduleSpawn(0.8, () => game.spawnVFormation(5, 510, fid + '_c', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
       },
-      // Wave 5: Grand Climax V-Formation Barrage with layered waves and Fruit Carrier drop
+      // Wave 5: Quad Staggered Micro-V Waves (4 waves of 5 Scouts sweeping across)
       (game, fid) => {
-        game.spawnVFormation(9, 220, fid);
-        game.scheduleSpawn(0.6, () => game.spawnVFormation(9, 500, fid + '_b'));
-        game.scheduleSpawn(1.2, () => game.spawnVFormation(9, 360, fid + '_c'));
-        game.scheduleEnemy(1.0, { type: 'FRUIT_CARRIER', x: 1340, y: 360 });
-        game.scheduleEnemy(1.8, { type: 'DRONE', x: 1320, y: 200 });
-        game.scheduleEnemy(1.8, { type: 'DRONE', x: 1320, y: 520 });
+        game.spawnVFormation(5, 200, fid, { waveAmp: 0, spacingX: 44, spacingY: 36 });
+        game.scheduleSpawn(0.6, () => game.spawnVFormation(5, 310, fid + '_b', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
+        game.scheduleSpawn(1.2, () => game.spawnVFormation(5, 420, fid + '_c', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
+        game.scheduleSpawn(1.8, () => game.spawnVFormation(5, 530, fid + '_d', { waveAmp: 0, spacingX: 44, spacingY: 36 }));
+      },
+      // Wave 6: Grand Climax Pink Armada: Royal 11-plane V-Formation + Twin 7-plane Flankers + Fruit Carrier
+      (game, fid) => {
+        game.spawnVFormation(11, 350, fid, { waveAmp: 0, spacingX: 48, spacingY: 38 });
+        game.scheduleSpawn(0.7, () => game.spawnVFormation(7, 190, fid + '_b', { waveAmp: 0, spacingX: 46, spacingY: 38 }));
+        game.scheduleSpawn(0.7, () => game.spawnVFormation(7, 510, fid + '_c', { waveAmp: 0, spacingX: 46, spacingY: 38 }));
+        game.scheduleEnemy(1.2, { type: 'FRUIT_CARRIER', x: 1340, y: 350 });
       }
     ]
   },
@@ -273,34 +306,42 @@ export const STAGE_CONFIGS = [
     subtitle: 'MISI 4: HADAPI ARMADA MERIAM & JUMBO DREAD CRUISER',
     biome: 'VALLEY',
     waves: [
-      // Wave 1: Gunship Trio + Scout escort formation (2 types)
+      // Wave 1: Armored Vanguard: Gunship pair + Scout escort formation (2 types)
       (game, fid) => {
-        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 360 }));
-        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 540 }));
-        game.spawnScoutFormation(5, 360, fid);
+        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 480 }));
+        game.spawnScoutFormation(5, 350, fid);
       },
-      // Wave 2: Heavy Blimps + Gunship crossfire (2 types)
+      // Wave 2: Heavy Zeppelins: Dual Blimps + Gunship center (2 types)
       (game) => {
         game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 200 }));
         game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 500 }));
-        game.scheduleEnemy(0.8, { type: 'GUNSHIP', x: 1320, y: 320 });
-        game.scheduleEnemy(1.6, { type: 'GUNSHIP', x: 1320, y: 400 });
+        game.scheduleEnemy(0.8, { type: 'GUNSHIP', x: 1320, y: 350 });
       },
-      // Wave 3: Heavy Gunships battery + Dual Blimps (2 types)
+      // Wave 3: Iron Flotilla: Dual Blimps + Dual Gunships staggered (2 types)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 200 }));
+        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 500 }));
+        game.scheduleEnemy(0.8, { type: 'BLIMP', x: 1340, y: 270 });
+        game.scheduleEnemy(1.6, { type: 'BLIMP', x: 1340, y: 430 });
+      },
+      // Wave 4: Tactical Aerial Squadron: 3 Gunships in tactical spread (1 type)
       (game) => {
         game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 360 }));
-        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 540 }));
-        game.scheduleEnemy(0.8, { type: 'BLIMP', x: 1340, y: 260 });
-        game.scheduleEnemy(1.6, { type: 'BLIMP', x: 1340, y: 460 });
+        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 350 }));
+        game.enemies.push(new Enemy({ type: 'GUNSHIP', x: 1320, y: 520 }));
       },
-      // Wave 4: Mini-Boss Jumbo Dread Cruiser + Triple Gunship escorts (2 types)
+      // Wave 5: Pre-Boss Siege Battery: Dual Blimps + Dual Gunships Escort (2 types)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'BLIMP', x: 1340, y: 480 }));
+        game.scheduleEnemy(0.8, { type: 'GUNSHIP', x: 1320, y: 280 });
+        game.scheduleEnemy(1.6, { type: 'GUNSHIP', x: 1320, y: 420 });
+      },
+      // Wave 6: MANDATORY MINI-BOSS BATTLE: Jumbo Dread Cruiser + 1 Gunship escort
       (game) => {
         game.enemies.push(new Enemy({ type: 'JUMBO_DREAD_CRUISER', x: 1360, y: 340 }));
-        game.scheduleEnemy(0.6, { type: 'GUNSHIP', x: 1320, y: 180 });
-        game.scheduleEnemy(1.2, { type: 'GUNSHIP', x: 1320, y: 350 });
-        game.scheduleEnemy(1.8, { type: 'GUNSHIP', x: 1320, y: 520 });
+        game.scheduleEnemy(1.2, { type: 'GUNSHIP', x: 1320, y: 200 });
       }
     ]
   },
@@ -330,26 +371,49 @@ export const STAGE_CONFIGS = [
     subtitle: 'MISI 6: PENYELAM NGARAI & TAWON PENYENGAT',
     biome: 'CANYON',
     waves: [
-      // Wave 1: Canyon Divers top diving sequence (1 type)
+      // Wave 1: First Canyon Dive - 3 Canyon Divers diving in sequence from top sky (interval 0.9s)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 700, y: -60 }));
-        game.scheduleEnemy(0.8, { type: 'CANYON_DIVER', x: 920, y: -60 });
-        game.scheduleEnemy(1.6, { type: 'CANYON_DIVER', x: 1140, y: -60 });
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 750, y: -60, stage: 6 }));
+        game.scheduleEnemy(0.9, { type: 'CANYON_DIVER', x: 950, y: -60, stage: 6 });
+        game.scheduleEnemy(1.8, { type: 'CANYON_DIVER', x: 1150, y: -60, stage: 6 });
       },
-      // Wave 2: Canyon Divers + Stingers horizontal rush (2 types)
+      // Wave 2: Stinger Recon Patrol - 3 Stingers darting across distinct horizontal lanes (interval 0.6s)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 800, y: -60 }));
-        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 240 }));
-        game.scheduleEnemy(1.0, { type: 'CANYON_DIVER', x: 1050, y: -60 });
-        game.scheduleEnemy(1.2, { type: 'STINGER', x: 1320, y: 480 });
+        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 200, stage: 6 }));
+        game.scheduleEnemy(0.6, { type: 'STINGER', x: 1320, y: 360, stage: 6 });
+        game.scheduleEnemy(1.2, { type: 'STINGER', x: 1320, y: 520, stage: 6 });
       },
-      // Wave 3: Stinger echelon + Canyon Divers (2 types)
+      // Wave 3: Top Dive + Front Stinger Skirmish - 2 Canyon Divers and 2 Stingers lower lane
       (game) => {
-        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 200 }));
-        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 520 }));
-        game.scheduleEnemy(0.8, { type: 'CANYON_DIVER', x: 750, y: -60 });
-        game.scheduleEnemy(1.4, { type: 'CANYON_DIVER', x: 1000, y: -60 });
-        game.scheduleEnemy(1.8, { type: 'STINGER', x: 1320, y: 360 });
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 800, y: -60, stage: 6 }));
+        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 460, stage: 6 }));
+        game.scheduleEnemy(1.0, { type: 'CANYON_DIVER', x: 1050, y: -60, stage: 6 });
+        game.scheduleEnemy(1.4, { type: 'STINGER', x: 1320, y: 540, stage: 6 });
+      },
+      // Wave 4: Dual Stinger Pairs - Top pair and bottom pair, leaving middle lane open
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 180, stage: 6 }));
+        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 260, stage: 6 }));
+        game.scheduleEnemy(0.8, { type: 'STINGER', x: 1320, y: 460, stage: 6 });
+        game.scheduleEnemy(0.8, { type: 'STINGER', x: 1320, y: 540, stage: 6 });
+      },
+      // Wave 5: Cascading Canyon Dive - 4 Canyon Divers sweeping across top-to-bottom + 1 Center Stinger
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 1180, y: -60, stage: 6 }));
+        game.scheduleEnemy(0.6, { type: 'CANYON_DIVER', x: 1000, y: -60, stage: 6 });
+        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 820, y: -60, stage: 6 });
+        game.scheduleEnemy(1.8, { type: 'CANYON_DIVER', x: 680, y: -60, stage: 6 });
+        game.scheduleEnemy(1.4, { type: 'STINGER', x: 1320, y: 350, stage: 6 });
+      },
+      // Wave 6: Intro Climax & Weapon Drop - Coordinated Divers & Stingers + Bonus Weapon Capsule
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 820, y: -60, stage: 6 }));
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 1100, y: -60, stage: 6 }));
+        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 240, stage: 6 }));
+        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 480, stage: 6 }));
+        game.scheduleEnemy(1.0, { type: 'CANYON_DIVER', x: 960, y: -60, stage: 6 });
+        game.scheduleEnemy(1.2, { type: 'STINGER', x: 1320, y: 360, stage: 6 });
+        game.scheduleSpawn(2.2, () => game.spawnWeaponCapsule(1320, 360));
       }
     ]
   },
@@ -359,120 +423,188 @@ export const STAGE_CONFIGS = [
     subtitle: 'MISI 7: ROKET GEYSER BAWAH & FALCON PELACAK',
     biome: 'CANYON',
     waves: [
-      // Wave 1: Geyser Rushers erupting vertically (1 type)
+      // Wave 1: Geyser Eruption Intro - 3 Geyser Rushers erupting vertically from bottom canyon vents
       (game) => {
-        game.enemies.push(new Enemy({ type: 'GEYSER_RUSHER', x: 700, y: 760 }));
-        game.scheduleEnemy(0.8, { type: 'GEYSER_RUSHER', x: 920, y: 760 });
-        game.scheduleEnemy(1.6, { type: 'GEYSER_RUSHER', x: 1140, y: 760 });
+        game.enemies.push(new Enemy({ type: 'GEYSER_RUSHER', x: 720, y: 760, stage: 7 }));
+        game.scheduleEnemy(0.8, { type: 'GEYSER_RUSHER', x: 940, y: 760, stage: 7 });
+        game.scheduleEnemy(1.6, { type: 'GEYSER_RUSHER', x: 1160, y: 760, stage: 7 });
       },
-      // Wave 2: Falcon Trackers + Geyser Rushers (2 types)
+      // Wave 2: Falcon Hunter Infiltration - 1 Falcon Tracker tracking player + 2 Flanking Stingers
       (game) => {
-        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 260 }));
-        game.enemies.push(new Enemy({ type: 'GEYSER_RUSHER', x: 780, y: 760 }));
-        game.scheduleEnemy(0.8, { type: 'FALCON_TRACKER', x: 1320, y: 460 });
-        game.scheduleEnemy(1.2, { type: 'GEYSER_RUSHER', x: 1040, y: 760 });
+        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 350, stage: 7 }));
+        game.scheduleEnemy(0.5, { type: 'STINGER', x: 1320, y: 190, stage: 7 });
+        game.scheduleEnemy(0.5, { type: 'STINGER', x: 1320, y: 510, stage: 7 });
       },
-      // Wave 3: Falcon Trackers + Stingers (2 types)
+      // Wave 3: Vertical Pincer: Diver meets Geyser - 2 Canyon Divers from sky + 2 Geyser Rushers from floor
       (game) => {
-        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 320 }));
-        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'STINGER', x: 1320, y: 520 }));
-        game.scheduleEnemy(1.0, { type: 'FALCON_TRACKER', x: 1320, y: 440 });
-        game.scheduleEnemy(1.5, { type: 'STINGER', x: 1320, y: 360 });
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 780, y: -60, stage: 7 }));
+        game.enemies.push(new Enemy({ type: 'GEYSER_RUSHER', x: 850, y: 760, stage: 7 }));
+        game.scheduleEnemy(1.0, { type: 'CANYON_DIVER', x: 1060, y: -60, stage: 7 });
+        game.scheduleEnemy(1.0, { type: 'GEYSER_RUSHER', x: 1120, y: 760, stage: 7 });
+      },
+      // Wave 4: Twin Falcon Pursuit - Dual Falcon Trackers flanking + 1 Geyser Rusher
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 240, stage: 7 }));
+        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 480, stage: 7 }));
+        game.scheduleEnemy(0.8, { type: 'GEYSER_RUSHER', x: 960, y: 760, stage: 7 });
+        game.scheduleEnemy(1.4, { type: 'STINGER', x: 1320, y: 360, stage: 7 });
+      },
+      // Wave 5: Tri-Vector Canyon Ambush - 2 Canyon Divers, 2 Geyser Rushers, and 1 Aggressive Falcon
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'CANYON_DIVER', x: 800, y: -60, stage: 7 }));
+        game.enemies.push(new Enemy({ type: 'GEYSER_RUSHER', x: 800, y: 760, stage: 7 }));
+        game.scheduleEnemy(0.7, { type: 'FALCON_TRACKER', x: 1320, y: 350, stage: 7 });
+        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 1080, y: -60, stage: 7 });
+        game.scheduleEnemy(1.2, { type: 'GEYSER_RUSHER', x: 1080, y: 760, stage: 7 });
+      },
+      // Wave 6: Stage 2 Grand Climax - Full multi-vector squadron + Bonus Fruit Carrier
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 240, stage: 7 }));
+        game.enemies.push(new Enemy({ type: 'FALCON_TRACKER', x: 1320, y: 480, stage: 7 }));
+        game.scheduleEnemy(0.6, { type: 'CANYON_DIVER', x: 920, y: -60, stage: 7 });
+        game.scheduleEnemy(0.6, { type: 'GEYSER_RUSHER', x: 920, y: 760, stage: 7 });
+        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 1140, y: -60, stage: 7 });
+        game.scheduleEnemy(1.2, { type: 'GEYSER_RUSHER', x: 1140, y: 760, stage: 7 });
+        game.scheduleEnemy(1.8, { type: 'FRUIT_CARRIER', x: 1340, y: 350, stage: 7 });
       }
     ]
   },
   {
     stage: 8,
-    title: 'KINETIK CAKRAM SPINNER',
-    subtitle: 'MISI 8: BARRAGE CAKRAM SPINNER MEMANTUL & PERCIKAN RADIAL',
+    title: 'BADAI CAKRAM GERGAJI & LADANG RANJAU',
+    subtitle: 'MISI 8: TARIAN ARTISTIK CAKRAM GERGAJI & RANJAU HANYUT CEPAT',
     biome: 'CANYON',
     waves: [
-      // Wave 1: Trio Spinners criss-crossing bounce + Geyser Rusher surprise
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 180, vy: 160 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 360, vy: -160 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 520, vy: 160 }));
-        game.scheduleEnemy(0.9, { type: 'GEYSER_RUSHER', x: 1320, y: 580 });
+      // Wave 1: Sapuan Sabit Senja - 3 Spinners in cascading crescent swoop + 3 fast drifting mines
+      (game, fid) => {
+        game.spawnMinefield(3, { x: 1360, vx: -140, stagger: 1.4, minY: 180, maxY: 540 });
+        game.spawnSpinnerArtisticCascade([
+          { delay: 0.0, baseY: 200, swoopAmp: 130, waveAmp: 30, waveFreq: 0.0055, vx: -165 },
+          { delay: 0.8, baseY: 260, swoopAmp: 100, waveAmp: 25, waveFreq: 0.0055, vx: -165 },
+          { delay: 1.6, baseY: 320, swoopAmp: 70, waveAmp: 25, waveFreq: 0.0055, vx: -165 }
+        ], fid);
       },
-      // Wave 2: Quad Spinners high-speed dynamic ricochet + Canyon Diver
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 160, vy: 180 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 280, vy: -180 }));
-        game.scheduleEnemy(0.7, { type: 'SPINNER', x: 1320, y: 420, vy: 180 });
-        game.scheduleEnemy(0.7, { type: 'SPINNER', x: 1320, y: 560, vy: -180 });
-        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 900, y: -60 });
+      // Wave 2: Tarian Ombak Asimetris - 4 Spinners in two organic distinct streams + 4 fast drifting mines
+      (game, fid) => {
+        game.spawnMinefield(4, { x: 1360, vx: -145, stagger: 1.2, minY: 160, maxY: 560 });
+        game.spawnSpinnerArtisticCascade([
+          // Upper stream: gentle wide ripple
+          { delay: 0.0, baseY: 210, waveAmp: 45, waveFreq: 0.0055, vx: -170 },
+          { delay: 0.75, baseY: 240, waveAmp: 45, waveFreq: 0.0055, vx: -170 },
+          // Lower stream: dynamic deeper wave with slight upward drift
+          { delay: 0.5, baseY: 490, waveAmp: 60, waveFreq: 0.0075, driftY: -0.05, vx: -170 },
+          { delay: 1.3, baseY: 460, waveAmp: 60, waveFreq: 0.0075, driftY: -0.05, vx: -170 }
+        ], fid);
       },
-      // Wave 3: Quintuple Spinners dense radial spark storm + Mine Layer hazard
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 160, vy: 170 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 260, vy: -170 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 360, vy: 170 }));
-        game.scheduleEnemy(0.7, { type: 'SPINNER', x: 1320, y: 460, vy: -170 });
-        game.scheduleEnemy(0.7, { type: 'SPINNER', x: 1320, y: 560, vy: 170 });
-        game.scheduleEnemy(1.4, { type: 'MINE_LAYER', x: 1340, y: 360 });
+      // Wave 3: Pita Meliuk Berkelok - 4 Spinners in a flowing, undulating silk ribbon + 4 fast drifting mines
+      (game, fid) => {
+        game.spawnMinefield(4, { x: 1360, vx: -150, stagger: 1.1, minY: 150, maxY: 570 });
+        game.spawnSpinnerArtisticCascade([
+          { delay: 0.0, baseY: 340, waveAmp: 65, waveFreq: 0.0065, phase: 0.0, vx: -170 },
+          { delay: 0.7, baseY: 370, waveAmp: 65, waveFreq: 0.0065, phase: 1.0, vx: -170 },
+          { delay: 1.4, baseY: 330, waveAmp: 65, waveFreq: 0.0065, phase: 2.0, vx: -170 },
+          { delay: 2.1, baseY: 380, waveAmp: 65, waveFreq: 0.0065, phase: 3.0, vx: -170 }
+        ], fid);
       },
-      // Wave 4: Hex-Spinner kinetic wall barrage bouncing at alternating phase angles
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 140, vy: 190 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 240, vy: -190 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 360, vy: 190 }));
-        game.scheduleEnemy(0.6, { type: 'SPINNER', x: 1320, y: 460, vy: -190 });
-        game.scheduleEnemy(0.6, { type: 'SPINNER', x: 1320, y: 560, vy: 190 });
-        game.scheduleEnemy(1.2, { type: 'SPINNER', x: 1320, y: 300, vy: -190 });
-        game.scheduleEnemy(1.5, { type: 'CANYON_DIVER', x: 1050, y: -60 });
+      // Wave 4: Persilangan Anggun Dua Arus - 4 Spinners crossing diagonally like brushstrokes + 4 fast drifting mines
+      (game, fid) => {
+        game.spawnMinefield(4, { x: 1360, vx: -145, stagger: 1.2, minY: 140, maxY: 580 });
+        game.spawnSpinnerArtisticCascade([
+          // Descending stream from upper rim toward mid
+          { delay: 0.0, baseY: 160, driftY: 0.16, waveAmp: 35, waveFreq: 0.006, vx: -170 },
+          { delay: 0.6, baseY: 190, driftY: 0.14, waveAmp: 35, waveFreq: 0.006, vx: -170 },
+          // Ascending stream from lower rim toward mid
+          { delay: 0.3, baseY: 560, driftY: -0.15, waveAmp: 35, waveFreq: 0.006, vx: -170 },
+          { delay: 0.9, baseY: 530, driftY: -0.13, waveAmp: 35, waveFreq: 0.006, vx: -170 }
+        ], fid);
       },
-      // Wave 5: Climax Kinetic Vortex: 7 rapid Spinners coordinated with high-altitude dive bombers & Fruit Carrier
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 160, vy: 200 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 260, vy: -200 }));
-        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 360, vy: 200 }));
-        game.scheduleEnemy(0.5, { type: 'SPINNER', x: 1320, y: 460, vy: -200 });
-        game.scheduleEnemy(0.5, { type: 'SPINNER', x: 1320, y: 560, vy: 200 });
-        game.scheduleEnemy(1.0, { type: 'SPINNER', x: 1320, y: 220, vy: 180 });
-        game.scheduleEnemy(1.0, { type: 'SPINNER', x: 1320, y: 480, vy: -180 });
-        game.scheduleEnemy(1.2, { type: 'FRUIT_CARRIER', x: 1340, y: 360 });
-        game.scheduleEnemy(1.6, { type: 'FALCON_TRACKER', x: 1320, y: 320 });
+      // Wave 5: Koreografi Layang-Layang Bebas - 4 Spinners riding canyon thermals freely + 5 fast drifting mines
+      (game, fid) => {
+        game.spawnMinefield(5, { x: 1360, vx: -155, stagger: 1.0, minY: 140, maxY: 580 });
+        game.spawnSpinnerArtisticCascade([
+          { delay: 0.0, baseY: 190, waveAmp: 40, waveFreq: 0.006, vx: -160 },
+          { delay: 0.6, baseY: 310, waveAmp: 55, waveFreq: 0.007, vx: -175 },
+          { delay: 1.2, baseY: 430, waveAmp: 45, waveFreq: 0.006, vx: -165 },
+          { delay: 1.8, baseY: 520, waveAmp: 50, waveFreq: 0.0065, vx: -170 }
+        ], fid);
+      },
+      // Wave 6: Klimaks Resonansi Langit Senja - 5 Spinners in organic harmonious cascade + 5 fast drifting mines + Fruit Carrier
+      (game, fid) => {
+        game.spawnMinefield(5, { x: 1360, vx: -150, stagger: 1.1, minY: 140, maxY: 580 });
+        game.spawnSpinnerArtisticCascade([
+          // Upper soaring wing
+          { delay: 0.0, baseY: 220, waveAmp: 50, waveFreq: 0.006, vx: -165 },
+          { delay: 0.7, baseY: 250, waveAmp: 55, waveFreq: 0.006, vx: -165 },
+          { delay: 1.4, baseY: 210, waveAmp: 50, waveFreq: 0.006, vx: -165 },
+          // Lower cruising wing (offset, organic rhythm)
+          { delay: 0.5, baseY: 480, waveAmp: 55, waveFreq: 0.007, phase: 1.2, vx: -170 },
+          { delay: 1.3, baseY: 510, waveAmp: 50, waveFreq: 0.007, phase: 2.0, vx: -170 }
+        ], fid);
+        game.scheduleEnemy(2.2, { type: 'FRUIT_CARRIER', x: 1360, y: 360, stage: 8 });
       }
     ]
   },
   {
     stage: 9,
-    title: 'RANJAU NGARAI & BENTENG PASIR JUMBO',
-    subtitle: 'MISI 9: PENYEBAR RANJAU & BENTENG PASIR JUMBO',
+    title: 'BENTENG PASIR JUMBO & SERANGAN TOTAL NGARAI',
+    subtitle: 'MISI 9: ARMADA PENYEBAR RANJAU & BENTENG PASIR JUMBO',
     biome: 'CANYON',
     waves: [
-      // Wave 1: Mine Layers + Canyon Divers plunge (2 types)
+      // Wave 1: Full-Canyon Incursion: Dual Mine Layers + Plunging Canyon Divers + Falcon
       (game) => {
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 500 }));
-        game.scheduleEnemy(0.6, { type: 'CANYON_DIVER', x: 750, y: -60 });
-        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 950, y: -60 });
-        game.scheduleEnemy(1.8, { type: 'CANYON_DIVER', x: 1150, y: -60 });
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 220, stage: 9 }));
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 500, stage: 9 }));
+        game.scheduleEnemy(0.6, { type: 'CANYON_DIVER', x: 750, y: -60, stage: 9 });
+        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 950, y: -60, stage: 9 });
+        game.scheduleEnemy(1.8, { type: 'CANYON_DIVER', x: 1150, y: -60, stage: 9 });
+        game.scheduleEnemy(1.0, { type: 'FALCON_TRACKER', x: 1320, y: 360, stage: 9 });
       },
-      // Wave 2: Dual Mine Layers + Plunging Canyon Divers (2 types)
+      // Wave 2: Armored Mine Barrier & Geyser Barrage: 2 Mine Layers + 3 Geyser Rushers + 2 Stingers
       (game) => {
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 300 }));
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 440 }));
-        game.scheduleEnemy(0.8, { type: 'CANYON_DIVER', x: 700, y: -60 });
-        game.scheduleEnemy(1.4, { type: 'CANYON_DIVER', x: 920, y: -60 });
-        game.scheduleEnemy(2.0, { type: 'CANYON_DIVER', x: 1120, y: -60 });
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 300, stage: 9 }));
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 440, stage: 9 }));
+        game.scheduleEnemy(0.6, { type: 'GEYSER_RUSHER', x: 720, y: 760, stage: 9 });
+        game.scheduleEnemy(1.1, { type: 'GEYSER_RUSHER', x: 940, y: 760, stage: 9 });
+        game.scheduleEnemy(1.6, { type: 'GEYSER_RUSHER', x: 1160, y: 760, stage: 9 });
+        game.scheduleEnemy(0.8, { type: 'STINGER', x: 1320, y: 190, stage: 9 });
+        game.scheduleEnemy(1.4, { type: 'STINGER', x: 1320, y: 530, stage: 9 });
       },
-      // Wave 3: Triple Mine Layers minefield barrier + Diving bombers (2 types)
+      // Wave 3: Saw Vortex & Falcon Hunting Wing: 4 Aggressive Spinners + Twin Falcons
       (game) => {
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 360 }));
-        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 540 }));
-        game.scheduleEnemy(0.8, { type: 'CANYON_DIVER', x: 800, y: -60 });
-        game.scheduleEnemy(1.6, { type: 'CANYON_DIVER', x: 1050, y: -60 });
+        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 160, vy: 190, stage: 9 }));
+        game.enemies.push(new Enemy({ type: 'SPINNER', x: 1320, y: 280, vy: -190, stage: 9 }));
+        game.scheduleEnemy(0.6, { type: 'SPINNER', x: 1320, y: 440, vy: 190, stage: 9 });
+        game.scheduleEnemy(0.6, { type: 'SPINNER', x: 1320, y: 560, vy: -190, stage: 9 });
+        game.scheduleEnemy(0.8, { type: 'FALCON_TRACKER', x: 1320, y: 220, stage: 9 });
+        game.scheduleEnemy(1.4, { type: 'FALCON_TRACKER', x: 1320, y: 480, stage: 9 });
       },
-      // Wave 4: Mini-Boss Jumbo Sand Fortress + Mine Layer Escort Squad (2 types)
+      // Wave 4: Tri-Layer Mine Siege: 3 Mine Layers + 2 Canyon Divers + 2 Geyser Rushers (Vertical Pincer)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'JUMBO_SAND_FORTRESS', x: 1360, y: 340 }));
-        game.scheduleEnemy(0.6, { type: 'MINE_LAYER', x: 1340, y: 180 });
-        game.scheduleEnemy(1.0, { type: 'MINE_LAYER', x: 1340, y: 500 });
-        game.scheduleEnemy(1.6, { type: 'MINE_LAYER', x: 1340, y: 240 });
-        game.scheduleEnemy(2.2, { type: 'MINE_LAYER', x: 1340, y: 440 });
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 180, stage: 9 }));
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 360, stage: 9 }));
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 540, stage: 9 }));
+        game.scheduleEnemy(0.8, { type: 'CANYON_DIVER', x: 800, y: -60, stage: 9 });
+        game.scheduleEnemy(1.6, { type: 'CANYON_DIVER', x: 1050, y: -60, stage: 9 });
+        game.scheduleEnemy(0.8, { type: 'GEYSER_RUSHER', x: 800, y: 760, stage: 9 });
+        game.scheduleEnemy(1.6, { type: 'GEYSER_RUSHER', x: 1050, y: 760, stage: 9 });
+      },
+      // Wave 5: Fortress Vanguard Strike: Dense heavy fleet (2 Mine Layers, 2 Falcons, 2 Spinners, 2 Divers)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 240, stage: 9 }));
+        game.enemies.push(new Enemy({ type: 'MINE_LAYER', x: 1340, y: 480, stage: 9 }));
+        game.scheduleEnemy(0.5, { type: 'FALCON_TRACKER', x: 1320, y: 350, stage: 9 });
+        game.scheduleEnemy(0.8, { type: 'SPINNER', x: 1320, y: 180, vy: 180, stage: 9 });
+        game.scheduleEnemy(0.8, { type: 'SPINNER', x: 1320, y: 520, vy: -180, stage: 9 });
+        game.scheduleEnemy(1.2, { type: 'CANYON_DIVER', x: 900, y: -60, stage: 9 });
+        game.scheduleEnemy(1.6, { type: 'CANYON_DIVER', x: 1120, y: -60, stage: 9 });
+      },
+      // Wave 6: MANDATORY MINI-BOSS BATTLE: Jumbo Sand Fortress + Escort Squad (Locks wave until defeated)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'JUMBO_SAND_FORTRESS', x: 1360, y: 340, stage: 9 }));
+        game.scheduleEnemy(0.6, { type: 'MINE_LAYER', x: 1340, y: 180, stage: 9 });
+        game.scheduleEnemy(1.0, { type: 'MINE_LAYER', x: 1340, y: 500, stage: 9 });
+        game.scheduleEnemy(1.6, { type: 'FALCON_TRACKER', x: 1320, y: 240, stage: 9 });
+        game.scheduleEnemy(2.2, { type: 'FALCON_TRACKER', x: 1320, y: 440, stage: 9 });
       }
     ]
   },
@@ -673,192 +805,280 @@ export const STAGE_CONFIGS = [
   // --- WORLD 4: THE COSMIC SINGULARITY (Stages 16 - 20) ---
   {
     stage: 16,
-    title: 'GERBANG RUANG KOSMIS',
-    subtitle: 'MISI 16: PENYELAM METEOR DARI ATAS & PANCARAN ABYSS DARI BAWAH',
+    title: 'GERBANG KUANTUM KOSMIS',
+    subtitle: 'MISI 16: PENYELAM KUANTUM & JEBAKAN LASER TETHER',
     biome: 'COSMIC_VOID',
     waves: [
-      // Wave 1: Meteor Divers vertical plunge from ceiling (1 type)
+      // Wave 1: Quantum Blink Quadrant (4 Quantum Warpers in symmetrical quadrant)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'METEOR_DIVER', x: 700, y: -60 }));
-        game.scheduleEnemy(0.8, { type: 'METEOR_DIVER', x: 950, y: -60 });
-        game.scheduleEnemy(1.6, { type: 'METEOR_DIVER', x: 1150, y: -60 });
+        game.enemies.push(new Enemy({ type: 'QUANTUM_WARPER', x: 1320, y: 180 }));
+        game.enemies.push(new Enemy({ type: 'QUANTUM_WARPER', x: 1320, y: 540 }));
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1360, y: 300 });
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1360, y: 420 });
       },
-      // Wave 2: Abyss Ascenders vertical eruption from floor (1 type)
+      // Wave 2: Dual Binary Laser Tether (2 pairs of Binary Tethers = 4 Pylons)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'ABYSS_ASCENDER', x: 750, y: 760 }));
-        game.scheduleEnemy(0.8, { type: 'ABYSS_ASCENDER', x: 980, y: 760 });
-        game.scheduleEnemy(1.6, { type: 'ABYSS_ASCENDER', x: 1200, y: 760 });
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 160, tetherId: 's16_t1' }));
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 560, tetherId: 's16_t1' }));
+        game.scheduleEnemy(0.9, { type: 'BINARY_TETHER', x: 1420, y: 240, tetherId: 's16_t2' });
+        game.scheduleEnemy(0.9, { type: 'BINARY_TETHER', x: 1420, y: 480, tetherId: 's16_t2' });
       },
-      // Wave 3: Meteor Divers + Abyss Ascenders cross-vertical pincer (2 types)
+      // Wave 3: Singularity Anchor & Orbital Warpers (1 Singularity Orb + 3 Quantum Warpers)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'METEOR_DIVER', x: 750, y: -60 }));
-        game.enemies.push(new Enemy({ type: 'ABYSS_ASCENDER', x: 850, y: 760 }));
-        game.scheduleEnemy(0.8, { type: 'METEOR_DIVER', x: 1050, y: -60 });
-        game.scheduleEnemy(1.2, { type: 'ABYSS_ASCENDER', x: 1150, y: 760 });
+        game.enemies.push(new Enemy({ type: 'SINGULARITY_ORB', x: 1300, y: 360 }));
+        game.scheduleEnemy(0.5, { type: 'QUANTUM_WARPER', x: 1360, y: 200 });
+        game.scheduleEnemy(0.5, { type: 'QUANTUM_WARPER', x: 1360, y: 520 });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1400, y: 360 });
+      },
+      // Wave 4: Cross-Chiasm Quantum Slices (4 Quantum Warpers + 2 Singularity Orbs)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'SINGULARITY_ORB', x: 1320, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'SINGULARITY_ORB', x: 1320, y: 500 }));
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1370, y: 160 });
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1370, y: 560 });
+        game.scheduleEnemy(1.2, { type: 'QUANTUM_WARPER', x: 1420, y: 320 });
+        game.scheduleEnemy(1.2, { type: 'QUANTUM_WARPER', x: 1420, y: 400 });
+      },
+      // Wave 5: The Tether Gate & Gravity Vortex (1 Pair Binary Tether + 1 Singularity Orb + 3 Quantum Warpers)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 170, tetherId: 's16_t3' }));
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 550, tetherId: 's16_t3' }));
+        game.scheduleEnemy(0.6, { type: 'SINGULARITY_ORB', x: 1380, y: 360 });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1420, y: 240 });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1420, y: 480 });
+        game.scheduleEnemy(1.4, { type: 'QUANTUM_WARPER', x: 1460, y: 360 });
+      },
+      // Wave 6: Grand Gateway Parade & Weapon Cache (6 Quantum Warpers + 1 Pair Binary Tether + Weapon Capsule)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'QUANTUM_WARPER', x: 1340, y: 360 }));
+        game.scheduleEnemy(0.5, { type: 'QUANTUM_WARPER', x: 1390, y: 240 });
+        game.scheduleEnemy(0.5, { type: 'QUANTUM_WARPER', x: 1390, y: 480 });
+        game.scheduleEnemy(0.8, { type: 'BINARY_TETHER', x: 1420, y: 150, tetherId: 's16_tgate' });
+        game.scheduleEnemy(0.8, { type: 'BINARY_TETHER', x: 1420, y: 570, tetherId: 's16_tgate' });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1440, y: 180 });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1440, y: 540 });
+        game.scheduleEnemy(1.3, { type: 'QUANTUM_WARPER', x: 1490, y: 360 });
+        game.scheduleSpawn(2.2, () => game.spawnWeaponCapsule(1320, 360));
       }
     ]
   },
   {
     stage: 17,
-    title: 'LINTASAN WARP & ORBIT KOSMIS',
-    subtitle: 'MISI 17: PENYUSUP BELAKANG WARP FLANKER & ORBITER',
+    title: 'ALIRAN TEMPORAL & DISTORSI GRAVITASI',
+    subtitle: 'MISI 17: RANJAU WAKTU CHRONO & GAUNTLET TETHER BERGERAK',
     biome: 'COSMIC_VOID',
     waves: [
-      // Wave 1: Pincer Warp Infiltration & Cosmic Orbiter Vanguard (2 Flankers + 1 Orbiter)
+      // Wave 1: Chrono Minefield Intro (3 Chrono Leeches + 2 Quantum Warpers)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'WARP_FLANKER', x: -80, y: 200, fromBehind: true, stopAtX: 1100 }));
-        game.enemies.push(new Enemy({ type: 'WARP_FLANKER', x: -80, y: 520, fromBehind: true, stopAtX: 1100 }));
-        game.scheduleEnemy(0.6, { type: 'COSMIC_ORBITER', x: 1320, y: 360 });
+        game.enemies.push(new Enemy({ type: 'CHRONO_LEECH', x: 1320, y: 200 }));
+        game.enemies.push(new Enemy({ type: 'CHRONO_LEECH', x: 1320, y: 520 }));
+        game.scheduleEnemy(0.6, { type: 'CHRONO_LEECH', x: 1350, y: 360 });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1380, y: 280 });
+        game.scheduleEnemy(1.0, { type: 'QUANTUM_WARPER', x: 1380, y: 440 });
       },
-      // Wave 2: Dual Cosmic Orbital Ring + Middle Infiltration & Sky Dive (2 Orbiters + 1 Flanker + 1 Diver)
+      // Wave 2: Moving Tether Gauntlet (2 Pairs Binary Tether + 1 Chrono Leech)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'COSMIC_ORBITER', x: 1320, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'COSMIC_ORBITER', x: 1320, y: 480 }));
-        game.scheduleEnemy(0.8, { type: 'WARP_FLANKER', x: -80, y: 350, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.4, { type: 'METEOR_DIVER', x: 950, y: -60 });
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 160, tetherId: 's17_g1' }));
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 420, tetherId: 's17_g1' }));
+        game.scheduleEnemy(0.8, { type: 'BINARY_TETHER', x: 1390, y: 300, tetherId: 's17_g2' });
+        game.scheduleEnemy(0.8, { type: 'BINARY_TETHER', x: 1390, y: 560, tetherId: 's17_g2' });
+        game.scheduleEnemy(1.2, { type: 'CHRONO_LEECH', x: 1430, y: 360 });
       },
-      // Wave 3: Triple Warp Infiltration Echelon + Cross-Vertical Threats (3 Flankers + 1 Ascender + 1 Diver)
+      // Wave 3: Binary Singularity Wells & Quantum Ambush (2 Singularity Orbs + 4 Quantum Warpers)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'WARP_FLANKER', x: -80, y: 180, fromBehind: true, stopAtX: 1100 }));
-        game.scheduleEnemy(0.6, { type: 'WARP_FLANKER', x: -80, y: 360, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.2, { type: 'WARP_FLANKER', x: -80, y: 540, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(0.8, { type: 'ABYSS_ASCENDER', x: 820, y: 760 });
-        game.scheduleEnemy(1.5, { type: 'METEOR_DIVER', x: 1080, y: -60 });
+        game.enemies.push(new Enemy({ type: 'SINGULARITY_ORB', x: 1320, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'SINGULARITY_ORB', x: 1320, y: 500 }));
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1360, y: 160 });
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1360, y: 560 });
+        game.scheduleEnemy(1.2, { type: 'QUANTUM_WARPER', x: 1400, y: 360 });
+        game.scheduleEnemy(1.2, { type: 'QUANTUM_WARPER', x: 1440, y: 360 });
       },
-      // Wave 4: Constellation Triangle Orbiters + Rear Flanker Pincer (3 Orbiters + 2 Flankers)
+      // Wave 4: Temporal Crossfire & Rear Flank (1 Rear Cosmic Cruiser + 1 Pair Binary Tether + 2 Chrono Leeches + 2 Quantum Warpers)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'COSMIC_ORBITER', x: 1320, y: 360 }));
-        game.scheduleEnemy(0.5, { type: 'COSMIC_ORBITER', x: 1370, y: 200 });
-        game.scheduleEnemy(0.5, { type: 'COSMIC_ORBITER', x: 1370, y: 520 });
-        game.scheduleEnemy(1.0, { type: 'WARP_FLANKER', x: -80, y: 260, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.6, { type: 'WARP_FLANKER', x: -80, y: 460, fromBehind: true, stopAtX: 1100 });
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 180, tetherId: 's17_cross' }));
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 540, tetherId: 's17_cross' }));
+        game.scheduleEnemy(0.4, { type: 'COSMIC_CRUISER', x: -110, y: 360, fromBehind: true, vx: 50 });
+        game.scheduleEnemy(0.8, { type: 'CHRONO_LEECH', x: 1370, y: 260 });
+        game.scheduleEnemy(0.8, { type: 'CHRONO_LEECH', x: 1370, y: 460 });
+        game.scheduleEnemy(1.3, { type: 'QUANTUM_WARPER', x: 1440, y: 200 });
+        game.scheduleEnemy(1.3, { type: 'QUANTUM_WARPER', x: 1440, y: 520 });
       },
-      // Wave 5: Climax Singularity Warp Gate + Fruit Carrier Harvest (2 Orbiters + 2 Flankers + 1 Diver + Fruit Carrier)
+      // Wave 5: Tri-Point Singularity Cage (3 Singularity Orbs + 4 Quantum Warpers)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'COSMIC_ORBITER', x: 1320, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'COSMIC_ORBITER', x: 1320, y: 480 }));
-        game.scheduleEnemy(0.6, { type: 'WARP_FLANKER', x: -80, y: 180, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.2, { type: 'WARP_FLANKER', x: -80, y: 520, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.0, { type: 'METEOR_DIVER', x: 1000, y: -60 });
-        game.scheduleEnemy(1.4, { type: 'FRUIT_CARRIER', x: 1340, y: 360 });
+        game.enemies.push(new Enemy({ type: 'SINGULARITY_ORB', x: 1320, y: 360 }));
+        game.scheduleEnemy(0.5, { type: 'SINGULARITY_ORB', x: 1370, y: 200 });
+        game.scheduleEnemy(0.5, { type: 'SINGULARITY_ORB', x: 1370, y: 520 });
+        game.scheduleEnemy(0.8, { type: 'QUANTUM_WARPER', x: 1410, y: 270 });
+        game.scheduleEnemy(0.8, { type: 'QUANTUM_WARPER', x: 1410, y: 450 });
+        game.scheduleEnemy(1.3, { type: 'QUANTUM_WARPER', x: 1460, y: 160 });
+        game.scheduleEnemy(1.3, { type: 'QUANTUM_WARPER', x: 1460, y: 560 });
+      },
+      // Wave 6: Dimensional Convergence & Fruit Chariot (2 Chrono Leeches + 1 Pair Binary Tether + 3 Quantum Warpers + 1 Fruit Carrier)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 160, tetherId: 's17_chariot' }));
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1340, y: 560, tetherId: 's17_chariot' }));
+        game.scheduleEnemy(0.5, { type: 'CHRONO_LEECH', x: 1370, y: 220 });
+        game.scheduleEnemy(0.5, { type: 'CHRONO_LEECH', x: 1370, y: 500 });
+        game.scheduleEnemy(0.9, { type: 'QUANTUM_WARPER', x: 1410, y: 280 });
+        game.scheduleEnemy(0.9, { type: 'QUANTUM_WARPER', x: 1410, y: 440 });
+        game.scheduleEnemy(0.9, { type: 'QUANTUM_WARPER', x: 1450, y: 360 });
+        game.scheduleEnemy(1.2, { type: 'FRUIT_CARRIER', x: 1350, y: 360 });
       }
     ]
   },
   {
     stage: 18,
     title: 'PERBURUAN KELAM VOID',
-    subtitle: 'MISI 18: SPAM KAWANAN PEMBURU VOID STALKER MENGEJAR PESAWAT',
+    subtitle: 'MISI 18: SPAM FORMASI ESTETIS PESAWAT UNGU PELACAK TARGET',
     biome: 'COSMIC_VOID',
     waves: [
-      // Wave 1: Trio Void Stalkers locking onto player (3 Hunters)
+      // Wave 1: The Pristine Violet Chevron (Pure 7 Void Stalkers, Zero Guests!)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 200 }));
         game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 360 }));
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 520 });
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 290 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 430 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1440, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1440, y: 500 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1490, y: 160 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1490, y: 560 }));
       },
-      // Wave 2: Quad Void Stalkers converging aggressively + Cosmic Orbiter harassment
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 280 }));
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 420 });
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 540 });
-        game.scheduleEnemy(1.0, { type: 'COSMIC_ORBITER', x: 1320, y: 360 });
-      },
-      // Wave 3: Quintuple Void Stalkers predatory pursuit swarm + Warp Flanker ambush
+      // Wave 2: Violet Crescent Arc & The Quantum Phantom (8 Void Stalkers + Guest: 1 Quantum Warper)
       (game) => {
         game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 160 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 260 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 560 }));
+        game.scheduleEnemy(0.4, { type: 'VOID_STALKER', x: 1370, y: 220 });
+        game.scheduleEnemy(0.4, { type: 'VOID_STALKER', x: 1370, y: 500 });
+        game.scheduleEnemy(0.6, { type: 'QUANTUM_WARPER', x: 1320, y: 360 });
+        game.scheduleEnemy(0.8, { type: 'VOID_STALKER', x: 1400, y: 280 });
+        game.scheduleEnemy(0.8, { type: 'VOID_STALKER', x: 1400, y: 440 });
+        game.scheduleEnemy(1.1, { type: 'VOID_STALKER', x: 1430, y: 330 });
+        game.scheduleEnemy(1.1, { type: 'VOID_STALKER', x: 1430, y: 390 });
+      },
+      // Wave 3: Dual Violet Railroad & Singularity Core (8 Void Stalkers + Guest: 1 Singularity Orb)
+      (game) => {
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 500 }));
+        game.scheduleEnemy(0.35, { type: 'VOID_STALKER', x: 1340, y: 220 });
+        game.scheduleEnemy(0.35, { type: 'VOID_STALKER', x: 1340, y: 500 });
+        game.scheduleEnemy(0.50, { type: 'SINGULARITY_ORB', x: 1310, y: 360 });
+        game.scheduleEnemy(0.70, { type: 'VOID_STALKER', x: 1340, y: 220 });
+        game.scheduleEnemy(0.70, { type: 'VOID_STALKER', x: 1340, y: 500 });
+        game.scheduleEnemy(1.05, { type: 'VOID_STALKER', x: 1340, y: 220 });
+        game.scheduleEnemy(1.05, { type: 'VOID_STALKER', x: 1340, y: 500 });
+      },
+      // Wave 4: The Violet Diamond Matrix & Laser Slice (8 Void Stalkers + Guest: 1 Pair Binary Tether)
+      (game) => {
         game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 360 }));
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 460 });
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 560 });
-        game.scheduleEnemy(1.2, { type: 'WARP_FLANKER', x: -80, y: 300, fromBehind: true, stopAtX: 1100 });
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 280 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 360 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 440 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1440, y: 200 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1440, y: 520 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1490, y: 310 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1490, y: 410 }));
+        game.scheduleEnemy(0.8, { type: 'BINARY_TETHER', x: 1460, y: 150, tetherId: 's18_tether' });
+        game.scheduleEnemy(0.8, { type: 'BINARY_TETHER', x: 1460, y: 570, tetherId: 's18_tether' });
       },
-      // Wave 4: Phased Dual-Pack Void Stalkers (6 hunters) rushing in alternating pincers
+      // Wave 5: Twin Harmonic Sine Weave & Chrono Distortion (10 Void Stalkers + Guest: 1 Chrono Leech)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 280 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 380 }));
-        game.scheduleEnemy(0.8, { type: 'VOID_STALKER', x: 1340, y: 220 });
-        game.scheduleEnemy(0.8, { type: 'VOID_STALKER', x: 1340, y: 340 });
-        game.scheduleEnemy(0.8, { type: 'VOID_STALKER', x: 1340, y: 480 });
-        game.scheduleEnemy(1.4, { type: 'METEOR_DIVER', x: 1340, y: 200 });
-        game.scheduleEnemy(1.4, { type: 'ABYSS_ASCENDER', x: 1340, y: 520 });
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 240 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 480 }));
+        game.scheduleEnemy(0.3, { type: 'VOID_STALKER', x: 1340, y: 190 });
+        game.scheduleEnemy(0.3, { type: 'VOID_STALKER', x: 1340, y: 530 });
+        game.scheduleEnemy(0.6, { type: 'CHRONO_LEECH', x: 1320, y: 360 });
+        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 260 });
+        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 460 });
+        game.scheduleEnemy(0.9, { type: 'VOID_STALKER', x: 1340, y: 210 });
+        game.scheduleEnemy(0.9, { type: 'VOID_STALKER', x: 1340, y: 510 });
+        game.scheduleEnemy(1.2, { type: 'VOID_STALKER', x: 1340, y: 240 });
+        game.scheduleEnemy(1.2, { type: 'VOID_STALKER', x: 1340, y: 480 });
       },
-      // Wave 5: Void Hunter Swarm + Dual Warp Flankers rear siege
+      // Wave 6: Grand Climax: The Imperial Violet Armada (12 Void Stalkers + Guest: 1 Fruit Carrier)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 160 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 300 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 440 }));
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 240 });
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 380 });
-        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1340, y: 520 });
-        game.scheduleEnemy(1.1, { type: 'WARP_FLANKER', x: -80, y: 220, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.1, { type: 'WARP_FLANKER', x: -80, y: 500, fromBehind: true, stopAtX: 1100 });
-      },
-      // Wave 6: Cosmic Void Apex Stalkers: 8 Void Stalkers rushing in sweeping sine packs
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 160 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 260 }));
+        // Primary Imperial Chevron (6 Stalkers)
         game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 360 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 460 }));
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 200 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 300 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 420 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 540 });
-        game.scheduleEnemy(1.2, { type: 'COSMIC_ORBITER', x: 1320, y: 240 });
-        game.scheduleEnemy(1.2, { type: 'COSMIC_ORBITER', x: 1320, y: 480 });
-      },
-      // Wave 7: Grand Void Climax Onslaught: 10 Void Stalkers coordinated pincer pursuit + Fruit Carrier
-      (game) => {
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 150 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 250 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 350 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 450 }));
-        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1340, y: 550 }));
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 180 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 280 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 380 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 480 });
-        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1340, y: 580 });
-        game.scheduleEnemy(1.0, { type: 'FRUIT_CARRIER', x: 1340, y: 360 });
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 280 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1390, y: 440 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1440, y: 200 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1440, y: 520 }));
+        game.enemies.push(new Enemy({ type: 'VOID_STALKER', x: 1490, y: 360 }));
+        // Secondary Escort Chevron (6 Stalkers, delay 0.7s)
+        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1360, y: 360 });
+        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1410, y: 280 });
+        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1410, y: 440 });
+        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1460, y: 200 });
+        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1460, y: 520 });
+        game.scheduleEnemy(0.7, { type: 'VOID_STALKER', x: 1510, y: 360 });
+        // Royal Fruit Carrier nestled in the fleet
+        game.scheduleEnemy(1.1, { type: 'FRUIT_CARRIER', x: 1360, y: 360 });
       }
     ]
   },
   {
     stage: 19,
-    title: 'BARIKADE TERAKHIR TITAN',
-    subtitle: 'MISI 19: RAKSASA JUGGERNAUT & TITAN SINGULARITAS',
+    title: 'BENTENG SINGULARITAS & SERBUAN JUMBO',
+    subtitle: 'MISI 19: KAPAL INDUK KOSMIS & SERBUAN TITAN DARI DEPAN',
     biome: 'COSMIC_VOID',
     waves: [
-      // Wave 1: Juggernauts + Warp Flankers rear ambush (2 types)
+      // Wave 1: Menara Pylon Laser Penarget (Fokus Musuh Kuning Kecil: Pylon Laser Penarget Pemain)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 220 }));
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 500 }));
-        game.scheduleEnemy(0.8, { type: 'WARP_FLANKER', x: -80, y: 180, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.4, { type: 'WARP_FLANKER', x: -80, y: 520, fromBehind: true, stopAtX: 1100 });
+        // Pasang A: Keduanya menembakkan laser ke target pemain dengan peringatan telegraf awal
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1350, y: 190 }));
+        game.enemies.push(new Enemy({ type: 'BINARY_TETHER', x: 1350, y: 530 }));
+        // Pasang B: Sepasang pylon berikutnya meluncur 2.5 detik kemudian
+        game.scheduleEnemy(2.5, { type: 'BINARY_TETHER', x: 1370, y: 280 });
+        game.scheduleEnemy(2.5, { type: 'BINARY_TETHER', x: 1370, y: 440 });
       },
-      // Wave 2: Dual Juggernauts + Triple Warp Flankers crossfire (2 types)
+      // Wave 2: Barisan Kapal Jelajah Kosmis (Fokus: 2 COSMIC_CRUISER + 2 Pengawal QUANTUM_WARPER)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 260 }));
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 440 }));
-        game.scheduleEnemy(0.6, { type: 'WARP_FLANKER', x: -80, y: 180, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.2, { type: 'WARP_FLANKER', x: -80, y: 360, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.8, { type: 'WARP_FLANKER', x: -80, y: 540, fromBehind: true, stopAtX: 1100 });
+        game.enemies.push(new Enemy({ type: 'COSMIC_CRUISER', x: 1350, y: 220 }));
+        game.enemies.push(new Enemy({ type: 'COSMIC_CRUISER', x: 1350, y: 500 }));
+        game.scheduleEnemy(0.8, { type: 'QUANTUM_WARPER', x: 1380, y: 360 });
+        game.scheduleEnemy(1.6, { type: 'QUANTUM_WARPER', x: 1420, y: 360 });
       },
-      // Wave 3: Triple Juggernauts heavy plasma line + Rear Warp Flankers (2 types)
+      // Wave 3: Serbuan Kapal Tempur Emas Belakang (Fokus Musuh Kuning Besar: 1 CHRONO_DREADNOUGHT + 2 SINGULARITY_ORB)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 180 }));
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 360 }));
-        game.enemies.push(new Enemy({ type: 'JUGGERNAUT', x: 1350, y: 540 }));
-        game.scheduleEnemy(0.8, { type: 'WARP_FLANKER', x: -80, y: 240, fromBehind: true, stopAtX: 1100 });
-        game.scheduleEnemy(1.6, { type: 'WARP_FLANKER', x: -80, y: 480, fromBehind: true, stopAtX: 1100 });
+        // Kapal Tempur Emas Raksasa menyerang dari BELAKANG!
+        game.enemies.push(new Enemy({ type: 'CHRONO_DREADNOUGHT', x: -120, y: 360, fromBehind: true, vx: 50 }));
+        // Tarikan gravitasi dari DEPAN
+        game.scheduleEnemy(0.6, { type: 'SINGULARITY_ORB', x: 1340, y: 220 });
+        game.scheduleEnemy(0.6, { type: 'SINGULARITY_ORB', x: 1340, y: 500 });
       },
-      // Wave 4: Super Mini-Boss Jumbo Singularity Titan + Triple Juggernaut escorts (2 types)
+      // Wave 4: Gelombang Temporal & Pemburu Void (Fokus: 2 CHRONO_LEECH + 4 VOID_STALKER)
       (game) => {
-        game.enemies.push(new Enemy({ type: 'JUMBO_SINGULARITY_TITAN', x: 1360, y: 350 }));
-        game.scheduleEnemy(0.6, { type: 'JUGGERNAUT', x: 1350, y: 180 });
-        game.scheduleEnemy(1.2, { type: 'JUGGERNAUT', x: 1350, y: 520 });
-        game.scheduleEnemy(1.8, { type: 'JUGGERNAUT', x: 1350, y: 350 });
+        game.enemies.push(new Enemy({ type: 'CHRONO_LEECH', x: 1350, y: 200 }));
+        game.enemies.push(new Enemy({ type: 'CHRONO_LEECH', x: 1350, y: 520 }));
+        game.scheduleEnemy(0.6, { type: 'VOID_STALKER', x: 1380, y: 360 });
+        game.scheduleEnemy(0.9, { type: 'VOID_STALKER', x: 1420, y: 300 });
+        game.scheduleEnemy(0.9, { type: 'VOID_STALKER', x: 1420, y: 420 });
+        game.scheduleEnemy(1.2, { type: 'VOID_STALKER', x: 1460, y: 360 });
+      },
+      // Wave 5: Benteng Armada Emas Bersaudara (Sinergi Puncak: 2 CHRONO_DREADNOUGHT + 2 BINARY_TETHER)
+      (game) => {
+        // Dreadnought Emas Depan
+        game.enemies.push(new Enemy({ type: 'CHRONO_DREADNOUGHT', x: 1360, y: 250, fromBehind: false, vx: -45 }));
+        // Dreadnought Emas Belakang
+        game.scheduleEnemy(0.5, { type: 'CHRONO_DREADNOUGHT', x: -120, y: 470, fromBehind: true, vx: 50 });
+        // Dual Pylon Penarget Pemain
+        game.scheduleEnemy(1.0, { type: 'BINARY_TETHER', x: 1400, y: 160 });
+        game.scheduleEnemy(1.0, { type: 'BINARY_TETHER', x: 1400, y: 560 });
+      },
+      // Wave 6: Klimaks Titan Singularitas (Fokus Penuh Mini-Boss: JUMBO_SINGULARITY_TITAN + 2 COSMIC_CRUISER)
+      (game) => {
+        // Super Mini-Boss Jumbo Titan menyerang gagah dari DEPAN (kanan layar)!
+        game.enemies.push(new Enemy({
+          type: 'JUMBO_SINGULARITY_TITAN',
+          x: 1380,
+          y: 350,
+          fromBehind: false,
+          targetHoverX: 960,
+          vx: -60
+        }));
+        // Dua kapal pengawal setia di sayap
+        game.scheduleEnemy(0.8, { type: 'COSMIC_CRUISER', x: 1410, y: 190 });
+        game.scheduleEnemy(0.8, { type: 'COSMIC_CRUISER', x: 1410, y: 510 });
+        // Amunisi Pamungkas sebelum Boss Stage 20
+        game.scheduleSpawn(2.0, () => game.spawnWeaponCapsule(700, 360));
       }
     ]
   },
@@ -1316,6 +1536,12 @@ export class Game {
     this.boss = null;
     this.particles.clear();
     this.spawnQueue = [];
+    this.formationsTracker.clear();
+    if (this.camera) this.camera.trauma = 0;
+    if (this.scene3D) {
+      if (this.scene3D.clear) this.scene3D.clear();
+      if (this.scene3D.player && this.scene3D.player.reset) this.scene3D.player.reset(this.player);
+    }
     this.weaponDropTimer = this.getRandomWeaponDropInterval();
 
     // Determine starting stage (Stage 1 or Cheat starting stage 1..20)
@@ -1360,182 +1586,197 @@ export class Game {
       return;
     }
 
-    this.sound.init();
-    this.sound.setBossMode(false);
-    if (this.bg && this.bg.setBossMode) this.bg.setBossMode(false);
-    this.sound.setPauseDucking(false);
-
-    // 1. Difficulty & Cheats restoration
-    if (saved.difficulty && DIFFICULTY_CONFIGS[saved.difficulty]) {
-      this.difficulty = saved.difficulty;
-      this.difficultyConfig = DIFFICULTY_CONFIGS[saved.difficulty];
-    }
-    // CRITICAL: We do NOT overwrite this.cheatConfig or localStorage.getItem('platypus_cheat_config')!
-    // Cheat settings modified by the user are strictly preserved for new games (permainan awal).
-    // The resumed session continues using its own saved session parameters without mutating global settings.
-    const sessionCheat = (saved.cheatConfig && saved.isCheat) ? Object.assign({}, DEFAULT_CHEAT_CONFIG, saved.cheatConfig) : null;
-    Enemy.difficultyConfig = sessionCheat ? this._buildEnemyDifficultyConfig(sessionCheat) : this.getEffectiveEnemyDifficultyConfig();
-    if (this.hud) {
-      this.hud.setDifficulty(this.difficulty, this.difficultyConfig);
-      this.hud.setCheatActive(Boolean(saved.isCheat));
-    }
-
-    // 2. Clear old state
-    for (const b of this.bullets) {
-      Bullet.release(b);
-    }
-    this.bullets = [];
-    this.enemies = [];
-    this.collectibles = [];
-    this.boss = null;
-    this.particles.clear();
-    this.spawnQueue = [];
-    this.formationsTracker.clear();
-    if (this.camera) this.camera.trauma = 0;
-
-    // 3. Stage & wave director restoration
-    this.currentStage = Math.max(1, Math.min(this.totalStages, saved.stage || 1));
-    Enemy.currentStage = this.currentStage;
-    this.currentWave = Math.max(1, Math.min(this.totalWavesInStage, saved.wave || 1));
-
-    if (saved.director) {
-      this.waveTimer = saved.director.waveTimer || 0;
-      this.waveInProgress = Boolean(saved.director.waveInProgress);
-      this.stageTransitionTimer = saved.director.stageTransitionTimer || 0;
-      this.isTransitioningStage = Boolean(saved.director.isTransitioningStage);
-      this.weaponDropTimer = saved.director.weaponDropTimer || this.getRandomWeaponDropInterval();
-    } else {
-      this.waveTimer = 0;
-      this.waveInProgress = true;
-      this.stageTransitionTimer = 0;
-      this.isTransitioningStage = false;
-      this.weaponDropTimer = this.getRandomWeaponDropInterval();
-    }
-
-    // 4. Formations Tracker restoration
-    if (Array.isArray(saved.formationsTracker)) {
-      for (const [fid, val] of saved.formationsTracker) {
-        this.formationsTracker.set(fid, val);
-      }
-    }
-
-    // 5. Player entity restoration
-    this.player.reset(this.difficultyConfig, sessionCheat ? this.getCheatOverrides() : null);
-    if (saved.player) {
-      this.player.deserialize(saved.player);
-    } else {
-      this.player.score = saved.score || 0;
-      this.player.infiniteLives = Boolean(saved.infiniteLives);
-      this.player.lives = saved.infiniteLives ? Infinity : (saved.lives !== undefined ? saved.lives : 3);
-      this.player.maxLives = saved.maxLives || 10;
-      this.player.nextLifeScore = saved.nextLifeScore || 200000;
-      this.player.scoreIntervalForLife = saved.scoreIntervalForLife || 200000;
-      this.player.activeWeapon = saved.activeWeapon || 'NORMAL';
-      this.player.weaponTimeLeft = saved.weaponTimeLeft || 0;
-      this.player.infiniteWeapon = Boolean(saved.infiniteWeapon);
-      this.player.speedBoostTimeLeft = saved.speedBoostTimeLeft || 0;
-      this.player.speedBoostActive = Boolean(saved.speedBoostActive);
-      this.player.x = 160;
-      this.player.y = this.height / 2;
-      this.player.invulnerableTimer = 3.0;
-      this.player.dead = false;
-    }
-
-    // 6. Enemies restoration
-    if (Array.isArray(saved.enemies)) {
-      for (const enemyData of saved.enemies) {
-        const e = Enemy.deserialize(enemyData, this.getEffectiveEnemyDifficultyConfig());
-        if (e && !e.dead) {
-          this.enemies.push(e);
-        }
-      }
-    }
-
-    // 7. Boss restoration
-    if (saved.boss && !saved.boss.dead) {
-      this.boss = Boss.deserialize(this.width, this.height, saved.boss);
-    }
-
-    // 8. Bullets restoration
-    if (Array.isArray(saved.bullets)) {
-      for (const bulletData of saved.bullets) {
-        const b = Bullet.deserialize(bulletData);
-        if (b && !b.dead) {
-          this.bullets.push(b);
-        }
-      }
-    }
-
-    // 9. Collectibles restoration
-    if (Array.isArray(saved.collectibles)) {
-      for (const colData of saved.collectibles) {
-        const c = deserializeCollectible(colData);
-        if (c && !c.dead) {
-          this.collectibles.push(c);
-        }
-      }
-    }
-
-    // 10. Spawn Queue restoration
-    if (Array.isArray(saved.spawnQueue)) {
-      for (const item of saved.spawnQueue) {
-        if (!item || item.timer === undefined || !item.descriptor) continue;
-        const action = this._recreateSpawnAction(item.descriptor);
-        if (action) {
-          this.spawnQueue.push({
-            timer: item.timer,
-            action,
-            descriptor: item.descriptor
-          });
-        }
-      }
-    }
-
-    // If Version 1 legacy save without entities or queue, spawn current wave
-    if (!saved.version || saved.version < 2) {
-      if (this.enemies.length === 0 && !this.boss && this.spawnQueue.length === 0) {
-        this.spawnCurrentWave();
-      }
-    }
-
-    // 11. Environment & Audio
-    const cfg = this.currentStageConfig;
-    this.bg.setBiome(cfg.biome);
-
-    const isBossActive = Boolean(this.boss || (saved.audio && saved.audio.isBossMusic) || (cfg.isBossStage && this.currentWave === this.totalWavesInStage));
-    const bossTypeToPlay = (this.boss ? this.boss.bossType : null) || (saved.audio ? saved.audio.currentBossType : null) || cfg.bossType;
-
-    if (isBossActive) {
-      this.sound.restartMusic({ biome: cfg.biome, isBoss: true, bossType: bossTypeToPlay });
-      this.sound.setBossMode(true, cfg.biome, bossTypeToPlay);
-      if (this.boss && this.boss.rageMode && this.sound.setBossRage) this.sound.setBossRage(true);
-      if (this.bg && this.bg.setBossMode) this.bg.setBossMode(true, bossTypeToPlay);
-    } else {
-      this.sound.restartMusic({ biome: cfg.biome, isBoss: false });
+    try {
+      this.sound.init();
       this.sound.setBossMode(false);
       if (this.bg && this.bg.setBossMode) this.bg.setBossMode(false);
+      this.sound.setPauseDucking(false);
+
+      if (this.uiHooks && this.uiHooks.input) {
+        this.uiHooks.input.consumePause();
+      }
+
+      // 1. Difficulty & Cheats restoration
+      if (saved.difficulty && DIFFICULTY_CONFIGS[saved.difficulty]) {
+        this.difficulty = saved.difficulty;
+        this.difficultyConfig = DIFFICULTY_CONFIGS[saved.difficulty];
+      }
+      // CRITICAL: We do NOT overwrite this.cheatConfig or localStorage.getItem('platypus_cheat_config')!
+      // Cheat settings modified by the user are strictly preserved for new games (permainan awal).
+      // The resumed session continues using its own saved session parameters without mutating global settings.
+      const sessionCheat = (saved.cheatConfig && saved.isCheat) ? Object.assign({}, DEFAULT_CHEAT_CONFIG, saved.cheatConfig) : null;
+      Enemy.difficultyConfig = sessionCheat ? this._buildEnemyDifficultyConfig(sessionCheat) : this.getEffectiveEnemyDifficultyConfig();
+      if (this.hud) {
+        this.hud.setDifficulty(this.difficulty, this.difficultyConfig);
+        this.hud.setCheatActive(Boolean(saved.isCheat));
+      }
+
+      // 2. Clear old state
+      for (const b of this.bullets) {
+        Bullet.release(b);
+      }
+      this.bullets = [];
+      this.enemies = [];
+      this.collectibles = [];
+      this.boss = null;
+      this.particles.clear();
+      this.spawnQueue = [];
+      this.formationsTracker.clear();
+      if (this.camera) this.camera.trauma = 0;
+      if (this.scene3D && this.scene3D.clear) {
+        this.scene3D.clear();
+      }
+
+      // 3. Stage & wave director restoration
+      this.currentStage = Math.max(1, Math.min(this.totalStages, saved.stage || 1));
+      Enemy.currentStage = this.currentStage;
+      this.currentWave = Math.max(1, Math.min(this.totalWavesInStage, saved.wave || 1));
+
+      if (saved.director) {
+        this.waveTimer = saved.director.waveTimer || 0;
+        this.waveInProgress = Boolean(saved.director.waveInProgress);
+        this.stageTransitionTimer = saved.director.stageTransitionTimer || 0;
+        this.isTransitioningStage = Boolean(saved.director.isTransitioningStage);
+        this.weaponDropTimer = saved.director.weaponDropTimer || this.getRandomWeaponDropInterval();
+      } else {
+        this.waveTimer = 0;
+        this.waveInProgress = true;
+        this.stageTransitionTimer = 0;
+        this.isTransitioningStage = false;
+        this.weaponDropTimer = this.getRandomWeaponDropInterval();
+      }
+
+      // 4. Formations Tracker restoration
+      if (Array.isArray(saved.formationsTracker)) {
+        for (const [fid, val] of saved.formationsTracker) {
+          this.formationsTracker.set(fid, val);
+        }
+      }
+
+      // 5. Player entity restoration
+      this.player.reset(this.difficultyConfig, sessionCheat ? this.getCheatOverrides() : null);
+      if (saved.player) {
+        this.player.deserialize(saved.player);
+      } else {
+        this.player.score = saved.score || 0;
+        this.player.infiniteLives = Boolean(saved.infiniteLives);
+        this.player.lives = saved.infiniteLives ? Infinity : (saved.lives !== undefined ? saved.lives : 3);
+        this.player.maxLives = saved.maxLives || 10;
+        this.player.nextLifeScore = saved.nextLifeScore || 200000;
+        this.player.scoreIntervalForLife = saved.scoreIntervalForLife || 200000;
+        this.player.activeWeapon = saved.activeWeapon || 'NORMAL';
+        this.player.weaponTimeLeft = saved.weaponTimeLeft || 0;
+        this.player.infiniteWeapon = Boolean(saved.infiniteWeapon);
+        this.player.speedBoostTimeLeft = saved.speedBoostTimeLeft || 0;
+        this.player.speedBoostActive = Boolean(saved.speedBoostActive);
+        this.player.x = 160;
+        this.player.y = this.height / 2;
+        this.player.invulnerableTimer = 3.0;
+        this.player.dead = false;
+      }
+      this.player.dead = false;
+      this.player.invulnerableTimer = Math.max(this.player.invulnerableTimer || 0, 2.5);
+
+      // 6. Enemies restoration
+      if (Array.isArray(saved.enemies)) {
+        for (const enemyData of saved.enemies) {
+          const e = Enemy.deserialize(enemyData, this.getEffectiveEnemyDifficultyConfig());
+          if (e && !e.dead) {
+            this.enemies.push(e);
+          }
+        }
+      }
+
+      // 7. Boss restoration
+      if (saved.boss && !saved.boss.dead) {
+        this.boss = Boss.deserialize(this.width, this.height, saved.boss);
+      }
+
+      // 8. Bullets restoration (player bullets only to prevent unfair ambushes or invalid target locks)
+      if (Array.isArray(saved.bullets)) {
+        for (const bulletData of saved.bullets) {
+          if (bulletData && bulletData.isEnemy) continue;
+          const b = Bullet.deserialize(bulletData);
+          if (b && !b.dead) {
+            this.bullets.push(b);
+          }
+        }
+      }
+
+      // 9. Collectibles restoration
+      if (Array.isArray(saved.collectibles)) {
+        for (const colData of saved.collectibles) {
+          const c = deserializeCollectible(colData);
+          if (c && !c.dead) {
+            this.collectibles.push(c);
+          }
+        }
+      }
+
+      // 10. Spawn Queue restoration
+      if (Array.isArray(saved.spawnQueue)) {
+        for (const item of saved.spawnQueue) {
+          if (!item || item.timer === undefined || !item.descriptor) continue;
+          const action = this._recreateSpawnAction(item.descriptor);
+          if (action) {
+            this.spawnQueue.push({
+              timer: item.timer,
+              action,
+              descriptor: item.descriptor
+            });
+          }
+        }
+      }
+
+      // 10b. If no active enemies, no boss, no pending spawns, and not transitioning, ensure the wave or boss is active!
+      if (this.enemies.length === 0 && !this.boss && this.spawnQueue.length === 0 && !this.isTransitioningStage) {
+        this.waveInProgress = true;
+        this.waveTimer = 0;
+        this.spawnCurrentWave();
+      }
+
+      // 11. Environment & Audio
+      const cfg = this.currentStageConfig;
+      this.bg.setBiome(cfg.biome);
+
+      const isBossActive = Boolean(this.boss || (saved.audio && saved.audio.isBossMusic) || (cfg.isBossStage && this.currentWave === this.totalWavesInStage));
+      const bossTypeToPlay = (this.boss ? this.boss.bossType : null) || (saved.audio ? saved.audio.currentBossType : null) || cfg.bossType;
+
+      if (isBossActive) {
+        this.sound.restartMusic({ biome: cfg.biome, isBoss: true, bossType: bossTypeToPlay });
+        this.sound.setBossMode(true, cfg.biome, bossTypeToPlay);
+        if (this.boss && this.boss.rageMode && this.sound.setBossRage) this.sound.setBossRage(true);
+        if (this.bg && this.bg.setBossMode) this.bg.setBossMode(true, bossTypeToPlay);
+      } else {
+        this.sound.restartMusic({ biome: cfg.biome, isBoss: false });
+        this.sound.setBossMode(false);
+        if (this.bg && this.bg.setBossMode) this.bg.setBossMode(false);
+      }
+
+      if (saved.audio && typeof saved.audio.musicStep === 'number') {
+        this.sound.musicStep = saved.audio.musicStep;
+      }
+
+      // 12. Set game state
+      this.state = GAME_STATES.PLAYING;
+      this.lastTime = performance.now();
+
+      this.hud.showBanner(
+        `STAGE ${this.currentStage}: ${cfg.title} (DILANJUTKAN)`,
+        `GELOMBANG ${this.currentWave} • SKOR ${formatInt(this.player.score)}`,
+        3.5,
+        '#66bb6a'
+      );
+
+      if (this.uiHooks && this.uiHooks.onStageChanged) {
+        this.uiHooks.onStageChanged(this.currentStage, this.totalStages, cfg);
+      }
+
+      this.saveProgress();
+    } catch (err) {
+      console.error('Critical failure in resumeSavedGame, falling back to clean start:', err);
+      this.start();
     }
-
-    if (saved.audio && typeof saved.audio.musicStep === 'number') {
-      this.sound.musicStep = saved.audio.musicStep;
-    }
-
-    // 12. Set game state
-    this.state = GAME_STATES.PLAYING;
-    this.lastTime = performance.now();
-
-    this.hud.showBanner(
-      `STAGE ${this.currentStage}: ${cfg.title} (DILANJUTKAN)`,
-      `GELOMBANG ${this.currentWave} • SKOR ${formatInt(this.player.score)}`,
-      3.5,
-      '#66bb6a'
-    );
-
-    if (this.uiHooks && this.uiHooks.onStageChanged) {
-      this.uiHooks.onStageChanged(this.currentStage, this.totalStages, cfg);
-    }
-
-    this.saveProgress();
   }
 
   restart() {
@@ -1568,6 +1809,9 @@ export class Game {
       this.sound.setPauseDucking(true);
       if (this.uiHooks.onPause) this.uiHooks.onPause(true);
     } else if (this.state === GAME_STATES.PAUSED) {
+      if (this.uiHooks && this.uiHooks.input) {
+        this.uiHooks.input.consumePause();
+      }
       this.state = GAME_STATES.PLAYING;
       this.lastTime = performance.now();
       this.sound.setPauseDucking(false);
@@ -1576,27 +1820,32 @@ export class Game {
   }
 
   loop(currentTime) {
-    const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
-    this.lastTime = currentTime;
+    try {
+      const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+      this.lastTime = currentTime;
 
-    if (this.state === GAME_STATES.PLAYING) {
-      this.update(dt);
-    } else if (this.state === GAME_STATES.PAUSED) {
-      const input = this.uiHooks.input;
-      if (input && input.consumePause()) {
-        this.togglePause();
+      if (this.state === GAME_STATES.PLAYING) {
+        this.update(dt);
+      } else if (this.state === GAME_STATES.PAUSED) {
+        const input = this.uiHooks.input;
+        if (input && input.consumePause()) {
+          this.togglePause();
+        }
+        this.bg.update(dt * 0.4, 0.4, 0.5, 0);
+      } else if (this.state === GAME_STATES.MENU) {
+        this.bg.update(dt * 0.4, 0.4, 0.5, 0);
       }
-      this.bg.update(dt * 0.4, 0.4, 0.5, 0);
-    } else if (this.state === GAME_STATES.MENU) {
-      this.bg.update(dt * 0.4, 0.4, 0.5, 0);
-    }
 
-    if (this.uiHooks && this.uiHooks.onFrame) {
-      this.uiHooks.onFrame(this);
-    }
+      if (this.uiHooks && this.uiHooks.onFrame) {
+        this.uiHooks.onFrame(this);
+      }
 
-    this.render();
-    requestAnimationFrame(this.boundLoop);
+      this.render();
+    } catch (err) {
+      console.error('Recovered from game loop exception:', err);
+    } finally {
+      requestAnimationFrame(this.boundLoop);
+    }
   }
 
   update(dt) {
@@ -1667,7 +1916,7 @@ export class Game {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (e.dead) continue;
-      const alive = e.update(dt, this.player, this.bullets, this.sound, this._extraEnemies, this.particles);
+      const alive = e.update(dt, this.player, this.bullets, this.sound, this._extraEnemies, this.particles, this.enemies);
       if (!alive) {
         e.dead = true;
       }
@@ -1872,7 +2121,13 @@ export class Game {
       const item = this.spawnQueue[i];
       item.timer -= dt;
       if (item.timer <= 0) {
-        item.action();
+        try {
+          if (typeof item.action === 'function') {
+            item.action();
+          }
+        } catch (err) {
+          console.warn('Error executing spawn queue item:', err);
+        }
         this.spawnQueue.splice(i, 1);
       }
     }
@@ -1891,8 +2146,14 @@ export class Game {
         this.waveTimer = 0;
       }
 
-      const isClearedEarly = (isSpawningComplete && this.enemies.length === 0);
-      const isTimeUp = (isSpawningComplete && this.waveTimer >= waveInterval);
+      // Kunci Mini-Boss: Jika ada mini-boss aktif yang masih hidup, timer dibekukan dan wave tidak boleh timeout/diskip!
+      const hasActiveMiniBoss = this.enemies.some(e => e.isMiniBoss && e.hp > 0);
+      if (hasActiveMiniBoss) {
+        this.waveTimer = 0;
+      }
+
+      const isClearedEarly = (isSpawningComplete && !hasActiveMiniBoss && this.enemies.length === 0);
+      const isTimeUp = (isSpawningComplete && !hasActiveMiniBoss && this.waveTimer >= waveInterval);
 
       if (this.currentWave < this.totalWavesInStage) {
         const cfg = this.currentStageConfig;
@@ -1935,9 +2196,17 @@ export class Game {
       } else {
         // Final wave of the stage
         const cfg = this.currentStageConfig;
-        if (!cfg.isBossStage && isSpawningComplete && this.enemies.length === 0) {
+        if (!cfg.isBossStage && isSpawningComplete && !hasActiveMiniBoss && this.enemies.length === 0) {
           this.handleStageCleared();
           return;
+        } else if (cfg.isBossStage && isSpawningComplete && !this.boss && this.enemies.length === 0) {
+          // Safety recovery: If in boss wave and no boss exists, spawn boss!
+          this.sound.playBossAlarm();
+          this.sound.setBossMode(true, cfg.biome, cfg.bossType);
+          if (this.bg && this.bg.setBossMode) this.bg.setBossMode(true, cfg.bossType);
+          this.camera.addTrauma(0.5);
+          this.hud.showBanner('PERINGATAN BAHAYA!', `${cfg.title} MUNCUL!`, 3.5, '#ff1744');
+          this.spawnCurrentWave();
         }
       }
       return;
@@ -1962,6 +2231,15 @@ export class Game {
     if (waveFn) {
       const fid = `form_s${this.currentStage}_w${this.currentWave}_${Date.now()}`;
       waveFn(this, fid);
+
+      // Pemberitahuan Mini-Boss jika muncul di wave ini
+      const miniBossEnemy = this.enemies.find(e => e.isMiniBoss && e.hp > 0);
+      if (miniBossEnemy && !cfg.isBossStage) {
+        this.sound.playBossAlarm();
+        const miniName = miniBossEnemy.type.replace(/_/g, ' ');
+        this.hud.showBanner('PERINGATAN MINI-BOSS!', `${miniName} MUNCUL! KALAHKAN UNTUK MAJU!`, 3.5, '#ffa726');
+        this.camera.addTrauma(0.35);
+      }
     }
     this.saveProgress();
   }
@@ -2045,7 +2323,7 @@ export class Game {
       this.particles.createFloatingText(640, 320, '⚠️ TERAS PECAH! INTI MUTAN TELAH BANGKIT!', '#ff1744');
       this.hud.showBanner(
         'PERINGATAN ANCAMAN TERTINGGI!',
-        'TERAS PECAH! ANAK MUTAN KELUAR DARI DALAM CORE (800 HP)!',
+        'TERAS PECAH! ANAK MUTAN KELUAR DARI DALAM CORE (600 HP)!',
         4.5,
         '#ff1744'
       );
@@ -2202,9 +2480,10 @@ export class Game {
   spawnVFormation(count, centerY, formationId, options = {}) {
     this.formationsTracker.set(formationId, { total: count, killed: 0 });
     const startX = options.x !== undefined ? options.x : 1340;
-    const spacingX = options.spacingX || 48;
-    const spacingY = options.spacingY || 42;
+    const spacingX = options.spacingX || 46;
+    const spacingY = options.spacingY || 40;
     const half = Math.floor(count / 2);
+    const waveAmp = options.waveAmp !== undefined ? options.waveAmp : 0; // Default 0 for rigid symmetrical V-formation
 
     for (let i = 0; i < count; i++) {
       const offset = Math.abs(i - half);
@@ -2216,15 +2495,15 @@ export class Game {
         x: enemyX,
         y: enemyY,
         baseY: enemyY,
-        waveAmp: 55,
-        waveFreq: 0.045,
+        waveAmp,
+        waveFreq: options.waveFreq || 0.04,
+        syncWave: options.syncWave || false,
         formationId,
         stage: this.currentStage,
         isLastInFormation: (i === count - 1)
       }, options);
 
-      const delay = (enemyX - startX) / 320;
-      this.scheduleEnemy(Math.max(0, delay), enemyOpts);
+      this.scheduleEnemy(0, enemyOpts);
     }
   }
 
@@ -2243,6 +2522,114 @@ export class Game {
         waveAmp: 22 + (i % 4) * 6
       });
     }
+  }
+
+  spawnMinefield(count, options = {}) {
+    const startX = options.x !== undefined ? options.x : 1360;
+    const minY = options.minY !== undefined ? options.minY : 130;
+    const maxY = options.maxY !== undefined ? options.maxY : 590;
+    const stagger = options.stagger !== undefined ? options.stagger : 1.0;
+    const minLaneDist = options.minDistance !== undefined ? options.minDistance : 75;
+    const baseVx = options.vx !== undefined ? options.vx : -140;
+
+    let lastY = -999;
+    for (let i = 0; i < count; i++) {
+      let y = minY + Math.random() * (maxY - minY);
+      let attempts = 0;
+      while (attempts < 20 && Math.abs(y - lastY) < minLaneDist) {
+        y = minY + Math.random() * (maxY - minY);
+        attempts++;
+      }
+      lastY = y;
+
+      const delay = i * stagger;
+      const vx = baseVx - Math.random() * 25; // Dynamic fast drift: -140 to -165
+      this.scheduleEnemy(delay, {
+        type: 'MINE',
+        x: Math.round(startX + Math.random() * 40), // Offscreen edge only!
+        y: Math.round(y),
+        vx,
+        stage: this.currentStage
+      });
+    }
+  }
+
+  spawnSpinnerCurveStream(count, centerY, formationId, options = {}) {
+    this.formationsTracker.set(formationId, { total: count, killed: 0 });
+    const interval = options.interval !== undefined ? options.interval : 0.65;
+    const startX = options.x !== undefined ? options.x : 1360;
+    const waveAmp = options.waveAmp !== undefined ? options.waveAmp : 70;
+    const waveFreq = options.waveFreq !== undefined ? options.waveFreq : 0.0065;
+    const phase = options.phase !== undefined ? options.phase : 0;
+    const vx = options.vx !== undefined ? options.vx : -170;
+
+    for (let i = 0; i < count; i++) {
+      const delay = i * interval;
+      this.scheduleEnemy(delay, Object.assign({
+        type: 'SPINNER',
+        x: startX,
+        y: centerY,
+        baseY: centerY,
+        vx,
+        vy: 0,
+        waveAmp,
+        waveFreq,
+        phase,
+        formationId,
+        stage: this.currentStage,
+        isLastInFormation: (i === count - 1)
+      }, options));
+    }
+  }
+
+  spawnSpinnerMirroredStream(countPerLane, options = {}) {
+    const topY = options.topY !== undefined ? options.topY : 220;
+    const botY = options.botY !== undefined ? options.botY : 500;
+    const interval = options.interval !== undefined ? options.interval : 0.70;
+    const waveAmp = options.waveAmp !== undefined ? options.waveAmp : 65;
+    const waveFreq = options.waveFreq !== undefined ? options.waveFreq : 0.0065;
+    const fidTop = options.formationId ? `${options.formationId}_top` : `spin_top_${Date.now()}`;
+    const fidBot = options.formationId ? `${options.formationId}_bot` : `spin_bot_${Date.now()}`;
+
+    this.spawnSpinnerCurveStream(countPerLane, topY, fidTop, Object.assign({}, options, {
+      waveAmp,
+      waveFreq,
+      phase: 0,
+      interval
+    }));
+
+    this.spawnSpinnerCurveStream(countPerLane, botY, fidBot, Object.assign({}, options, {
+      waveAmp,
+      waveFreq,
+      phase: Math.PI,
+      interval
+    }));
+  }
+
+  spawnSpinnerArtisticCascade(planes, formationId) {
+    this.formationsTracker.set(formationId, { total: planes.length, killed: 0 });
+    planes.forEach((p, i) => {
+      const delay = p.delay !== undefined ? p.delay : i * 0.75;
+      const startX = p.x !== undefined ? p.x : 1360;
+      const centerY = p.baseY !== undefined ? p.baseY : (p.y !== undefined ? p.y : 360);
+      const enemyOpts = Object.assign({
+        type: 'SPINNER',
+        x: startX,
+        y: centerY,
+        baseY: centerY,
+        vx: p.vx !== undefined ? p.vx : -170,
+        vy: 0,
+        waveAmp: p.waveAmp !== undefined ? p.waveAmp : 55,
+        waveFreq: p.waveFreq !== undefined ? p.waveFreq : 0.0065,
+        phase: p.phase !== undefined ? p.phase : 0,
+        driftY: p.driftY !== undefined ? p.driftY : 0,
+        swoopAmp: p.swoopAmp !== undefined ? p.swoopAmp : 0,
+        formationId,
+        stage: this.currentStage,
+        isLastInFormation: (i === planes.length - 1)
+      }, p);
+      this.scheduleEnemy(delay, enemyOpts);
+    });
   }
 
   detonateFlak(b) {
@@ -2532,21 +2919,47 @@ export class Game {
     }
 
     // D. Enemies vs Player (Crash collision: AABB fast rejection + squared distance)
-    for (let ei = 0; ei < enemyCount; ei++) {
-      const e = enemies[ei];
-      if (e.dead) continue;
+    if (player.invulnerableTimer <= 0) {
+      for (let ei = 0; ei < enemyCount; ei++) {
+        const e = enemies[ei];
+        if (e.dead) continue;
 
-      const rSum = pr + e.radius - 8;
-      const dx = px - e.x;
-      if (dx < -rSum || dx > rSum) continue;
-      const dy = py - e.y;
-      if (dy < -rSum || dy > rSum) continue;
+        const rSum = pr + e.radius - 8;
+        const dx = px - e.x;
+        if (dx < -rSum || dx > rSum) continue;
+        const dy = py - e.y;
+        if (dy < -rSum || dy > rSum) continue;
 
-      if (dx * dx + dy * dy < rSum * rSum) {
-        this.damagePlayer();
-        e.takeDamage(10);
-        if (e.dead) this.handleEnemyDeath(e);
-        break;
+        if (dx * dx + dy * dy < rSum * rSum) {
+          this.damagePlayer();
+          const killed = e.takeDamage(10, px, false, 'COLLISION');
+          if (killed) {
+            this.handleEnemyDeath(e);
+          } else {
+            this.sound.playEnemyHit();
+            this.particles.createClaySplat(e.x, e.y, 8, e.color, e.shadowColor);
+          }
+          break;
+        }
+      }
+    }
+
+    // E. Boss vs Player (Crash collision: AABB fast rejection + squared distance)
+    if (player.invulnerableTimer <= 0 && this.boss && !this.boss.dead && !this.boss.isDying) {
+      const boss = this.boss;
+      const rSum = boss.radius * 0.85 + pr;
+      const dx = px - boss.x;
+      if (dx >= -rSum && dx <= rSum) {
+        const dy = py - boss.y;
+        if (dy >= -rSum && dy <= rSum) {
+          if (dx * dx + dy * dy < rSum * rSum) {
+            this.damagePlayer();
+            boss.takeDamage(10, py, this.particles, this.sound, 'COLLISION');
+            this.sound.playExplosion('small');
+            this.particles.createClaySplat(px, py, 22, '#ff5722', '#b71c1c');
+            this.camera.addTrauma(0.4);
+          }
+        }
       }
     }
 
@@ -2590,7 +3003,7 @@ export class Game {
       return;
     }
 
-    const isHeavy = (e.type === 'BLIMP' || e.type === 'GUNSHIP' || e.type === 'BOMBER' || e.type === 'SHIELD_CRUISER' || e.type === 'JUGGERNAUT' || e.type === 'ACE' || e.type === 'INTERCEPTOR' || e.type === 'VORTEX_DRONE');
+    const isHeavy = (e.type === 'BLIMP' || e.type === 'GUNSHIP' || e.type === 'BOMBER' || e.type === 'SHIELD_CRUISER' || e.type === 'JUGGERNAUT' || e.type === 'COSMIC_CRUISER' || e.type === 'CHRONO_DREADNOUGHT' || e.type === 'ACE' || e.type === 'INTERCEPTOR' || e.type === 'VORTEX_DRONE');
     this.sound.playExplosion(isHeavy ? 'large' : 'small');
     this.camera.addTrauma(isHeavy ? 0.35 : 0.15);
     this.particles.createClaySplat(e.x, e.y, isHeavy ? 24 : 14, e.color, e.shadowColor);
@@ -2823,8 +3236,15 @@ export class Game {
 
     // 6. Real-time 3D Claymation Layer (Player, Bosses, Enemies, Pickups, Bullets, Debris)
     if (this.scene3D) {
-      if (this.scene3D.render(this)) {
-        this.ctx.drawImage(this.scene3D.canvas, 0, 0, this.width, this.height);
+      try {
+        if (this.scene3D.render(this)) {
+          this.ctx.drawImage(this.scene3D.canvas, 0, 0, this.width, this.height);
+        }
+      } catch (err) {
+        console.warn('[Game] scene3D.render recovered from error, drawing 2D fallback:', err);
+        if (this.player.lives > 0) {
+          this.player.draw(this.ctx);
+        }
       }
     } else if (this.player.lives > 0) {
       this.player.draw(this.ctx);
@@ -2832,7 +3252,7 @@ export class Game {
 
     // 6.5. 2D Overlays on top of 3D entities (Jumbo enemy health bars & shield badges)
     for (const e of this.enemies) {
-      if (e.drawOverlay) e.drawOverlay(this.ctx);
+      if (e.drawOverlay) e.drawOverlay(this.ctx, this.player);
     }
 
     // 7. Particles

@@ -99,6 +99,10 @@ export class Player {
     this.dead = false;
   }
 
+  get isInvulnerable() {
+    return this.invulnerableTimer > 0;
+  }
+
   respawn() {
     this.x = 160;
     this.y = this.canvasHeight / 2;
@@ -167,8 +171,10 @@ export class Player {
       input.mouseSteeringActive = false;
     } else if (input.mouseSteeringActive && input.mouse.active) {
       // 2. Mouse / Touchpad / Touch steering smoothly glides the ship to pointer position
-      const targetX = Math.max(50, Math.min(this.canvasWidth - 80, input.mouse.x));
-      const targetY = Math.max(50, Math.min(this.canvasHeight - 50, input.mouse.y));
+      const mx = Number.isFinite(input.mouse.x) ? input.mouse.x : this.x;
+      const my = Number.isFinite(input.mouse.y) ? input.mouse.y : this.y;
+      const targetX = Math.max(50, Math.min(this.canvasWidth - 80, mx));
+      const targetY = Math.max(50, Math.min(this.canvasHeight - 50, my));
 
       const dx = targetX - this.x;
       const dy = targetY - this.y;
@@ -184,7 +190,7 @@ export class Player {
 
     // 3D Aerodynamic Roll Banking & Pitch Kinematics (Plasticine Elasticity)
     this.targetRoll = targetTilt * 0.72; // Bank up to ~41 degrees into the turn
-    const moveX = isKeyboardMoving ? move.dx : Math.max(-1, Math.min(1, ((input.mouse && input.mouse.x || this.x) - this.x) * 0.05));
+    const moveX = isKeyboardMoving ? move.dx : Math.max(-1, Math.min(1, ((input.mouse && Number.isFinite(input.mouse.x) ? input.mouse.x : this.x) - this.x) * 0.05));
     this.targetPitch = -moveX * 0.16 + (this.speedBoostActive ? -0.25 : 0);
 
     // Spring-damper plasticine elasticity interpolation with micro engine-hum wobble
@@ -193,9 +199,9 @@ export class Player {
     this.pitch += (this.targetPitch - this.pitch) * 12 * dt;
     this.altitude = 1.0 + Math.sin(this.engineTick * 0.06) * 0.15;
 
-    // Boundary constraints
-    this.x = Math.max(45, Math.min(this.canvasWidth - 55, this.x));
-    this.y = Math.max(45, Math.min(this.canvasHeight - 45, this.y));
+    // Strict boundary constraints and NaN-immunity
+    this.x = Number.isFinite(this.x) ? Math.max(45, Math.min(this.canvasWidth - 55, this.x)) : 160;
+    this.y = Number.isFinite(this.y) ? Math.max(45, Math.min(this.canvasHeight - 45, this.y)) : (this.canvasHeight / 2);
 
     // Exhaust smoke trail
     if (this.engineTick % 3 === 0 && particles) {
@@ -391,6 +397,9 @@ export class Player {
     }
     this.lives--;
     this.invulnerableTimer = this.invulnerableDuration || 2.2;
+    if (this.lives <= 0) {
+      this.dead = true;
+    }
     return true;
   }
 
@@ -455,8 +464,8 @@ export class Player {
     if (!data) return;
     if (data.difficultyConfig) this.difficultyConfig = data.difficultyConfig;
     if (data.cheatOverrides) this.cheatOverrides = data.cheatOverrides;
-    this.x = data.x !== undefined ? data.x : this.x;
-    this.y = data.y !== undefined ? data.y : this.y;
+    this.x = (data.x !== undefined && Number.isFinite(data.x)) ? Math.max(45, Math.min(this.canvasWidth - 55, data.x)) : (Number.isFinite(this.x) ? this.x : 160);
+    this.y = (data.y !== undefined && Number.isFinite(data.y)) ? Math.max(45, Math.min(this.canvasHeight - 45, data.y)) : (Number.isFinite(this.y) ? this.y : (this.canvasHeight / 2));
     this.radius = data.radius !== undefined ? data.radius : this.radius;
     this.speed = data.speed !== undefined ? data.speed : this.speed;
     this.tilt = data.tilt !== undefined ? data.tilt : this.tilt;

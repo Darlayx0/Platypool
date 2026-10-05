@@ -428,53 +428,58 @@ export class SpeedBoostDrop {
 
 export function deserializeCollectible(data) {
   if (!data) return null;
-  switch (data.collectibleType) {
-    case 'CAPSULE': {
-      const item = new PowerUpCapsule(data.x, data.y, data.weaponType);
-      item.vx = data.vx !== undefined ? data.vx : item.vx;
-      item.vy = data.vy !== undefined ? data.vy : item.vy;
-      item.radius = data.radius !== undefined ? data.radius : item.radius;
-      item.tick = data.tick !== undefined ? data.tick : item.tick;
-      item.hitCooldown = data.hitCooldown !== undefined ? data.hitCooldown : item.hitCooldown;
-      item.dead = Boolean(data.dead);
-      item.wobble = data.wobble !== undefined ? data.wobble : item.wobble;
-      return item;
+  try {
+    switch (data.collectibleType) {
+      case 'CAPSULE': {
+        const item = new PowerUpCapsule(data.x, data.y, data.weaponType);
+        item.vx = data.vx !== undefined ? data.vx : item.vx;
+        item.vy = data.vy !== undefined ? data.vy : item.vy;
+        item.radius = data.radius !== undefined ? data.radius : item.radius;
+        item.tick = data.tick !== undefined ? data.tick : item.tick;
+        item.hitCooldown = data.hitCooldown !== undefined ? data.hitCooldown : item.hitCooldown;
+        item.dead = Boolean(data.dead);
+        item.wobble = data.wobble !== undefined ? data.wobble : item.wobble;
+        return item;
+      }
+      case 'FRUIT': {
+        const item = new FruitDrop(data.x, data.y, data.type, data.stage || 1, {
+          isBossDrop: data.isBossDrop,
+          vx: data.vx,
+          vy: data.vy,
+          gravity: data.gravity,
+          bounce: data.bounce,
+          friction: data.friction,
+          groundFriction: data.groundFriction,
+          rotation: data.rotation,
+          vRot: data.vRot,
+          life: data.life
+        });
+        item.maxLife = data.maxLife !== undefined ? data.maxLife : item.maxLife;
+        item.tick = data.tick !== undefined ? data.tick : item.tick;
+        item.dead = Boolean(data.dead);
+        item.groundY = data.groundY !== undefined ? data.groundY : item.groundY;
+        return item;
+      }
+      case 'SPEED_BOOST': {
+        const item = new SpeedBoostDrop(data.x, data.y, {
+          vx: data.vx,
+          vy: data.vy,
+          life: data.life
+        });
+        item.baseY = data.baseY !== undefined ? data.baseY : item.baseY;
+        item.rotation = data.rotation !== undefined ? data.rotation : item.rotation;
+        item.vRot = data.vRot !== undefined ? data.vRot : item.vRot;
+        item.tick = data.tick !== undefined ? data.tick : item.tick;
+        item.dead = Boolean(data.dead);
+        item.maxLife = data.maxLife !== undefined ? data.maxLife : item.maxLife;
+        return item;
+      }
+      default:
+        return null;
     }
-    case 'FRUIT': {
-      const item = new FruitDrop(data.x, data.y, data.type, data.stage || 1, {
-        isBossDrop: data.isBossDrop,
-        vx: data.vx,
-        vy: data.vy,
-        gravity: data.gravity,
-        bounce: data.bounce,
-        friction: data.friction,
-        groundFriction: data.groundFriction,
-        rotation: data.rotation,
-        vRot: data.vRot,
-        life: data.life
-      });
-      item.maxLife = data.maxLife !== undefined ? data.maxLife : item.maxLife;
-      item.tick = data.tick !== undefined ? data.tick : item.tick;
-      item.dead = Boolean(data.dead);
-      item.groundY = data.groundY !== undefined ? data.groundY : item.groundY;
-      return item;
-    }
-    case 'SPEED_BOOST': {
-      const item = new SpeedBoostDrop(data.x, data.y, {
-        vx: data.vx,
-        vy: data.vy,
-        life: data.life
-      });
-      item.baseY = data.baseY !== undefined ? data.baseY : item.baseY;
-      item.rotation = data.rotation !== undefined ? data.rotation : item.rotation;
-      item.vRot = data.vRot !== undefined ? data.vRot : item.vRot;
-      item.tick = data.tick !== undefined ? data.tick : item.tick;
-      item.dead = Boolean(data.dead);
-      item.maxLife = data.maxLife !== undefined ? data.maxLife : item.maxLife;
-      return item;
-    }
-    default:
-      return null;
+  } catch (e) {
+    console.warn('Failed to deserialize collectible:', e, data);
+    return null;
   }
 }
 

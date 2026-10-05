@@ -412,6 +412,179 @@ function jumbo(o) {
   return g;
 }
 
+function quantumWarper(o) {
+  const g = new THREE.Group();
+  const pb = new PartBuilder();
+  const body = clayMat(o.body || '#1a0933');
+  const acc = clayMat(o.accent || '#00e5ff');
+  const glow = glowMat(o.glow || '#00e5ff', 0.9);
+  const dark = clayMat(DARK);
+
+  // Sleek swept stealth delta wings with split forward prongs
+  pb.add(sculpt(wingGeo(58, 22, 3.2, 0.25, -10), 0.3, 0.12, 4), body, [-2, 0, 0]);
+  // Forward prongs / quantum field emitters
+  pb.addPair(sculpt(capsuleGeo(2.4, 20, 'x'), 0.2, 0.2, 2), acc, [14, 0, 16]);
+  pb.addPair(sphereGeo(3.2, 1, 1, 1, 12), glow, [24, 0, 16]);
+
+  // Central stealth canopy & glowing quantum eye
+  pb.add(sculpt(fuselageGeo(34, [[1, 0], [6, 0.2], [7.5, 0.5], [6, 0.8], [2, 1]], 20, 0.8, 1.2), 0.3, 0.15, 1), dark, [4, 2, 0]);
+  pb.add(sphereGeo(4, 1.4, 0.7, 1, 14), glowMat('#00e5ff', 0.95), [6, 4, 0]);
+  pb.build(g);
+
+  // Quantum warp rings on aft section
+  const ring = new THREE.Group();
+  ring.name = 'spinY';
+  ring.add(new THREE.Mesh(new THREE.TorusGeometry(13, 1.6, 8, 32).rotateX(Math.PI / 2), glow));
+  ring.position.set(-14, 0, 0);
+  g.add(ring);
+
+  // Twin quantum phase flames
+  for (const s of [-1, 1]) {
+    const f = makeFlame('#00e5ff', 12, 3.2, s > 0 ? 'flame' : 'flame2');
+    f.position.set(-18, 0, s * 9);
+    g.add(f);
+  }
+  return g;
+}
+
+function singularityOrb(o) {
+  const g = new THREE.Group();
+  const pb = new PartBuilder();
+  // Pure dark matter clay core
+  const darkCore = clayMat('#0a0014', { roughness: 0.8, bump: true });
+  pb.add(sculpt(sphereGeo(20, 1, 1, 1, 32), 0.4, 0.15, 6), darkCore);
+
+  // Magnetic containment crescent teeth
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2;
+    pb.add(new THREE.ConeGeometry(3.5, 12, 6).rotateZ(a - Math.PI / 2), clayMat('#311b92'), [Math.cos(a) * 22, Math.sin(a) * 22, 0]);
+  }
+  pb.build(g);
+
+  // Pulsing central event horizon core
+  const core = new THREE.Mesh(sphereGeo(12, 1, 1, 1, 24), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  core.name = 'glow';
+  g.add(core);
+
+  // Dual dynamic tilted spinning accretion disk
+  const ring1 = new THREE.Group();
+  ring1.name = 'spinY';
+  ring1.add(new THREE.Mesh(new THREE.TorusGeometry(28, 2.6, 12, 48).rotateX(Math.PI / 2), glowMat('#e040fb', 0.9)));
+  ring1.rotation.z = 0.45;
+  g.add(ring1);
+
+  const ring2 = new THREE.Group();
+  ring2.name = 'spinZ';
+  ring2.add(new THREE.Mesh(new THREE.TorusGeometry(35, 1.4, 8, 48), glowMat('#7c4dff', 0.7)));
+  ring2.rotation.x = 0.35;
+  g.add(ring2);
+
+  return g;
+}
+
+function binaryTether(o) {
+  const g = new THREE.Group();
+  const pb = new PartBuilder();
+  const gold = clayMat('#ffb300', { roughness: 0.25, clearcoat: 0.7 });
+  const dark = clayMat(DARK);
+  const glow = glowMat('#ffd700', 0.95);
+
+  // Hexagonal vertical crystal monolith pylon
+  pb.add(sculpt(new THREE.CylinderGeometry(8, 12, 44, 6), 0.3, 0.12, 5), gold, [0, 0, 0]);
+  for (const y of [-12, 0, 12]) {
+    pb.add(new THREE.TorusGeometry(10.5, 1.6, 8, 24).rotateX(Math.PI / 2), dark, [0, y, 0]);
+  }
+  // High-voltage apex crystal emitter
+  pb.add(new THREE.OctahedronGeometry(6, 0), glow, [0, 26, 0]);
+  pb.add(new THREE.OctahedronGeometry(6, 0), glow, [0, -26, 0]);
+  pb.build(g);
+
+  // Dual counter-rotating magnetic stabilizer rings around equator
+  const ringY = new THREE.Group();
+  ringY.name = 'spinY';
+  ringY.add(new THREE.Mesh(new THREE.TorusGeometry(16, 1.8, 8, 36).rotateX(Math.PI / 2), glowMat('#ffea00', 0.9)));
+  g.add(ringY);
+
+  const ringZ = new THREE.Group();
+  ringZ.name = 'spinZ';
+  ringZ.add(new THREE.Mesh(new THREE.TorusGeometry(19, 1.4, 8, 36), glowMat('#ffd700', 0.85)));
+  g.add(ringZ);
+
+  return g;
+}
+
+function chronoLeech(o) {
+  const g = new THREE.Group();
+  const pb = new PartBuilder();
+  const bronze = clayMat('#8d6e63', { roughness: 0.4 });
+  const purple = clayMat('#4a148c');
+  const glow = glowMat('#ffb300', 0.9);
+
+  // Stepped temporal segmented carapace (segmented bulbs)
+  pb.add(sculpt(sphereGeo(15, 1.4, 0.9, 1.1, 24), 0.3, 0.15, 2), bronze, [10, 0, 0]);
+  pb.add(sculpt(sphereGeo(12, 1.2, 0.85, 1.0, 20), 0.3, 0.15, 3), purple, [-4, 0, 0]);
+  pb.add(sculpt(sphereGeo(9, 1.1, 0.8, 0.9, 18), 0.3, 0.15, 4), bronze, [-16, 0, 0]);
+
+  // Dual temporal hourglass sand bulbs
+  pb.addPair(capsuleGeo(4, 16, 'x'), glow, [2, 10, 12]);
+  pb.addPair(capsuleGeo(4, 16, 'x'), glow, [2, -10, 12]);
+
+  // Temporal fin distorters
+  pb.add(sculpt(slabGeo(16, 32, 2.5, 4), 0.2, 0.15, 1), purple, [-12, 0, 0], [0, 0, 0.3]);
+  pb.build(g);
+
+  // Chronometer spinning gear
+  const gear = new THREE.Group();
+  gear.name = 'spinZ';
+  gear.add(new THREE.Mesh(new THREE.TorusGeometry(18, 1.8, 6, 24), glowMat('#ea80fc', 0.8)));
+  gear.position.set(-6, 0, 0);
+  g.add(gear);
+
+  return g;
+}
+
+function cosmicCruiser(o) {
+  const g = heavy({
+    ...o,
+    len: 84,
+    span: 76,
+    tall: 1.25,
+    turret: true,
+    shield: true,
+    shieldR: 58,
+    shieldColor: '#00e5ff'
+  });
+
+  // Orbiting defensive shield satellite drones!
+  const orbitGroup = new THREE.Group();
+  orbitGroup.name = 'spinOrbit';
+  const droneGeo = sphereGeo(6, 1.2, 0.8, 1, 14);
+  const droneMat = clayMat('#00e5ff', { clearcoat: 0.8, roughness: 0.2 });
+  const d1 = new THREE.Mesh(droneGeo, droneMat);
+  d1.position.set(0, 0, 48);
+  const d2 = new THREE.Mesh(droneGeo, droneMat);
+  d2.position.set(0, 0, -48);
+  orbitGroup.add(d1, d2);
+  g.add(orbitGroup);
+
+  return g;
+}
+
+function chronoDreadnought(o) {
+  const g = jumbo({
+    ...o,
+    len: 98,
+    span: 88,
+    tall: 1.3,
+    style: 'dread',
+    turret: true,
+    shield: true,
+    shieldR: 74,
+    shieldColor: '#ffd700'
+  });
+  return g;
+}
+
 // ---------- type table ----------
 // canon = model's native "radius" used to scale to the gameplay hitbox
 export const ENEMY_DEFS = {
@@ -430,6 +603,12 @@ export const ENEMY_DEFS = {
   METEOR_DIVER:   { a: fighter, canon: 24, body: '#ff5252', accent: '#6d4c41', wing: false, rocky: true, stab: 22, flame: '#ff3d00', flameLen: 22, dir: true },
   ABYSS_ASCENDER: { a: fighter, canon: 24, body: '#ea80fc', accent: '#4a148c', span: 36, sweep: 10, twinFin: true, glowLines: '#ea80fc', flame: '#e040fb', flameLen: 18, dir: true },
   WARP_FLANKER:   { a: fighter, canon: 26, body: '#e040fb', accent: '#f3e5f5', span: 54, sweep: -4, canard: true, twinFin: true, glowLines: '#ffffff', flame: '#ea80fc' },
+  QUANTUM_WARPER: { a: quantumWarper, canon: 24, body: '#1a0933', accent: '#00e5ff', glow: '#00e5ff' },
+  SINGULARITY_ORB:{ a: singularityOrb, canon: 28, body: '#0d021a', accent: '#e040fb', noYaw: true },
+  BINARY_TETHER:  { a: binaryTether, canon: 24, body: '#ffb300', accent: '#263238', noYaw: true },
+  CHRONO_LEECH:   { a: chronoLeech, canon: 26, body: '#8d6e63', accent: '#4a148c', glow: '#ffb300' },
+  COSMIC_CRUISER: { a: cosmicCruiser, canon: 44, body: '#1c2331', accent: '#00e5ff', turret: true },
+  CHRONO_DREADNOUGHT: { a: chronoDreadnought, canon: 48, body: '#b8860b', accent: '#ffd700', style: 'dread', glow: '#ffea00', turret: true },
   DRONE:          { a: drone, canon: 18, body: '#43a047', accent: '#c8e6c9', rotor: true, noYaw: true },
   VORTEX_DRONE:   { a: drone, canon: 24, body: '#00838f', accent: '#00e5ff', rocketPods: true, antenna: true, glow: '#00e5ff', noYaw: true },
   COSMIC_ORBITER: { a: drone, canon: 26, body: '#1de9b6', accent: '#004d40', orbitRing: true, glow: '#64ffda', noYaw: true },

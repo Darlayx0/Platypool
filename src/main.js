@@ -299,6 +299,39 @@ function initGameApp() {
     }
   }
 
+  const resetGameViewport = () => {
+    // 1. Release active focus from buttons/links to prevent browser auto-scroll anchoring
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      try { document.activeElement.blur(); } catch (e) {}
+    }
+
+    // 2. Absolutely reset scroll coordinates on window, documentElement, body, and game wrapper
+    try {
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+      const wrapper = document.getElementById('game-wrapper');
+      if (wrapper) wrapper.scrollTop = 0;
+    } catch (e) {}
+
+    // 3. Reset internal scroll in all modal screens & cards
+    allModals.forEach(m => {
+      if (m) {
+        m.scrollTop = 0;
+        const card = m.querySelector('.clay-card');
+        if (card) card.scrollTop = 0;
+      }
+    });
+
+    // 4. Re-measure canvas and input dimensions
+    if (typeof game !== 'undefined' && game && typeof game.updateCanvasDimensions === 'function') {
+      game.updateCanvasDimensions();
+    }
+    if (typeof input !== 'undefined' && input && typeof input.updateRect === 'function') {
+      input.updateRect();
+    }
+  };
+
   function showModal(modal) {
     if (modal !== modalVictory) {
       stopVictoryConfetti();
@@ -307,11 +340,15 @@ function initGameApp() {
       if (m && m !== modal) {
         m.classList.remove('active');
         m.style.display = 'none';
+        m.scrollTop = 0;
       }
     });
     if (modal) {
       modal.style.display = 'flex';
       modal.classList.add('active');
+      modal.scrollTop = 0;
+      const card = modal.querySelector('.clay-card');
+      if (card) card.scrollTop = 0;
     }
     if (hudTopBar) {
       if (modal === modalStart || !modal) {
@@ -331,8 +368,12 @@ function initGameApp() {
       if (m) {
         m.classList.remove('active');
         m.style.display = 'none';
+        m.scrollTop = 0;
+        const card = m.querySelector('.clay-card');
+        if (card) card.scrollTop = 0;
       }
     });
+    resetGameViewport();
     if (hudTopBar) {
       hudTopBar.classList.remove('hidden');
     }
@@ -553,9 +594,16 @@ function initGameApp() {
       e.preventDefault();
       e.stopPropagation();
     }
+    input.clearInputState();
     ensureFullscreen();
     hideAllModals();
-    game.resumeSavedGame();
+    try {
+      game.resumeSavedGame();
+    } catch (err) {
+      console.error('Failed to resume game:', err);
+      showToast('⚠️ Gagal melanjutkan game, memulai permainan baru...', 3000);
+      game.start();
+    }
   };
 
   if (btnPlayGame) {
@@ -1179,6 +1227,8 @@ function initGameApp() {
         returnToMainMenu();
       } else if (isEnter || isSpace || e.code === 'KeyP' || keyLower === 'p') {
         e.preventDefault();
+        input.consumePause();
+        resetGameViewport();
         game.togglePause();
       } else if (e.code === 'KeyR' || keyLower === 'r') {
         e.preventDefault();
@@ -1268,10 +1318,12 @@ function initGameApp() {
   // Pause Screen Buttons
   if (btnResume) {
     btnResume.addEventListener('click', () => {
+      input.consumePause();
       if (game.sound) {
         game.sound.init();
         game.sound.playUiClick();
       }
+      resetGameViewport();
       game.togglePause();
     });
   }

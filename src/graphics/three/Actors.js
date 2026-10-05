@@ -110,7 +110,8 @@ export class EnemyActor {
     this.body.rotation.x = shake;
 
     // ---- animated parts ----
-    const P = this.parts;
+    const P = this.parts || {};
+    if (P.spinOrbit) for (const o of P.spinOrbit) o.rotation.y += dt * 3.5;
     if (P.spin) for (const o of P.spin) o.rotation.x += dt * 40;
     if (P.spinY) for (const o of P.spinY) o.rotation.y += dt * (this.type === 'COSMIC_ORBITER' ? 2.5 : 30);
     if (P.spinZ) for (const o of P.spinZ) o.rotation.z -= dt * 14;
@@ -135,6 +136,19 @@ export class EnemyActor {
     if (this.body.userData.tumble) {
       this.body.rotation.y += dt * 1.2;
       this.body.rotation.z += dt * 0.7;
+    }
+
+    // Special 3D phase-shifting effect for QUANTUM_WARPER
+    if (this.type === 'QUANTUM_WARPER') {
+      if (e.blinkState === 'DEMATERIALIZING') {
+        const factor = Math.max(0.04, (e.blinkTimer !== undefined ? e.blinkTimer : 0.2) / 0.4);
+        this.body.scale.set(factor, factor * (0.7 + Math.random() * 0.6), factor);
+      } else if (e.blinkState === 'MATERIALIZING') {
+        const factor = Math.min(1.0, 1.0 - (e.blinkTimer !== undefined ? e.blinkTimer : 0.2) / 0.4);
+        this.body.scale.set(factor, factor, factor);
+      } else {
+        this.body.scale.set(1 + j, 1 - j, 1 + j * 0.5);
+      }
     }
   }
 }
@@ -323,6 +337,13 @@ export class BulletLayer {
     mesh.count = i + 1;
   }
 
+  reset() {
+    this.caps.count = this.balls.count = this.halos.count = 0;
+    this.caps.instanceMatrix.needsUpdate = true;
+    this.balls.instanceMatrix.needsUpdate = true;
+    this.halos.instanceMatrix.needsUpdate = true;
+  }
+
   sync(bullets, time) {
     this.caps.count = this.balls.count = this.halos.count = 0;
     for (const b of bullets) {
@@ -470,5 +491,13 @@ export class DebrisSystem {
         items.pop();
       }
     }
+  }
+
+  clear() {
+    for (const d of this.items) {
+      d.m.visible = false;
+      this.free.push(d);
+    }
+    this.items.length = 0;
   }
 }

@@ -399,4 +399,26 @@ export class Scene3D {
     this.renderer.render(this.scene, this.camera);
     return true;
   }
+
+  clear() {
+    for (const [e, actor] of this.enemyActors.entries()) {
+      this.releaseEnemyActor(e, actor);
+    }
+    this.enemyActors.clear();
+    for (const [c, actor] of this.pickupActors.entries()) {
+      this.releasePickupActor(c, actor);
+    }
+    this.pickupActors.clear();
+    if (this.bossActor) {
+      this.scene.remove(this.bossActor.root);
+      this.bossActor = null;
+      this.lastBossHp = null;
+    }
+    if (this.bulletLayer && this.bulletLayer.reset) {
+      this.bulletLayer.reset();
+    }
+    if (this.debris && this.debris.clear) {
+      this.debris.clear();
+    }
+  }
 }

@@ -242,6 +242,16 @@ export class PlayerModel {
     this.body.scale.setScalar(0.86);
   }
 
+  reset(player = null) {
+    this.lastX = (player && Number.isFinite(player.x)) ? player.x : null;
+    this.lastY = (player && Number.isFinite(player.y)) ? player.y : null;
+    this.roll = 0;
+    this.pitch = 0;
+    this.vRoll = 0;
+    this.vPitch = 0;
+    this.squash = 1.0;
+  }
+
   /**
    * Sync model to the gameplay entity. Gameplay coordinates are screen pixels (y down).
    */
@@ -250,11 +260,21 @@ export class PlayerModel {
     const tick = player.engineTick || 0;
     const boosted = Boolean(player.speedBoostActive && player.speedBoostTimeLeft > 0);
 
-    // Velocity from positional delta (works for keyboard, mouse, touch)
-    const vx = this.lastX === null ? 0 : (player.x - this.lastX) / dt;
-    const vy = this.lastY === null ? 0 : (player.y - this.lastY) / dt;
-    this.lastX = player.x;
-    this.lastY = player.y;
+    const px = Number.isFinite(player.x) ? player.x : 160;
+    const py = Number.isFinite(player.y) ? player.y : 360;
+
+    // Velocity from positional delta with teleport/reset rejection
+    let vx = 0, vy = 0;
+    if (this.lastX !== null && this.lastY !== null) {
+      const dx = px - this.lastX;
+      const dy = py - this.lastY;
+      if (Math.hypot(dx, dy) < 250) {
+        vx = dx / dt;
+        vy = dy / dt;
+      }
+    }
+    this.lastX = px;
+    this.lastY = py;
 
     // Targets: climb -> nose up, bank strongly into vertical maneuvers (reveal wing tops/bottoms)
     const vyN = Math.max(-1, Math.min(1, vy / 460));
@@ -269,8 +289,17 @@ export class PlayerModel {
     this.roll += this.vRoll * dt;
     this.pitch += this.vPitch * dt;
 
+    if (!Number.isFinite(this.roll) || !Number.isFinite(this.vRoll)) {
+      this.roll = 0;
+      this.vRoll = 0;
+    }
+    if (!Number.isFinite(this.pitch) || !Number.isFinite(this.vPitch)) {
+      this.pitch = 0;
+      this.vPitch = 0;
+    }
+
     const bob = Math.sin(tick * 0.06) * 2.2;
-    this.root.position.set(player.x, -(player.y + bob), 0);
+    this.root.position.set(px, -(py + bob), 0);
 
     // Base 3/4 presentation tilt so the top surfaces read as true volume
     this.rollGroup.rotation.x = 0.42 + this.roll + Math.sin(tick * 0.05) * 0.03;

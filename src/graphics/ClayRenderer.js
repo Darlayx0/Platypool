@@ -1462,6 +1462,195 @@ export class ClayRenderer {
   }
 
   /**
+   * Draw Enemy: Quantum Warper (World 4 phase-shifting teleporter)
+   */
+  static drawQuantumWarper(ctx, x, y, tick = 0, hpRatio = 1, blinkAlpha = 1, roll = 0, pitch = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = Math.max(0.12, Math.min(1.0, blinkAlpha));
+    if (roll) ctx.rotate(roll * 0.4);
+
+    // Quantum distortion trail
+    for (let i = 1; i <= 3; i++) {
+      const trailAlpha = (1 - i * 0.28) * blinkAlpha * 0.45;
+      ctx.strokeStyle = `rgba(0, 229, 255, ${trailAlpha})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-24 - i * 8, -12, 12, 24);
+    }
+
+    // Prismatic hull
+    this.drawClayCapsule(ctx, 0, 0, 38, 14, '#00e5ff', '#006064');
+    this.drawClayBlob(ctx, 6, 0, 10, 8, '#e0f7fa', '#80deea');
+
+    // Tachyon wings
+    this.drawClayCapsule(ctx, -6, -14, 20, 6, '#00b4d8', '#0077b6', -0.35);
+    this.drawClayCapsule(ctx, -6, 14, 20, 6, '#00b4d8', '#0077b6', 0.35);
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-16, -22, 32, 4);
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-16, -22, 32 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Singularity Orb (World 4 micro-gravitational well)
+   */
+  static drawSingularityOrb(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Event Horizon swirling rings
+    ctx.save();
+    ctx.rotate(tick * 0.05);
+    ctx.strokeStyle = 'rgba(224, 64, 251, 0.75)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 36, 18, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.rotate(Math.PI / 3);
+    ctx.strokeStyle = 'rgba(124, 77, 255, 0.75)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 36, 18, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Black hole sphere with purple accretion fringe
+    const r = 20 + Math.sin(tick * 0.2) * 2;
+    this.drawClayBlob(ctx, 0, 0, r, r, '#0d001a', '#311b92');
+    this.drawClayBlob(ctx, 0, 0, 10, 10, '#e040fb', '#7b1fa2');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -28, 36, 4);
+      ctx.fillStyle = '#e040fb';
+      ctx.fillRect(-18, -28, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Binary Tether (World 4 dual crystal pylons with active laser tether)
+   */
+  static drawBinaryTether(ctx, x, y, partnerX, partnerY, tick = 0, isLinked = true) {
+    // 1. Draw Active Laser Beam if partner is linked and alive
+    if (isLinked && partnerX !== null && partnerY !== null && typeof partnerX === 'number' && typeof partnerY === 'number') {
+      ctx.save();
+      const beamGrad = ctx.createLinearGradient(x, y, partnerX, partnerY);
+      beamGrad.addColorStop(0, 'rgba(255, 215, 0, 0.9)');
+      beamGrad.addColorStop(0.5, 'rgba(255, 109, 0, 0.85)');
+      beamGrad.addColorStop(1, 'rgba(255, 215, 0, 0.9)');
+
+      // Outer glow beam
+      ctx.strokeStyle = 'rgba(255, 171, 0, 0.4)';
+      ctx.lineWidth = 7 + Math.sin(tick * 0.3) * 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(partnerX, partnerY);
+      ctx.stroke();
+
+      // Core electric beam
+      ctx.strokeStyle = beamGrad;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(partnerX, partnerY);
+      ctx.stroke();
+
+      // Energy sparks along beam
+      const midX = (x + partnerX) / 2 + Math.sin(tick * 0.4) * 8;
+      const midY = (y + partnerY) / 2;
+      this.drawClayBlob(ctx, midX, midY, 6, 6, '#ffffff', '#ffd700');
+      ctx.restore();
+    }
+
+    // 2. Draw Pylon Body
+    ctx.save();
+    ctx.translate(x, y);
+    this.drawClayCapsule(ctx, 0, 0, 32, 16, '#ffd700', '#ff6d00');
+    this.drawClayBlob(ctx, 0, 0, 10, 10, '#ffffff', '#ff9100');
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Chrono Leech (World 4 time-dilation void entity)
+   */
+  static drawChronoLeech(ctx, x, y, tick = 0, hpRatio = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Undulating temporal tentacles
+    for (let k = -1; k <= 1; k += 2) {
+      const wave = Math.sin(tick * 0.18 + k) * 7;
+      ctx.strokeStyle = 'rgba(234, 128, 252, 0.7)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-16, k * 8);
+      ctx.quadraticCurveTo(-28, k * 14 + wave, -38, k * 8 - wave);
+      ctx.stroke();
+    }
+
+    // Chrono Leech carapace
+    this.drawClayCapsule(ctx, 0, 0, 42, 18, '#aa00ff', '#4a148c');
+    this.drawClayBlob(ctx, 8, 0, 12, 12, '#ea80fc', '#7b1fa2');
+
+    // Chrono glow eye
+    this.drawClayBlob(ctx, 12, 0, 5, 5, '#ffffff', '#e040fb');
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-18, -26, 36, 4);
+      ctx.fillStyle = '#ea80fc';
+      ctx.fillRect(-18, -26, 36 * hpRatio, 4);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw Enemy: Cosmic Cruiser (World 4 armored heavy fortress ship, non-miniboss)
+   */
+  static drawCosmicCruiser(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Obsidian heavy cruiser hull
+    this.drawClayCapsule(ctx, 0, 0, 74, 34, '#263238', '#102027');
+    this.drawClayCapsule(ctx, -10, 0, 56, 26, '#37474f', '#212121');
+
+    // Forward armor bow & heavy turrets
+    this.drawClayCapsule(ctx, 24, -10, 20, 8, '#455a64', '#1c313a');
+    this.drawClayCapsule(ctx, 24, 10, 20, 8, '#455a64', '#1c313a');
+
+    // Orbiting defensive satellite shield nodes
+    for (let k = 0; k < 2; k++) {
+      const a = tick * 0.05 + k * Math.PI;
+      const sx = Math.cos(a) * 36;
+      const sy = Math.sin(a) * 22;
+      this.drawClayBlob(ctx, sx, sy, 7, 7, '#00e5ff', '#006064');
+    }
+
+    // Shield energy arc
+    if (shieldRatio > 0) {
+      ctx.strokeStyle = `rgba(0, 229, 255, ${0.4 + shieldRatio * 0.4})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 42, -Math.PI / 2, Math.PI / 2);
+      ctx.stroke();
+    }
+
+    if (hpRatio < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-24, -30, 48, 5);
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-24, -30, 48 * hpRatio, 5);
+    }
+    ctx.restore();
+  }
+
+  /**
    * Draw Jumbo Enemy: JUMBO DREAD CRUISER (World 1 Steam Sky Fortress)
    */
   static drawJumboDreadCruiser(ctx, x, y, hpRatio = 1, tick = 0) {
@@ -1599,9 +1788,12 @@ export class ClayRenderer {
   /**
    * Draw Jumbo Enemy: JUMBO SINGULARITY TITAN (World 4 Cosmic Singularity Behemoth)
    */
-  static drawJumboSingularityTitan(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0) {
+  static drawJumboSingularityTitan(ctx, x, y, shieldRatio = 1, hpRatio = 1, tick = 0, fromBehind = false) {
     ctx.save();
     ctx.translate(x, y);
+    if (fromBehind) {
+      ctx.scale(-1, 1);
+    }
 
     // 1. Cosmic distortion aura with swirling event horizon
     ctx.save();
@@ -2150,12 +2342,12 @@ export class ClayRenderer {
       ctx.fillStyle = `rgba(0, 229, 255, ${0.4 + (boss.laserChargeRatio || 0) * 0.5})`;
       ctx.fill();
 
-      // 11-way fanned laser telegraph guidance beams across screen
-      const laserCount = 11;
+      // 15-way fanned laser telegraph guidance beams across screen (derajat sedikit diperbesar)
+      const laserCount = boss.laserCount || 15;
       const half = Math.floor(laserCount / 2);
       ctx.lineWidth = 1.5 + (boss.laserChargeRatio || 0) * 1.5;
       for (let i = 0; i < laserCount; i++) {
-        const lAngle = (i - half) * 0.115;
+        const lAngle = (i - half) * 0.125;
         const beamAlpha = 0.15 + (boss.laserChargeRatio || 0) * 0.35;
         ctx.strokeStyle = `rgba(0, 229, 255, ${beamAlpha})`;
         ctx.beginPath();

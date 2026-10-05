@@ -127,13 +127,21 @@ export class Enemy {
         break;
 
       case 'SPINNER':
-        this.maxHp = 10;
-        this.hp = 10;
+        this.maxHp = options.hp !== undefined ? options.hp : 10;
+        this.hp = this.maxHp;
         this.radius = 24;
-        this.vx = -190;
-        this.vy = (Math.random() > 0.5 ? 1 : -1) * 160;
+        this.vx = options.vx !== undefined ? options.vx : -190;
+        this.vy = options.vy !== undefined ? options.vy : ((Math.random() > 0.5 ? 1 : -1) * 160);
         this.scoreValue = 35;
-        this.sparkTimer = 1.2;
+        this.sparkTimer = options.sparkTimer !== undefined ? options.sparkTimer : 1.2;
+        this.sparkInterval = options.sparkInterval !== undefined ? options.sparkInterval : 1.4;
+        this.baseY = this.y;
+        this.waveAmp = options.waveAmp !== undefined ? options.waveAmp : 0;
+        this.waveFreq = options.waveFreq !== undefined ? options.waveFreq : 0.0065;
+        this.phase = options.phase !== undefined ? options.phase : 0;
+        this.driftY = options.driftY !== undefined ? options.driftY : 0;
+        this.swoopAmp = options.swoopAmp !== undefined ? options.swoopAmp : 0;
+        this.syncWave = Boolean(options.syncWave);
         this.color = '#e53935';
         this.shadowColor = '#b71c1c';
         break;
@@ -166,11 +174,11 @@ export class Enemy {
         break;
 
       case 'MINE':
-        this.maxHp = 3;
-        this.hp = 3;
+        this.maxHp = options.hp !== undefined ? options.hp : 3;
+        this.hp = this.maxHp;
         this.radius = 18;
-        this.vx = -45;
-        this.vy = 0;
+        this.vx = options.vx !== undefined ? options.vx : -45;
+        this.vy = options.vy !== undefined ? options.vy : 0;
         this.baseY = this.y;
         this.scoreValue = 10;
         this.color = '#37474f';
@@ -207,8 +215,8 @@ export class Enemy {
         break;
 
       case 'JUGGERNAUT':
-        this.isMiniBoss = true;
-        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 2.0;
+        this.isMiniBoss = false;
+        this.invulnerableTimer = options.invulnerableTimer !== undefined ? options.invulnerableTimer : 0;
         this.maxInvulnerableTimer = this.invulnerableTimer;
         this.maxHp = 28;
         this.hp = 28;
@@ -418,6 +426,100 @@ export class Enemy {
         this.shadowColor = '#00bfa5';
         break;
 
+      case 'QUANTUM_WARPER':
+        this.maxHp = 10.2;
+        this.hp = 10.2;
+        this.radius = 24;
+        this.vx = options.vx !== undefined ? options.vx : -45;
+        this.vy = 0;
+        this.scoreValue = 90;
+        this.blinkState = 'MATERIALIZING';
+        this.blinkTimer = 0.4;
+        this.blinkAlpha = 0.2;
+        this.shootTimer = 0.8;
+        this.color = '#00e5ff';
+        this.shadowColor = '#006064';
+        break;
+
+      case 'SINGULARITY_ORB':
+        this.maxHp = 15.5;
+        this.hp = 15.5;
+        this.radius = 28;
+        this.vx = options.vx !== undefined ? options.vx : -45;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.pulseAngle = Math.random() * Math.PI * 2;
+        this.gravityPull = options.gravityPull !== undefined ? options.gravityPull : 75;
+        this.scoreValue = 120;
+        this.shootTimer = 1.6;
+        this.color = '#7c4dff';
+        this.shadowColor = '#311b92';
+        break;
+
+      case 'BINARY_TETHER':
+        this.maxHp = 11.8;
+        this.hp = 11.8;
+        this.radius = 22;
+        this.vx = options.vx !== undefined ? options.vx : -65;
+        this.vy = 0;
+        this.scoreValue = 85;
+        this.laserState = 'IDLE'; // 'IDLE' -> 'TELEGRAPH' -> 'FIRING' -> 'IDLE'
+        this.laserTimer = 0.8 + Math.random() * 0.6;
+        this.targetAngle = Math.PI;
+        this.laserWarmup = 0.85; // Durasi peringatan bidikan laser (0.85 detik)
+        this.laserDuration = 0.60; // Durasi tembakan sinar laser mematikan (0.60 detik)
+        this.shootTimer = 999999;
+        this.color = '#ffd700';
+        this.shadowColor = '#ff6d00';
+        break;
+
+      case 'CHRONO_LEECH':
+        this.maxHp = 12;
+        this.hp = 12;
+        this.radius = 26;
+        this.vx = options.vx !== undefined ? options.vx : -65;
+        this.vy = 0;
+        this.baseY = this.y;
+        this.scoreValue = 100;
+        this.shootTimer = 1.3;
+        this.color = '#ea80fc';
+        this.shadowColor = '#aa00ff';
+        break;
+
+      case 'COSMIC_CRUISER':
+        this.isMiniBoss = false;
+        this.fromBehind = options.fromBehind !== undefined ? options.fromBehind : (this.x < 100);
+        this.maxHp = 36;
+        this.hp = 36;
+        this.maxShieldHp = 16;
+        this.shieldHp = 16;
+        this.radius = 46;
+        this.vx = options.vx !== undefined ? options.vx : (this.fromBehind ? 55 : -50);
+        this.vy = 0;
+        this.scoreValue = 200;
+        this.shootTimer = 1.1;
+        this.color = '#1c2331';
+        this.shadowColor = '#0d131f';
+        break;
+
+      case 'CHRONO_DREADNOUGHT':
+        this.isMiniBoss = false;
+        this.fromBehind = options.fromBehind !== undefined ? options.fromBehind : (this.x < 100);
+        this.maxHp = 54;
+        this.hp = 54;
+        this.maxShieldHp = 20;
+        this.shieldHp = 20;
+        this.radius = 48;
+        this.vx = options.vx !== undefined ? options.vx : (this.fromBehind ? 50 : -45);
+        this.vy = 0;
+        this.scoreValue = 350;
+        this.shootTimer = 1.2;
+        this.chronoWaveTimer = 1.6;
+        this.flakMortarTimer = 3.2;
+        this.color = '#ffd700';
+        this.shadowColor = '#b8860b';
+        break;
+
       case 'JUMBO_DREAD_CRUISER':
         this.isJumbo = true;
         this.isMiniBoss = true;
@@ -486,11 +588,12 @@ export class Enemy {
         this.maxShieldHp = 120;
         this.shieldHp = 120;
         this.radius = 76;
-        this.vx = -60;
+        this.fromBehind = options.fromBehind !== undefined ? options.fromBehind : false;
+        this.targetHoverX = options.targetHoverX !== undefined ? options.targetHoverX : (this.fromBehind ? 240 : 960);
+        this.vx = options.vx !== undefined ? options.vx : (this.fromBehind ? 75 : -60);
         this.vy = 0;
-        this.targetHoverX = 960;
-        this.hoverPhase = 'ENTER'; // 'ENTER', 'HOVER_STATIC', 'ADVANCE_LEFT'
-        this.hoverTimer = 12.0; // Mengayun & statis di sisi kanan terlebih dahulu (~12 detik)
+        this.hoverPhase = 'ENTER'; // 'ENTER', 'HOVER_STATIC', 'ADVANCE_LEFT', 'ADVANCE_RIGHT'
+        this.hoverTimer = 12.0; // Mengayun & statis di sisi layar (~12 detik)
         this.scoreValue = 900;
         this.vortexTimer = 2.0;
         this.starNovaTimer = 1.5;
@@ -522,8 +625,9 @@ export class Enemy {
         this.vx = -210;
         this.vy = 0;
         this.baseY = this.y;
-        this.waveFreq = 0.05;
-        this.waveAmp = 55;
+        this.waveFreq = options.waveFreq !== undefined ? options.waveFreq : 0.05;
+        this.waveAmp = options.waveAmp !== undefined ? options.waveAmp : 55;
+        this.syncWave = Boolean(options.syncWave);
         this.scoreValue = 10;
         this.shootTimer = 2.0 + Math.random() * 2.0;
         this.color = '#e91e63';
@@ -561,7 +665,7 @@ export class Enemy {
     if (this.shootTimer) this.shootTimer *= this.shootCooldownMult;
   }
 
-  update(dt, player, bullets, sound, extraEnemies = [], particles = null) {
+  update(dt, player, bullets, sound, extraEnemies = [], particles = null, allEnemies = []) {
     const prevX = this.x;
     const prevY = this.y;
     this.tick += (this.slowTimer > 0 ? 0.5 : 1.0);
@@ -615,7 +719,15 @@ export class Enemy {
     switch (this.type) {
       case 'SCOUT':
         this.x += this.vx * dt;
-        this.y = this.baseY + Math.sin(this.x * this.waveFreq) * this.waveAmp;
+        if (this.waveAmp > 0) {
+          if (this.syncWave) {
+            this.y = this.baseY + Math.sin(this.tick * (this.waveFreq || 0.04)) * this.waveAmp;
+          } else {
+            this.y = this.baseY + Math.sin(this.x * this.waveFreq) * this.waveAmp;
+          }
+        } else {
+          this.y = this.baseY;
+        }
         break;
 
       case 'DRONE':
@@ -647,20 +759,19 @@ export class Enemy {
 
         this.shootTimer -= dt;
         if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200 && this.x > player.x + 50) {
-          this.shootTimer = 1.8 * this.shootCooldownMult;
+          this.shootTimer = 2.6 * this.shootCooldownMult; // Lebih berjeda (~2.6s)
           const angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
           const spd = 360 * this.bulletSpeedMult;
 
-          [-0.2, 0, 0.2].forEach(offset => {
-            bullets.push(new Bullet({
-              x: this.x - 25,
-              y: this.y,
-              vx: Math.cos(angleToPlayer + offset) * spd,
-              vy: Math.sin(angleToPlayer + offset) * spd,
-              radius: 7,
-              isEnemy: true
-            }));
-          });
+          // Hanya 1 butir peluru menargetkan pemain
+          bullets.push(new Bullet({
+            x: this.x - 25,
+            y: this.y,
+            vx: Math.cos(angleToPlayer) * spd,
+            vy: Math.sin(angleToPlayer) * spd,
+            radius: 7,
+            isEnemy: true
+          }));
           sound.playEnemyShoot();
         }
         break;
@@ -760,19 +871,31 @@ export class Enemy {
 
       case 'SPINNER':
         this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        // Bounce off top and bottom screen
-        if (this.y < 70) {
-          this.y = 70;
-          this.vy = Math.abs(this.vy);
-        } else if (this.y > 650) {
-          this.y = 650;
-          this.vy = -Math.abs(this.vy);
+        if (this.waveAmp > 0 || this.swoopAmp || this.driftY) {
+          const freq = this.waveFreq || 0.0065;
+          const ph = this.phase || 0;
+          const progress = Math.max(0, 1360 - this.x);
+          const drift = this.driftY ? progress * this.driftY : 0;
+          let curveY = (this.waveAmp > 0) ? Math.sin(this.x * freq + ph) * this.waveAmp : 0;
+          if (this.swoopAmp) {
+            curveY += Math.sin((progress / 1400) * Math.PI) * this.swoopAmp;
+          }
+          this.y = Math.max(70, Math.min(650, this.baseY + curveY + drift));
+        } else if (this.vy !== 0) {
+          this.y += this.vy * dt;
+          // Bounce off top and bottom screen
+          if (this.y < 70) {
+            this.y = 70;
+            this.vy = Math.abs(this.vy);
+          } else if (this.y > 650) {
+            this.y = 650;
+            this.vy = -Math.abs(this.vy);
+          }
         }
 
         this.sparkTimer -= dt;
         if (this.sparkTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1150 && this.x > 100) {
-          this.sparkTimer = 1.4 * this.shootCooldownMult;
+          this.sparkTimer = (this.sparkInterval || 1.4) * this.shootCooldownMult;
           // 4 radial sparks
           const spkSpd = 320 * this.bulletSpeedMult;
           for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
@@ -1285,6 +1408,301 @@ export class Enemy {
         }
         break;
 
+      case 'QUANTUM_WARPER': {
+        // State machine: MATERIALIZING -> ACTIVE -> DEMATERIALIZING -> BLINK
+        if (!this.blinkState) {
+          this.blinkState = 'MATERIALIZING';
+          this.blinkTimer = 0.4;
+          this.blinkAlpha = 0.2;
+        }
+
+        if (this.blinkState === 'MATERIALIZING') {
+          this.blinkTimer -= dt;
+          this.blinkAlpha = Math.min(1.0, this.blinkAlpha + dt * 2.5);
+          if (this.blinkTimer <= 0) {
+            this.blinkState = 'ACTIVE';
+            this.blinkTimer = 1.4;
+            this.blinkAlpha = 1.0;
+          }
+        } else if (this.blinkState === 'ACTIVE') {
+          this.x += (this.vx || -40) * dt;
+          this.y += Math.sin(this.tick * 0.04) * 25 * dt;
+          this.blinkTimer -= dt;
+
+          this.shootTimer -= dt;
+          if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 100 && this.x < 1220 && player) {
+            this.shootTimer = 1.0 * this.shootCooldownMult;
+            const targetAng = Math.atan2(player.y - this.y, player.x - this.x);
+            [-0.18, 0, 0.18].forEach(off => {
+              bullets.push(new Bullet({
+                x: this.x - 16,
+                y: this.y,
+                vx: Math.cos(targetAng + off) * 440 * this.bulletSpeedMult,
+                vy: Math.sin(targetAng + off) * 440 * this.bulletSpeedMult,
+                radius: 6,
+                type: 'ENEMY_SNIPER',
+                isEnemy: true
+              }));
+            });
+            sound.playShoot('LASER');
+          }
+
+          if (this.blinkTimer <= 0) {
+            this.blinkState = 'DEMATERIALIZING';
+            this.blinkTimer = 0.35;
+            if (particles) {
+              particles.createElectricSpark(this.x, this.y, 10, '#00e5ff', '#ffffff');
+              particles.createSmokePuff(this.x, this.y, 2, 12);
+            }
+          }
+        } else if (this.blinkState === 'DEMATERIALIZING') {
+          this.blinkTimer -= dt;
+          this.blinkAlpha = Math.max(0.05, this.blinkAlpha - dt * 2.8);
+          if (this.blinkTimer <= 0) {
+            // Quantum Blink to new tactical coordinates!
+            this.x = Math.max(260, Math.min(1140, this.x + (Math.random() > 0.5 ? -180 : 150)));
+            this.y = Math.max(120, Math.min(600, this.y + (Math.random() - 0.5) * 260));
+            this.blinkState = 'MATERIALIZING';
+            this.blinkTimer = 0.35;
+            if (sound && sound.playShoot) sound.playShoot('HOMING');
+            if (particles) {
+              particles.createElectricSpark(this.x, this.y, 14, '#00e5ff', '#e040fb');
+              particles.createSmokePuff(this.x, this.y, 2, 14);
+            }
+          }
+        }
+        break;
+      }
+
+      case 'SINGULARITY_ORB': {
+        this.x += this.vx * dt;
+        this.pulseAngle = (this.pulseAngle || 0) + 1.8 * dt;
+        this.y = (this.baseY || this.y) + Math.sin(this.pulseAngle) * 35;
+
+        // Gravitational micro-pull on player
+        if (player && !player.dead && this.x > 80 && this.x < 1240) {
+          const dx = this.x - player.x;
+          const dy = this.y - player.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 35 && dist < 450) {
+            const pullForce = (1 - dist / 450) * (this.gravityPull || 75) * dt;
+            player.x += (dx / dist) * pullForce;
+            player.y += (dy / dist) * pullForce;
+            player.x = Math.max(45, Math.min(1225, player.x));
+            player.y = Math.max(45, Math.min(675, player.y));
+          }
+        }
+
+        // Pulse 6-way gravitational burst
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 100 && this.x < 1200) {
+          this.shootTimer = 1.6 * this.shootCooldownMult;
+          for (let k = 0; k < 6; k++) {
+            const ang = (k * Math.PI * 2) / 6 + (this.pulseAngle || 0);
+            bullets.push(new Bullet({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(ang) * 260 * this.bulletSpeedMult,
+              vy: Math.sin(ang) * 260 * this.bulletSpeedMult,
+              radius: 6,
+              isEnemy: true
+            }));
+          }
+          sound.playEnemyShoot();
+        }
+        break;
+      }
+
+      case 'BINARY_TETHER': {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.laserState === 'IDLE') {
+          this.laserTimer -= dt;
+          if (this.laserTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 60 && this.x < 1250 && player && !player.dead) {
+            this.laserState = 'TELEGRAPH';
+            this.laserTimer = this.laserWarmup;
+            this.targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
+            if (sound && sound.playEnemyShoot) sound.playEnemyShoot();
+          }
+        } else if (this.laserState === 'TELEGRAPH') {
+          // Lacak posisi pemain hingga 0.20s terakhir sebelum mengunci sudut tembakan
+          if (this.laserTimer > 0.20 && player && !player.dead) {
+            const desiredAng = Math.atan2(player.y - this.y, player.x - this.x);
+            const diff = Math.atan2(Math.sin(desiredAng - this.targetAngle), Math.cos(desiredAng - this.targetAngle));
+            this.targetAngle += diff * Math.min(1.0, 10 * dt);
+          }
+
+          this.laserTimer -= dt;
+          if (particles && Math.random() < 0.45) {
+            particles.createElectricSpark(this.x, this.y, 4, '#ffd700', '#ff1744');
+          }
+
+          if (this.laserTimer <= 0) {
+            this.laserState = 'FIRING';
+            this.laserTimer = this.laserDuration;
+            if (sound && sound.playShoot) sound.playShoot('LASER');
+          }
+        } else if (this.laserState === 'FIRING') {
+          this.laserTimer -= dt;
+
+          // Sinar laser mematikan menembus seluruh layar mengarah ke target player
+          const beamLen = 1600;
+          const x1 = this.x, y1 = this.y;
+          const x2 = this.x + Math.cos(this.targetAngle) * beamLen;
+          const y2 = this.y + Math.sin(this.targetAngle) * beamLen;
+
+          // Deteksi tabrakan sinar laser dengan pemain
+          if (player && !player.invulnerable && !player.dead) {
+            const px = player.x, py = player.y;
+            const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+            if (l2 > 0) {
+              let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+              t = Math.max(0, Math.min(1, t));
+              const projX = x1 + t * (x2 - x1);
+              const projY = y1 + t * (y2 - y1);
+              const dist = Math.hypot(px - projX, py - projY);
+              const beamRadius = 14;
+              if (dist < (player.radius || 18) + beamRadius) {
+                player.hit();
+                if (sound && sound.playExplosion) sound.playExplosion('small');
+              }
+            }
+          }
+
+          if (particles && Math.random() < 0.5) {
+            const pDist = 100 + Math.random() * 700;
+            particles.createElectricSpark(
+              this.x + Math.cos(this.targetAngle) * pDist,
+              this.y + Math.sin(this.targetAngle) * pDist,
+              3, '#ffd700', '#ffffff'
+            );
+          }
+
+          if (this.laserTimer <= 0) {
+            this.laserState = 'IDLE';
+            this.laserTimer = (2.2 + Math.random() * 0.6) * this.shootCooldownMult;
+          }
+        }
+        break;
+      }
+
+      case 'CHRONO_LEECH': {
+        this.x += (this.vx || -65) * dt;
+        this.y = (this.baseY || this.y) + Math.sin(this.tick * 0.03) * 30;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 120 && this.x < 1200 && player) {
+          this.shootTimer = 1.3 * this.shootCooldownMult;
+          // Fires time-dilation temporal projectile (starts slow, then rapidly accelerates!)
+          const aimAng = Math.atan2(player.y - this.y, player.x - this.x);
+          bullets.push(new Bullet({
+            x: this.x - 20,
+            y: this.y,
+            vx: Math.cos(aimAng) * 90 * this.bulletSpeedMult,
+            vy: Math.sin(aimAng) * 90 * this.bulletSpeedMult,
+            accelX: Math.cos(aimAng) * 340,
+            accelY: Math.sin(aimAng) * 340,
+            radius: 8,
+            type: 'ENEMY_PLASMA',
+            isEnemy: true
+          }));
+          sound.playShoot('PLASMA');
+        }
+        break;
+      }
+
+      case 'COSMIC_CRUISER': {
+        this.x += (this.vx || (this.fromBehind ? 55 : -50)) * dt;
+        this.y += Math.sin(this.tick * 0.02) * 25 * dt;
+
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1220 && player) {
+          this.shootTimer = 1.3 * this.shootCooldownMult;
+          const a = Math.atan2(player.y - this.y, player.x - this.x);
+          const fDir = this.fromBehind ? 1 : -1;
+          [-14, 14].forEach(yOff => {
+            bullets.push(new Bullet({
+              x: this.x + fDir * 25,
+              y: this.y + yOff,
+              vx: Math.cos(a) * 420 * this.bulletSpeedMult,
+              vy: Math.sin(a) * 420 * this.bulletSpeedMult,
+              radius: 7,
+              isEnemy: true
+            }));
+          });
+          sound.playEnemyShoot();
+        }
+        break;
+      }
+
+      case 'CHRONO_DREADNOUGHT': {
+        this.x += (this.vx || (this.fromBehind ? 50 : -45)) * dt;
+        this.y += Math.sin(this.tick * 0.018) * 22 * dt;
+        const forwardDir = this.fromBehind ? 1 : -1;
+
+        // 1. Serangan Unik I: Chrono Stasis Wave (Gelombang Waktu 3 Arah)
+        this.chronoWaveTimer -= dt;
+        if (this.chronoWaveTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 60 && this.x < 1240 && player) {
+          this.chronoWaveTimer = 3.0 * this.shootCooldownMult;
+          const aimAng = Math.atan2(player.y - this.y, player.x - this.x);
+          [-0.22, 0, 0.22].forEach(angOff => {
+            const spreadAng = aimAng + angOff;
+            bullets.push(new Bullet({
+              x: this.x + forwardDir * 35,
+              y: this.y,
+              vx: Math.cos(spreadAng) * 90 * this.bulletSpeedMult,
+              vy: Math.sin(spreadAng) * 90 * this.bulletSpeedMult,
+              accelX: Math.cos(spreadAng) * 360,
+              accelY: Math.sin(spreadAng) * 360,
+              radius: 9,
+              type: 'ENEMY_PLASMA',
+              isEnemy: true
+            }));
+          });
+          if (sound && sound.playShoot) sound.playShoot('PLASMA');
+          if (particles) {
+            particles.createElectricSpark(this.x + forwardDir * 30, this.y, 14, '#ffd700', '#ffea00');
+          }
+        }
+
+        // 2. Serangan Unik II: Golden Shrapnel Mortar Artillery (Artileri Pecahan Emas)
+        this.flakMortarTimer -= dt;
+        if (this.flakMortarTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1220 && player) {
+          this.flakMortarTimer = 3.8 * this.shootCooldownMult;
+          const targetDist = Math.abs(player.x - this.x);
+          bullets.push(new Bullet({
+            x: this.x + forwardDir * 20,
+            y: this.y - 18,
+            vx: forwardDir * 240 * this.bulletSpeedMult,
+            vy: ((player.y - this.y) / Math.max(1, targetDist)) * 200,
+            radius: 11,
+            type: 'ENEMY_BOMB',
+            isEnemy: true
+          }));
+          if (sound && sound.playShoot) sound.playShoot('HOMING');
+        }
+
+        // 3. Serangan Unik III: Dual Heavy Kinetic Battery
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && this.spawnGraceTimer <= 0 && this.x > 80 && this.x < 1220 && player) {
+          this.shootTimer = 1.4 * this.shootCooldownMult;
+          [-16, 16].forEach(yOff => {
+            bullets.push(new Bullet({
+              x: this.x + forwardDir * 40,
+              y: this.y + yOff,
+              vx: forwardDir * 440 * this.bulletSpeedMult,
+              vy: 0,
+              radius: 7.5,
+              type: 'ENEMY_SNIPER',
+              isEnemy: true
+            }));
+          });
+          if (sound && sound.playShoot) sound.playShoot('LASER');
+        }
+        break;
+      }
+
       case 'FRUIT_CARRIER':
         this.x += this.vx * dt;
         this.y = this.baseY + Math.sin(this.tick * this.waveFreq) * this.waveAmp;
@@ -1443,44 +1861,51 @@ export class Enemy {
         }
         break;
 
-      case 'JUMBO_SINGULARITY_TITAN':
+      case 'JUMBO_SINGULARITY_TITAN': {
         if (!this.hoverPhase) {
-          this.hoverPhase = (this.x > this.targetHoverX) ? 'ENTER' : 'HOVER_STATIC';
+          const reachedTarget = this.fromBehind ? (this.x >= this.targetHoverX) : (this.x <= this.targetHoverX);
+          this.hoverPhase = reachedTarget ? 'HOVER_STATIC' : 'ENTER';
           this.hoverTimer = 12.0;
         }
 
         if (this.hoverPhase === 'ENTER') {
-          this.x += (this.vx || -60) * dt * this.speedMult;
-          if (this.x <= this.targetHoverX) {
+          this.x += (this.vx || (this.fromBehind ? 75 : -60)) * dt * this.speedMult;
+          const reached = this.fromBehind ? (this.x >= this.targetHoverX) : (this.x <= this.targetHoverX);
+          if (reached) {
             this.x = this.targetHoverX;
             this.hoverPhase = 'HOVER_STATIC';
             this.hoverTimer = 12.0;
           }
         } else if (this.hoverPhase === 'HOVER_STATIC') {
-          // Mengayun dan statis di sisi kanan layar terlebih dahulu (~12 detik)
+          // Mengayun dan statis di sisi layar (~12 detik)
           this.y += Math.sin(this.tick * 0.03) * 55 * dt * this.speedMult;
           this.hoverTimer -= dt;
           if (this.hoverTimer <= 0) {
-            this.hoverPhase = 'ADVANCE_LEFT';
+            this.hoverPhase = this.fromBehind ? 'ADVANCE_RIGHT' : 'ADVANCE_LEFT';
             if (particles && typeof particles.createFloatingText === 'function') {
-              particles.createFloatingText(this.x, this.y - 70, '⚠️ TITAN MENYERBU KE DEPAN!', '#e040fb');
+              particles.createFloatingText(this.x, this.y - 70, this.fromBehind ? '⚠️ TITAN MENYERBU KE KANAN!' : '⚠️ TITAN MENYERBU KE DEPAN!', '#e040fb');
             }
           }
         } else if (this.hoverPhase === 'ADVANCE_LEFT') {
-          // Jika lama lalu bergerak ke depan ujung kiri layar
           this.x -= 75 * dt * this.speedMult;
+          this.y += Math.sin(this.tick * 0.03) * 50 * dt * this.speedMult;
+        } else if (this.hoverPhase === 'ADVANCE_RIGHT') {
+          this.x += 75 * dt * this.speedMult;
           this.y += Math.sin(this.tick * 0.03) * 50 * dt * this.speedMult;
         }
 
+        const shootDir = this.fromBehind ? 1 : -1;
+        const canShoot = this.fromBehind ? (this.x > 50) : (this.x < 1220);
+
         // 1. Gravity Vortex Homing Missiles
         this.vortexTimer -= dt;
-        if (this.vortexTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220) {
+        if (this.vortexTimer <= 0 && this.spawnGraceTimer <= 0 && canShoot) {
           this.vortexTimer = 2.6 * this.shootCooldownMult;
           [-24, 24].forEach(yOff => {
             bullets.push(new Bullet({
-              x: this.x - 30,
+              x: this.x + shootDir * 35,
               y: this.y + yOff,
-              vx: -240,
+              vx: shootDir * 240,
               vy: yOff * 3.5,
               radius: 9,
               type: 'ENEMY_HOMING',
@@ -1493,13 +1918,13 @@ export class Enemy {
 
         // 2. Star Nova 12-Way Burst
         this.starNovaTimer -= dt;
-        if (this.starNovaTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1200) {
+        if (this.starNovaTimer <= 0 && this.spawnGraceTimer <= 0 && (this.fromBehind ? this.x > 80 : this.x < 1200)) {
           this.starNovaTimer = 2.0 * this.shootCooldownMult;
           const count = 12;
           for (let k = 0; k < count; k++) {
             const ang = (k * Math.PI * 2) / count + this.tick * 0.08;
             bullets.push(new Bullet({
-              x: this.x - 15,
+              x: this.x + shootDir * 15,
               y: this.y,
               vx: Math.cos(ang) * 360 * this.bulletSpeedMult,
               vy: Math.sin(ang) * 360 * this.bulletSpeedMult,
@@ -1512,12 +1937,13 @@ export class Enemy {
 
         // 3. Heavy frontal railgun spires
         this.homingPodTimer -= dt;
-        if (this.homingPodTimer <= 0 && this.spawnGraceTimer <= 0 && this.x < 1220 && this.x > player.x + 80) {
+        const inFiringZone = player && (this.fromBehind ? (this.x < player.x - 40) : (this.x > player.x + 80));
+        if (this.homingPodTimer <= 0 && this.spawnGraceTimer <= 0 && canShoot && inFiringZone) {
           this.homingPodTimer = 2.4 * this.shootCooldownMult;
           const a = Math.atan2(player.y - this.y, player.x - this.x);
           [-0.15, 0.15].forEach(off => {
             bullets.push(new Bullet({
-              x: this.x - 60,
+              x: this.x + shootDir * 60,
               y: this.y,
               vx: Math.cos(a + off) * 600 * this.bulletSpeedMult,
               vy: Math.sin(a + off) * 600 * this.bulletSpeedMult,
@@ -1529,6 +1955,7 @@ export class Enemy {
           sound.playShoot('LASER');
         }
         break;
+      }
     }
 
     // Dynamic 3D Flight Kinematics & Aerodynamic Banking
@@ -1537,6 +1964,22 @@ export class Enemy {
     const targetRoll = Math.max(-0.65, Math.min(0.65, (dY / Math.max(0.001, dt * 260)) * 0.55));
     this.roll = (this.roll || 0) + (targetRoll - (this.roll || 0)) * Math.min(1.0, 10 * dt);
     this.pitch = Math.max(-0.25, Math.min(0.25, (dX / Math.max(0.001, dt * 320)) * 0.15));
+
+    // Mini-boss safeguard: Mini-bosses must stay on screen and NEVER despawn off-screen while alive!
+    if (this.isMiniBoss && this.hp > 0) {
+      if (this.fromBehind) {
+        if (this.x < 120 && this.hoverPhase !== 'ENTER') {
+          this.x = 120;
+          if (this.vx < 0) this.vx = 0;
+        }
+      } else {
+        if (this.x < 720 && this.hoverPhase !== 'ADVANCE_LEFT') {
+          this.x = 720;
+          if (this.vx < 0) this.vx = 0;
+        }
+      }
+      return true;
+    }
 
     return this.x > -180 && this.x < 1460 && this.y > -140 && this.y < 860;
   }
@@ -1554,8 +1997,10 @@ export class Enemy {
       this.applyPlasmaSlow(bulletType === 'PLASMA' ? 1.5 : 1.2);
     }
 
-    // Shield Cruiser, Juggernaut, & Jumbo Shield mechanics
-    if ((this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT' || this.type === 'JUMBO_CYBER_GARGANTUA' || this.type === 'JUMBO_SINGULARITY_TITAN') && this.shieldHp > 0 && bulletX > this.x - 25) {
+    // Shield Cruiser, Juggernaut, Cosmic Cruiser, Chrono Dreadnought, & Jumbo Shield mechanics
+    const isShieldBearer = (this.type === 'SHIELD_CRUISER' || this.type === 'JUGGERNAUT' || this.type === 'COSMIC_CRUISER' || this.type === 'CHRONO_DREADNOUGHT' || this.type === 'JUMBO_CYBER_GARGANTUA' || this.type === 'JUMBO_SINGULARITY_TITAN');
+    const isFrontShieldHit = this.fromBehind ? (bulletX < this.x + 25) : (bulletX > this.x - 25);
+    if (isShieldBearer && this.shieldHp > 0 && isFrontShieldHit) {
       if (bulletType === 'FLAK') {
         // Tier A+ Flak Demolition: instantly shatters heavy energy shield in 1 blast!
         this.shieldHp = 0;
@@ -1774,6 +2219,23 @@ export class Enemy {
       case 'COSMIC_ORBITER':
         ClayRenderer.drawCosmicOrbiter(ctx, this.x, this.y, this.tick, hpRatio, r, p);
         break;
+      case 'QUANTUM_WARPER':
+        ClayRenderer.drawQuantumWarper(ctx, this.x, this.y, this.tick, hpRatio, this.blinkAlpha, r, p);
+        break;
+      case 'SINGULARITY_ORB':
+        ClayRenderer.drawSingularityOrb(ctx, this.x, this.y, this.tick, hpRatio);
+        break;
+      case 'BINARY_TETHER':
+        ClayRenderer.drawBinaryTether(ctx, this.x, this.y, this.partner ? this.partner.x : null, this.partner ? this.partner.y : null, this.tick, this.laserActive);
+        break;
+      case 'CHRONO_LEECH':
+        ClayRenderer.drawChronoLeech(ctx, this.x, this.y, this.tick, hpRatio);
+        break;
+      case 'COSMIC_CRUISER': {
+        const cShield = this.maxShieldHp ? Math.max(0, this.shieldHp / this.maxShieldHp) : 0;
+        ClayRenderer.drawCosmicCruiser(ctx, this.x, this.y, cShield, hpRatio, this.tick);
+        break;
+      }
       case 'JUMBO_DREAD_CRUISER':
         ClayRenderer.drawJumboDreadCruiser(ctx, this.x, this.y, hpRatio, this.tick, r, p);
         break;
@@ -1787,15 +2249,142 @@ export class Enemy {
       }
       case 'JUMBO_SINGULARITY_TITAN': {
         const jShield = this.maxShieldHp ? Math.max(0, this.shieldHp / this.maxShieldHp) : 0;
-        ClayRenderer.drawJumboSingularityTitan(ctx, this.x, this.y, jShield, hpRatio, this.tick, r, p);
+        ClayRenderer.drawJumboSingularityTitan(ctx, this.x, this.y, jShield, hpRatio, this.tick, this.fromBehind);
         break;
       }
     }
   }
 
   /** HP bar / invulnerability badge for enemies (rendered above 3D layer at step 6.5) */
-  drawOverlay(ctx) {
+  drawOverlay(ctx, player = null) {
     if (this.dead) return;
+
+    // 0. Binary Tether: Independent Targeted Laser with Telegraph Warning
+    if (this.type === 'BINARY_TETHER') {
+      const x1 = this.x, y1 = this.y;
+      const x2 = this.x + Math.cos(this.targetAngle) * 1600;
+      const y2 = this.y + Math.sin(this.targetAngle) * 1600;
+
+      // Fase 1: Peringatan di awal (Telegraph Warning Laser)
+      if (this.laserState === 'TELEGRAPH') {
+        ctx.save();
+        const progress = 1 - (this.laserTimer / (this.laserWarmup || 0.85));
+        const flashAlpha = 0.45 + Math.sin(this.tick * 0.4) * 0.35 + progress * 0.2;
+        
+        // Garis laser penanda bidikan merah-emas putus-putus
+        ctx.strokeStyle = `rgba(255, 23, 68, ${flashAlpha})`;
+        ctx.lineWidth = 1.8 + progress * 1.5;
+        ctx.setLineDash([8, 6]);
+        ctx.lineDashOffset = -this.tick * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Lingkaran reticle bidikan di sekitar jarak pemain
+        ctx.setLineDash([]);
+        const targetDist = player ? Math.hypot(player.x - this.x, player.y - this.y) : 400;
+        const tx = this.x + Math.cos(this.targetAngle) * targetDist;
+        const ty = this.y + Math.sin(this.targetAngle) * targetDist;
+        const reticleR = 12 + (1 - progress) * 16;
+        ctx.strokeStyle = `rgba(255, 215, 0, ${flashAlpha + 0.2})`;
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(tx, ty, reticleR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Apex charging crystal glow
+        ctx.fillStyle = `rgba(255, 215, 0, ${0.6 + progress * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(x1, y1, 8 + progress * 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      } else if (this.laserState === 'FIRING') {
+        ctx.save();
+        // Fase 2: Tembakan Sinar Laser Penuh Mematikan (Full Searing Lethal Beam)
+        // A. Aura panas luar emas berkilau
+        ctx.strokeStyle = `rgba(255, 215, 0, ${0.85 + Math.sin(this.tick * 0.5) * 0.15})`;
+        ctx.lineWidth = 14 + Math.sin(this.tick * 0.6) * 3;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // B. Inti putih menyala
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4.5;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // C. Kilatan loncatan petir bertegangan tinggi di sepanjang laser
+        const segs = 8;
+        ctx.strokeStyle = 'rgba(255, 245, 157, 0.9)';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let s = 1; s < segs; s++) {
+          const t = s / segs;
+          const jx = (Math.random() - 0.5) * 16;
+          const jy = (Math.random() - 0.5) * 16;
+          ctx.lineTo(x1 + (x2 - x1) * t + jx, y1 + (y2 - y1) * t + jy);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Muzzle flare
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x1, y1, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Ambient aura kristal pylon emas
+      ctx.save();
+      const tetherR = this.radius + 6 + Math.sin(this.tick * 0.25) * 3;
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.45 + Math.sin(this.tick * 0.3) * 0.25})`;
+      ctx.lineWidth = 2.0;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, tetherR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.type === 'SINGULARITY_ORB') {
+      ctx.save();
+      const pullR = this.radius + 16 + Math.sin(this.tick * 0.15) * 8;
+      ctx.strokeStyle = `rgba(224, 64, 251, ${0.45 + Math.sin(this.tick * 0.2) * 0.25})`;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#e040fb';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, pullR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.type === 'CHRONO_DREADNOUGHT') {
+      ctx.save();
+      const dreadR = this.radius + 10 + Math.sin(this.tick * 0.12) * 5;
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.35 + Math.sin(this.tick * 0.18) * 0.2})`;
+      ctx.lineWidth = 2.8;
+      ctx.shadowColor = '#ffb300';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, dreadR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // 1. Invulnerability Energy Shield & Badge (Always render if active)
     if (this.invulnerableTimer > 0) {
@@ -2000,21 +2589,26 @@ export class Enemy {
 
   static deserialize(data, difficultyConfig = null) {
     if (!data) return null;
-    const enemy = new Enemy({
-      x: data.x,
-      y: data.y,
-      type: data.type,
-      formationId: data.formationId,
-      isLastInFormation: data.isLastInFormation,
-      stage: data.stage,
-      difficultyConfig: difficultyConfig || Enemy.difficultyConfig
-    });
-    for (const key of Object.keys(data)) {
-      if (data[key] !== undefined) {
-        enemy[key] = data[key];
+    try {
+      const enemy = new Enemy({
+        x: data.x,
+        y: data.y,
+        type: data.type,
+        formationId: data.formationId,
+        isLastInFormation: data.isLastInFormation,
+        stage: data.stage,
+        difficultyConfig: difficultyConfig || Enemy.difficultyConfig
+      });
+      for (const key of Object.keys(data)) {
+        if (data[key] !== undefined) {
+          enemy[key] = data[key];
+        }
       }
+      return enemy;
+    } catch (e) {
+      console.warn('Failed to deserialize enemy:', e, data);
+      return null;
     }
-    return enemy;
   }
 }
 
